@@ -1,0 +1,205 @@
+@import url('@patternfly/patternfly/patternfly.css');
+#root {
+  margin: 0 auto;
+  padding: 0.1rem;
+  text-align: center;
+
+  --background-color-light: #F1F0E5;
+  --background-color-dark--blue: #14213D;
+  --border-radius-m: 10px;
+}
+
+.App {
+  text-align: center;
+  height: 100vh;
+}
+.App-header {
+  background-color: var(--background-color-light);
+
+  color: black;
+  color-scheme: light dark;
+  font-size: calc(10px + 2vmin);
+  height: 2.5rem;
+  justify-content: center;
+  display: flex;
+  padding-bottom: 0.2rem;
+  padding-top: 0.2rem;
+  margin: 0.05rem;
+  border-radius: 5px;
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+.pf-custom-navbar {
+  /* width: 15rem; */
+  width: 98%;
+  border-radius: var(--border-radius-m);
+  background-color: var(--background-color-dark--blue);
+  /* margin: 0.05rem; */
+  justify-self: center;
+  height: calc(100vh - 3.6rem);
+}
+
+.pf-custom-top-toolbar {
+  /* width: calc(100% - 15.1rem); */
+  width: 100%;
+  height: 2.5rem;
+  background-color: var(--background-color-light);
+  border-radius: var(--border-radius-m);
+  margin-bottom: 0.2rem;
+  display: inline-flex;
+  justify-content: center;
+  padding: 0.2rem;
+  align-items: flex-end;
+}
+
+.pf-v6-c-page__main-container {
+  margin: 0;
+  border-radius: 10px;
+}
+
+.pf-custom-main {
+  padding: 0;
+  display: flex;
+  height: calc(100vh - 2.75rem);
+}
+
+.pf-v6-c-page__main-body {
+  /* display: flex; */
+}
+
+.pf-v6-c-page__main-container {
+  height: calc(100vh - 1.5rem);
+}
+
+.pf-custom-add-print-button {
+  background-color: var(--background-color-dark--blue) !important;
+  border-radius: 10px;
+  color:#FF832B !important;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  height: 2rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.pf-v6-c-button {
+  border-radius: 10px;
+}
+
+.pf-m-primary.pf-custom-button {
+  background-color: #14213D;
+  border-radius: 10px;
+  color: #FF832B;
+  margin: 0.2rem
+}
+.pf-custom-button:disabled {
+  background-color: #888;
+  color: #14213D;
+}
+
+.pf-custom-upload-file-modal {
+  align-items: center;
+  padding-bottom: 1rem;
+  padding-top: 1rem;
+
+}
+
+.pf-custom-dashboard {
+  background-color: #F1F0E5;
+  border-radius: 10px;
+  height: calc(100vh - 6.25rem);
+  display: flex;
+  /* align-items: center; */
+}
+
+/* @media (min-width: 1200px) {
+  .pf-v6-c-page {
+     display: flow-root;
+     height: calc(100vh - 2.75rem);
+  }
+} */
+
+.pf-v6-c-modal-box.pf-custom-print-task-modal {
+  background-color: #fff;
+  padding: 20px;
+  width: 60%;
+  align-self: center;
+  position: static;
+  margin: 20px;
+  border-radius: 10px;
+}
+
+.pf-custom-print-task {
+  background-color: #fff;
+  padding: 20px;
+  width: 60%;
+  align-self: center;
+  position: static;
+  border-radius: 10px;
+  display: flow-root;
+  justify-self: center;
+}
+
+.pf-v6-c-modal-box__footer {
+  padding: 0;
+  justify-content: flex-end;
+}
+
+.pf-v6-c-backdrop {
+  /* background-color: #14213d9e; */
+  background-color: transparent;
+  
+}
+
+.pf-v6-c-multiple-file-upload__status-item {
+  font-size: small;
+}
+
+.pf-v6-c-progress__bar {
+  height: 0.5rem;
+}
+.pf-v6-c-progress__indicator {
+  height: 0.5rem;
+}
+
+.pf-custom-new-print-job {
+  border-radius: 10px;
+  width: 80%;
+  justify-self: center;
+}
+
+.pf-custom-text-align-left {
+  text-align-last: left;
+}
+
+.pf-custom-upload-button-footer {
+  justify-self: end;
+  padding-right: 0;
+  padding-bottom: 0;
+}
+
+.pf-custom-no-padding {
+  padding: 0;
+}
+
+.pf-custom-upload-icon {
+  padding-right: 1rem;
+  height: 20px;
+  vertical-align: sub;
+}
+
+.pf-custom-upload-header {
+  padding-top: 0 !important;
+  justify-self: left;
+}
+
+.pf-custom-print-detail-footer {
+  padding: 1rem;
+}

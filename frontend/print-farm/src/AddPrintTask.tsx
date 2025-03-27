@@ -67,39 +67,39 @@ export default function addPrintTask() {
 
     /** Forces uploaded files to become corrupted if "Demonstrate error reporting by forcing uploads to fail" is selected in the example,
      * only used in this example for demonstration purposes */
-    const updateCurrentFiles = (files: File[]) => {
+    const updateCurrentFiles = (files: readFile[]) => {
         setCurrentFiles((prevFiles) => [...prevFiles, ...files]);
     };
 
     // callback that will be called by the react dropzone with the newly dropped file objects
-    const handleFileDrop = (_event: DropEvent, droppedFiles: File[]) => {
+    const handleFileDrop = (_event: DropEvent, droppedFiles: readFile[]) => {
         // identify what, if any, files are re-uploads of already uploaded files
-        const currentFileNames = currentFiles.map((file) => file.name);
-        const reUploads = droppedFiles.filter((droppedFile) => currentFileNames.includes(droppedFile.name));
+        const currentFileNames = currentFiles.map((file) => file.fileName);
+        const reUploads = droppedFiles.filter((droppedFile) => currentFileNames.includes(droppedFile.fileName));
 
         /** this promise chain is needed because if the file removal is done at the same time as the file adding react
          * won't realize that the status items for the re-uploaded files needs to be re-rendered */
         Promise.resolve()
-        .then(() => removeFiles(reUploads.map((file) => file.name)))
+        .then(() => removeFiles(reUploads.map((file:any) => file.fileName)))
         .then(() => updateCurrentFiles(droppedFiles));
     };
 
     // callback called by the status item when a file is successfully read with the built-in file reader
-    const handleReadSuccess = (data: string, file: File) => {
-        setReadFileData((prevReadFiles) => [...prevReadFiles, { data, fileName: file.name, loadResult: 'success' }]);
+    const handleReadSuccess = (data: string, file: readFile) => {
+        setReadFileData((prevReadFiles) => [...prevReadFiles, { data, fileName: file.fileName, loadResult: 'success' }]);
     };
 
     // callback called by the status item when a file encounters an error while being read with the built-in file reader
-    const handleReadFail = (error: DOMException, file: File) => {
+    const handleReadFail = (error: DOMException, file: readFile) => {
         setReadFileData((prevReadFiles) => [
         ...prevReadFiles,
-        { loadError: error, fileName: file.name, loadResult: 'danger' }
+        { loadError: error, fileName: file.fileName, loadResult: 'danger' }
         ]);
     };
 
     // add helper text to a status item showing any error encountered during the file reading process
-    const createHelperText = (file: File) => {
-        const fileResult = readFileData.find((readFile) => readFile.fileName === file.name);
+    const createHelperText = (file: readFile) => {
+        const fileResult = readFileData.find((readFile) => readFile.fileName === file.fileName);
         if (fileResult?.loadError) {
         return (
             <HelperText isLiveRegion>
@@ -116,6 +116,7 @@ export default function addPrintTask() {
         setIsFileUploadModalOpen(false);
         setIsPrintTaskModalOpen(true);
         console.log(currentFiles);
+        console.log(currentFiles[0].path)
     }
 
     return (

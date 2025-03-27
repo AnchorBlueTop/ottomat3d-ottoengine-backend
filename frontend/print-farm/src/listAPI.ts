@@ -10,6 +10,15 @@ const initHeader = () => {
     return myHeader; 
 };
 
+const initFile = (fileInput: File) => {
+    const formdata = new FormData();
+    formdata.append(
+        "", 
+        fileInput, 
+        "copyOfGCODe.gcode"
+    );
+};
+
 const fetchResponse = async (baseUrl:string, requestOptions: any) => {
     return fetch(
         baseUrl, 
@@ -51,24 +60,31 @@ export class moonraker {
         )
     };
 
+    
     // TO-DO: REQUIRES IMPROVING
-    // uploadFile = async (
-    //     printerURL: String, 
-    //     file: File
-    // ): Promise<readFile> => {
-    //     var requestOptions = {
-    //         method: 'POST',
-    //         // Content-Disposition: 'form-data',
-    //         name: file.path ,
-    //         'Accept': '*/*',
-    //         'filename': file.fileName,
-    //         'Content-Type': 'multipart/form-data',
-    //     };
-    //     return fetchResponse(
-    //         printerURL + '/server/files/upload',
-    //         requestOptions
-    //     )
-    // };
+    uploadFile = async (
+        printerURL: String, 
+        file: File
+    ): Promise<readFile> => {
+        const formdata = new FormData();
+        formdata.append(
+            file.name, 
+            file
+        );
+        var requestOptions = {
+            method: 'POST',
+            // Content-Disposition: 'form-data',
+            // name: file.path ,
+            'Accept': '*/*',
+            'filename': file.name,
+            'Content-Type': 'multipart/form-data',
+            'body': formdata
+        };
+        return fetchResponse(
+            printerURL + '/server/files/upload',
+            requestOptions
+        )
+    };
 
 //     POST /server/files/upload
 // Content-Type: multipart/form-data

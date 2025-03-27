@@ -77,7 +77,7 @@ export default function newPrintJob () {
                             <Card frameBorder={'solid'} className="pf-custom-print-detail-footer">
                                 
                                 <Content className="pf-custom-text-align-left" component={ContentVariants.h6}>{'FILE'}</Content>
-                                <Content >{currentFiles[0].name}</Content>
+                                <Content >{currentFiles[0].fileName}</Content>
                             </Card>
                         {/* </FormGroup> */}
                     </GridItem>

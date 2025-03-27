@@ -9,7 +9,8 @@ export default function APILoader() {
 
     const fetchPrinterStatus = () => {
         new moonraker().fetchPrinterInfo(
-            "http://pi33.local"
+            // "http://pi33.local"
+            "http://pi.local"
         ).then((element: printerRepresentation) => {
             setPrinter(element);
         }).catch(() => {

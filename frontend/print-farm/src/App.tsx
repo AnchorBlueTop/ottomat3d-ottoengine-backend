@@ -24,8 +24,8 @@ type ContextType = {
   setIsPrintTaskModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   fileUploadModalOpen: boolean;
   setIsFileUploadModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  currentFiles: File[];
-  setCurrentFiles: React.Dispatch<React.SetStateAction<File[]>>;
+  currentFiles: readFile[];
+  setCurrentFiles: React.Dispatch<React.SetStateAction<readFile[]>>;
 }
 
 export const JobContext = createContext<ContextType>({} as ContextType);
@@ -34,7 +34,7 @@ export const JobContextProvider: React.FC<Props> = ({children}) => {
   const [printer, setPrinter] = useState<any|undefined>();
   const [printTaskModalOpen, setIsPrintTaskModalOpen] = useState(false);
   const [fileUploadModalOpen, setIsFileUploadModalOpen] = useState(false);
-  const [currentFiles, setCurrentFiles] = useState<File[]>([]);
+  const [currentFiles, setCurrentFiles] = useState<readFile[]>([]);
 
 
 

@@ -67,15 +67,15 @@ export default function addPrintTask() {
 
     /** Forces uploaded files to become corrupted if "Demonstrate error reporting by forcing uploads to fail" is selected in the example,
      * only used in this example for demonstration purposes */
-    const updateCurrentFiles = (files: readFile[]) => {
+    const updateCurrentFiles = (files: File[]) => {
         setCurrentFiles((prevFiles) => [...prevFiles, ...files]);
     };
 
     // callback that will be called by the react dropzone with the newly dropped file objects
-    const handleFileDrop = (_event: DropEvent, droppedFiles: readFile[]) => {
+    const handleFileDrop = (_event: DropEvent, droppedFiles: File[]) => {
         // identify what, if any, files are re-uploads of already uploaded files
-        const currentFileNames = currentFiles.map((file) => file.fileName);
-        const reUploads = droppedFiles.filter((droppedFile) => currentFileNames.includes(droppedFile.fileName));
+        const currentFileNames = currentFiles.map((file) => file.name);
+        const reUploads = droppedFiles.filter((droppedFile) => currentFileNames.includes(droppedFile.name));
 
         /** this promise chain is needed because if the file removal is done at the same time as the file adding react
          * won't realize that the status items for the re-uploaded files needs to be re-rendered */
@@ -85,21 +85,21 @@ export default function addPrintTask() {
     };
 
     // callback called by the status item when a file is successfully read with the built-in file reader
-    const handleReadSuccess = (data: string, file: readFile) => {
-        setReadFileData((prevReadFiles) => [...prevReadFiles, { data, fileName: file.fileName, loadResult: 'success' }]);
+    const handleReadSuccess = (data: string, file: File) => {
+        setReadFileData((prevReadFiles) => [...prevReadFiles, { data, fileName: file.name, loadResult: 'success' }]);
     };
 
     // callback called by the status item when a file encounters an error while being read with the built-in file reader
-    const handleReadFail = (error: DOMException, file: readFile) => {
+    const handleReadFail = (error: DOMException, file: File) => {
         setReadFileData((prevReadFiles) => [
         ...prevReadFiles,
-        { loadError: error, fileName: file.fileName, loadResult: 'danger' }
+        { loadError: error, fileName: file.name, loadResult: 'danger' }
         ]);
     };
 
     // add helper text to a status item showing any error encountered during the file reading process
-    const createHelperText = (file: readFile) => {
-        const fileResult = readFileData.find((readFile) => readFile.fileName === file.fileName);
+    const createHelperText = (file: File) => {
+        const fileResult = readFileData.find((readFile) => readFile.fileName === file.name);
         if (fileResult?.loadError) {
         return (
             <HelperText isLiveRegion>
@@ -116,26 +116,26 @@ export default function addPrintTask() {
         setIsFileUploadModalOpen(false);
         setIsPrintTaskModalOpen(true);
         console.log(currentFiles);
-        console.log(currentFiles[0].path)
+        // console.log(currentFiles[0].path)
     }
 
     return (
         <>
-        {fileUploadModalOpen ? 
+        {/* {fileUploadModalOpen ? 
         // <PageSection className='pf-custom-print-task'>
             <Card className='pf-custom-print-task'>
           <CardHeader className='pf-custom-upload-header'>
             <Content component={ContentVariants.h3}>
             <Brand src={uploadBox} alt="Upload logo" className='pf-custom-upload-icon'/>
             {' NEW PRINT JOB'}</Content>
-          </CardHeader>
+          </CardHeader> */}
           
         
-        {/* <Modal
+        <Modal
             isOpen={fileUploadModalOpen}
             className="pf-custom-print-task-modal pf-v6-u-box-shadow-lg"
             aria-label="add-print-task-modal"
-        > */}
+        >
             {currentFiles.length==0 ? (<MultipleFileUpload
                     onFileDrop={handleFileDrop}
                     dropzoneProps={{
@@ -181,8 +181,13 @@ export default function addPrintTask() {
                 )}</>
             }
             {/* <br/> */}
-            {/* <ModalFooter> */}
-            <PageSection className='pf-custom-upload-button-footer'>
+            <ModalFooter className='pf-custom-upload-button-footer'>
+                <Button 
+                    className="pf-m-danger"
+                    onClick={() => setIsFileUploadModalOpen(false)}
+                >
+                    {'Close'}
+                </Button>
                 <Button 
                     isDisabled={currentFiles.length==0}
                     className="pf-custom-button"
@@ -190,17 +195,10 @@ export default function addPrintTask() {
                 >
                     {'Continue'}
                 </Button>
-                <Button 
-                    className="pf-m-danger"
-                    onClick={() => setIsFileUploadModalOpen(false)}
-                >
-                    {'Close'}
-                </Button>
-            </PageSection>
-            {/* </ModalFooter> */}
-        {/* </Modal> */}
+            </ModalFooter>
+        </Modal>
         {/* </PageSection> */}
-        </Card> : '' }
+        {/* </Card> : '' } */}
         </>
     );
 };

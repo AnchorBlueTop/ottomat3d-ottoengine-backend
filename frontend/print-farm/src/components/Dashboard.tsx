@@ -1,10 +1,10 @@
-import { JobContext } from "./App";
+import { JobContext } from "../App";
 import { Button, Grid, GridItem, PageSection } from "@patternfly/react-core";
 import { useContext, useEffect, useState } from "react";
-import addPrintTask from "./AddPrintTask";
-import newPrintJob from "./newPrintJob";
-import APILoader from "./loadAPI";
-import { moonraker } from "./listAPI";
+import addPrintTask from "../AddPrintTask";
+import newPrintJob from "../newPrintJob";
+import APILoader from "../loadAPI";
+import { moonraker } from "../listAPI";
 
 
 
@@ -52,13 +52,13 @@ export default function Dashboard() {
     return (
         <>
             <Grid>
-                <GridItem span={2}>
+                {/* <GridItem span={2}>
                     <PageSection id='left-navbar' className="pf-custom-navbar">
 
                     </PageSection>
                 </GridItem>
 
-                <GridItem span={10}>
+                <GridItem span={10}> */}
                     <GridItem rowSpan={1}>
                         <PageSection id='top-toolbar' className="pf-custom-top-toolbar">
                             <Button 
@@ -73,14 +73,16 @@ export default function Dashboard() {
 
                     <GridItem>
                         <PageSection id='dashboard' className="pf-custom-dashboard">
-                            {newPrintJob()}
-                            {addPrintTask()}
+                            {/* {newPrintJob()}
+                            {addPrintTask()} */}
                             {/* {workflow()} */}
                         </PageSection>
                     </GridItem>
-                </GridItem>
+                {/* </GridItem> */}
                 
             </Grid>
+            {newPrintJob()}
+            {addPrintTask()}
             {/* <PageSection className="pf-custom-main">
                         
                 <PageSection id='left-navbar' className="pf-custom-navbar">

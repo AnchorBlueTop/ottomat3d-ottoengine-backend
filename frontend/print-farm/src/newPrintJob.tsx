@@ -1,4 +1,4 @@
-import { Brand, Button, Card, CardHeader, Content, ContentVariants, Form, FormGroup, Grid, GridItem, Modal, PageSection } from "@patternfly/react-core";
+import { Brand, Button, Card, CardHeader, Content, ContentVariants, Form, FormGroup, Grid, GridItem, Modal, ModalFooter, ModalHeader, PageSection } from "@patternfly/react-core";
 import { Component, useContext } from "react";
 import { JobContext } from "./App";
 import uploadBox from './public/box_icon.png';
@@ -23,24 +23,28 @@ export default function newPrintJob () {
     // };
 
     return (
-            // <Modal
-            //     isOpen={printTaskModalOpen}
-            //     className=""
-            //     aria-label="newPrintJob"
-            // >
+            <Modal
+                isOpen={printTaskModalOpen}
+                className="pf-custom-new-print-job-modal"
+                aria-label="newPrintJob"
+            >
 
-            // </Modal>
-            <>
-            {printTaskModalOpen ? 
+            {/* <> */}
+            {/* {printTaskModalOpen ?  */}
             <PageSection className="pf-custom-new-print-job">
-                <Grid hasGutter>
-                <CardHeader className='pf-custom-upload-header'>
+                <ModalHeader className="pf-custom-upload-header">
                     <Content component={ContentVariants.h3}>
-                    <Brand src={uploadBox} alt="Upload logo" className='pf-custom-upload-icon'/>
-                    {' NEW PRINT JOB'}</Content>
-                </CardHeader>
+                        <Brand src={uploadBox} alt="Upload logo" className='pf-custom-upload-icon'/>
+                        {' NEW PRINT JOB'}</Content>
+                </ModalHeader>
+                <Grid hasGutter>
+
+                {/* <CardHeader className='pf-custom-upload-header'>
+                    
+                </CardHeader> */}
+
                     <GridItem span={8}>
-                        <PageSection>
+                        {/* <PageSection> */}
                         <Form isHorizontal className="pf-custom-text-align-left">
                             
                             <Content component={ContentVariants.h6}>{'DETAILS'}</Content>
@@ -60,16 +64,16 @@ export default function newPrintJob () {
                             <Content>{'DURATION: '+ ' ~Duration test~'}</Content>
                            
                         </Form>
-                        </PageSection>
+                        {/* </PageSection> */}
                     </GridItem>
 
                     <GridItem span={4}>
-                        <PageSection>
+                        {/* <PageSection> */}
                         <FormGroup>
                             <Content component={ContentVariants.h6}>{'THUMBNAIL'}</Content>
                             <Brand src={thumbnail} alt={"print job thumbnail"} style={{width: '100%'}} />
                         </FormGroup>
-                        </PageSection>
+                        {/* </PageSection> */}
                     </GridItem>
 
                     <GridItem span={12}>
@@ -77,28 +81,39 @@ export default function newPrintJob () {
                             <Card frameBorder={'solid'} className="pf-custom-print-detail-footer">
                                 
                                 <Content className="pf-custom-text-align-left" component={ContentVariants.h6}>{'FILE'}</Content>
-                                <Content >{currentFiles[0].fileName}</Content>
+                                {/* <Content >{currentFiles[0].name}</Content> */}
                             </Card>
                         {/* </FormGroup> */}
                     </GridItem>
                 
                 </Grid>
 
-                <Button 
-                    isDisabled={currentFiles.length==0}
-                    className="pf-custom-button"
-                    // onClick={() => sendFileToPrinter()}
-                    onClick={() => {setIsPrintTaskModalOpen(false)}}
-                >
-                    {'Send File'}
-                </Button>
-                
-                
 
-                
+                <ModalFooter className="pf-custom-new-print-job-modal-footer">
+                    <Button 
+                        isDisabled={currentFiles.length==0}
+                        // className="pf-custom-button"
+                        variant="danger"
+                        // onClick={() => sendFileToPrinter()}
+                        onClick={() => {setIsPrintTaskModalOpen(false)}}
+                    >
+                        {'Cancel'}
+                    </Button>
+                    <Button 
+                        isDisabled={currentFiles.length==0}
+                        className="pf-custom-button"
+                        // onClick={() => sendFileToPrinter()}
+                        onClick={() => {setIsPrintTaskModalOpen(false)}}
+                    >
+                        {'Send File'}
+                    </Button>
+                </ModalFooter>
 
-            </PageSection> : ''}
-            </>
+            </PageSection> 
+
+            {/* : ''} */}
+            {/* </> */}
+            </Modal>
     )
     
 }

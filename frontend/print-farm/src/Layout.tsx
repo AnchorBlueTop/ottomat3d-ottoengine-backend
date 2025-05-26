@@ -6,6 +6,8 @@ import { Printers } from './components/Printers';
 import { PageHeader } from './Page-Header';
 import Dashboard from './components/Dashboard';
 import fullLogoWhite from './public/Ottomat3d Logo-White.png';
+import { Job } from './components/Jobs';
+import { Ottoeject } from './components/OttoEject';
 // import { Job } from './Jobs';
 // import { PrinterStatus } from './PrinterStatus';
 // import { JobDetails } from './JobDetails';
@@ -24,17 +26,18 @@ export function Layout({
     setActiveTab
 }: LayoutProps) {
     // const [activeTab, setActiveTab] = useState('printers');
-    const [selectedJob, setSelectedJob] = useState(null);
-    const [selectedPrinter, setSelectedPrinter] = useState(null);
+    // const [selectedJob, setSelectedJob] = useState(null);
+    // const [selectedPrinter, setSelectedPrinter] = useState(null);
     const renderContent = () => {
         switch (activeTab) {
             case 'jobs':
+                return <Job/>
             //   return selectedJob ? <JobDetails job={selectedJob} /> : <QueueManagement onSelectJob={setSelectedJob} />;
-                return <QueueManagement/>
+                // return <QueueManagement/>
             case 'printers':
-                return <Printers onSelectPrinter={setSelectedPrinter} />;
+                return <Printers />;
             case 'eject':
-                return <></>;
+                return <Ottoeject />;
             case 'rack':
                 return <></>;
             default:
@@ -50,10 +53,9 @@ export function Layout({
             <GridItem span={10}>
                 {/* Main content */}
                 <PageHeader />
-                <Divider />
                 <PageSection className="pf-custom-dashboard">{
                     <>
-                        <Masthead>
+                        <Masthead className='App-header'>
                             <Content content={ContentVariants.h2}>
                                 {activeTab === 'dashboard' && 'Dashboard'}
                                 {activeTab === 'jobs' && ("Print Jobs")}

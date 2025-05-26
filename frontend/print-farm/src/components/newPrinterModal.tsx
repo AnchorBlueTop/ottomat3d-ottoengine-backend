@@ -21,23 +21,23 @@ import { Component, useContext, useState } from "react";
 import { JobContext } from "../App.tsx";
 import uploadBox from './public/box_icon.png';
 import thumbnail from '../public/thumbnail.png';
-import printerRepresentation from "../printerRepresentation.ts";
+import { PrinterRegistrationRepresentation, PrinterRepresentation } from "../representations/printerRepresentation.ts";
+import { registerPrinter } from "../ottoengine_API.ts";
 // import { moonraker } from "./listAPI";
 
 export default function newPrinter () {
     const { printer, setPrinter, printerAddModalOpen, setIsPrinterAddModalOpen } = useContext(JobContext);
     // const [ID_Value, setID_Value] = useState();
-    // const [tempPrinter, setTempPrinter] = useState<printerRepresentation>();
-    const [tempPrinter, setTempPrinter] = useState<printerRepresentation>({
-        name: '',
-        printer: '',
-        ottoeject: '',
-        connection: {
-            ipAddress: '',
-            serial: '',
-            accessCode: ''
-        }
-    });
+    const [tempPrinter, setTempPrinter] = useState<PrinterRegistrationRepresentation>();
+    // const [tempPrinter, setTempPrinter] = useState<PrinterRegistrationRepresentation>({
+    //     name: '',
+    //     brand: '',
+    //     model: '',
+    //     type: '',
+    //     ip_address: '',
+    //     serial_number: '',
+    //     access_code: ''
+    // });
     
     
     // const [tempPrinter, setTempPrinter] = useState<printerRepresentation[]>([{
@@ -54,7 +54,13 @@ export default function newPrinter () {
 
     const updatePrinterList = (tempPrinter: any) => {
         if(!printer){
+            console.log(tempPrinter);
+            const registeredResponse = registerPrinter(tempPrinter).then(() => {console.log('then in printer registration')});
+
+                
+            console.log(registeredResponse);
             setPrinter([tempPrinter]);
+            setTempPrinter({});
         } else {
             if(!printer[0]){
                 delete printer[0];
@@ -62,9 +68,10 @@ export default function newPrinter () {
                 console.log(printer);
                 
                 setPrinter(printer);
+                setTempPrinter({});
             } else {
-                console.log(tempPrinter), 
-                console.log(printer),
+                console.log(tempPrinter); 
+                console.log(printer);
                 // setPrinter({...printer, 
                 //     [0]:{
                 //         name: tempPrinter[0].name,
@@ -78,25 +85,38 @@ export default function newPrinter () {
                 //     }
                     
                 // })
-                printer.push(tempPrinter);
-                console.log(printer);
+                // async() => {
+
+                    const registeredResponse = registerPrinter(tempPrinter).then(() => {console.log('then in printer registration')});
+                    
+                    console.log(registeredResponse);
+                    printer.push(tempPrinter);
+                    console.log(printer);
+                    
+                    setPrinter(printer);
+
+                    console.log('Adding new Printer');
+                    setIsPrinterAddModalOpen(false);
+                    setTempPrinter({});
+                // }
                 
-                setPrinter(printer);
             }
             
         }
+        setIsPrinterAddModalOpen(false);
+
     };
 
     return (
             <Modal
                 isOpen={printerAddModalOpen}
-                className="pf-custom-new-printer-job-modal"
+                className="pf-custom-new-printer-modal"
                 aria-label="newPrinter"
             >
 
             {/* <> */}
             {/* {printTaskModalOpen ?  */}
-            <PageSection className="pf-custom-new-print-job">
+            <PageSection className="pf-custom-new-printer">
                 <ModalHeader className="pf-custom-upload-header">
                     <Content component={ContentVariants.h3}>
                         {/* <Brand src={uploadBox} alt="Upload logo" className='pf-custom-upload-icon'/> */}
@@ -132,11 +152,11 @@ export default function newPrinter () {
 
                                             // onChange={(_event, value:any) => setPrinter({...printer, [0]:{name:value}})} 
                                             // onChange={(_event, value:any) => setTempPrinter({...tempPrinter, [0]:{name:value}})}
-                                            onChange={(_event, value:any) => setTempPrinter({...tempPrinter, name:value})}
+                                            onChange={(_event, value: string) => setTempPrinter({...tempPrinter, name:value})}
                                             // onChange={(_event, value:any) => tempPrinter.name == value }
-                                         
+                                        
 
-                                            frameBorder={'none'}
+                                            // frameBorder={'none'}
                                             
                                         />
                                     {/* </TextInputGroup> */}
@@ -148,13 +168,13 @@ export default function newPrinter () {
                             <Grid>
                                 {/* <FormGroup fieldId="printer-printer"> */}
                                 <GridItem span={3}>
-                                    <Content>{'PRINTER:'}</Content>
+                                    <Content>{'PRINTER BRAND:'}</Content>
                                 </GridItem>
                                 <GridItem span={8}>
                                     <TextInputGroup>
                                         {/* <TextInputGroupMain value={printer?.[0]?.printer} onChange={(_event, value:any) => setPrinter({...printer, [0]:{printer:value}})} /> */}
                                         {/* <TextInputGroupMain id='printer-printer' value={tempPrinter[0]?.printer} onChange={(_event, value:any) => setTempPrinter({...tempPrinter, [0]:{printer:value}})} /> */}
-                                        <TextInputGroupMain id='printer-printer' value={tempPrinter?.printer} onChange={(_event, value:any) => setTempPrinter({...tempPrinter, printer:value})} />
+                                        <TextInputGroupMain id='printer-brand' value={tempPrinter?.brand} onChange={(_event, value:any) => setTempPrinter({...tempPrinter, brand:value})} />
 
                                         {/* <TextInputGroupMain value={tempPrinter?.printer} onChange={(_event, value:any) => tempPrinter.printer==value} /> */}
 
@@ -167,13 +187,13 @@ export default function newPrinter () {
                             <Grid>
                                 {/* <FormGroup fieldId="printer-ottoeject"> */}
                                 <GridItem span={3}>
-                                    <Content>{'OTTOEJECT:'}</Content>
+                                    <Content>{'PRINTER MODEL:'}</Content>
                                 </GridItem>
                                 <GridItem span={8}>
                                     <TextInputGroup>
                                         {/* <TextInputGroupMain value={printer?.[0]?.ottoeject} onChange={(_event, value:any) => setPrinter({...printer, [0]:{ottoeject:value}})} /> */}
                                         {/* <TextInputGroupMain id='printer-ottoeject' value={tempPrinter[0]?.ottoeject} onChange={(_event, value:any) => setTempPrinter({...tempPrinter, [0]:{ottoeject:value}})} /> */}
-                                        <TextInputGroupMain id='printer-ottoeject' value={tempPrinter?.ottoeject} onChange={(_event, value:any) => setTempPrinter({...tempPrinter, ottoeject:value})} />
+                                        <TextInputGroupMain id='printer-model' value={tempPrinter?.model} onChange={(_event, value:any) => setTempPrinter({...tempPrinter, model:value})} />
 
                                         {/* <TextInputGroupMain value={tempPrinter.ottoeject} onChange={(_event, value:any) => tempPrinter.ottoeject==value} /> */}
 
@@ -192,7 +212,7 @@ export default function newPrinter () {
                                     <TextInputGroup>
                                         {/* <TextInputGroupMain value={printer?.[0]?.connection?.ipAddress} onChange={(_event, value:any) => setPrinter({...printer, [0]:{connection:{ipAddress:value}}})} /> */}
                                         {/* <TextInputGroupMain id='printer-connection-ipaddress' value={tempPrinter[0]?.connection?.ipAddress} onChange={(_event, value:any) => setTempPrinter({...tempPrinter, [0]:{connection:{...tempPrinter[0]?.connection, ipAddress:value}}})} /> */}
-                                        <TextInputGroupMain id='printer-connection-ipaddress' value={tempPrinter?.connection?.ipAddress} onChange={(_event, value:any) => setTempPrinter({...tempPrinter, connection:{...tempPrinter?.connection, ipAddress:value}})} />
+                                        <TextInputGroupMain id='printer-connection-ipaddress' value={tempPrinter?.ip_address} onChange={(_event, value:any) => setTempPrinter({...tempPrinter, ip_address:value})} />
 
                                         {/* <TextInputGroupMain value={tempPrinter?.connection?.ipAddress} onChange={(_event, value:any) => tempPrinter?.connection?.ipAddress == value }/> */}
 
@@ -209,7 +229,7 @@ export default function newPrinter () {
                                     <TextInputGroup>
                                         {/* <TextInputGroupMain value={printer?.[0]?.connection?.serial} onChange={(_event, value:any) => setPrinter({...printer, [0]:{connection:{serial:value}}})} /> */}
                                         {/* <TextInputGroupMain id='printer-connection-serial' value={tempPrinter[0]?.connection?.serial} onChange={(_event, value:any) => setTempPrinter({...tempPrinter, [0]:{connection:{...tempPrinter[0]?.connection, serial:value}}})} /> */}
-                                        <TextInputGroupMain id='printer-connection-serial' value={tempPrinter?.connection?.serial} onChange={(_event, value:any) => setTempPrinter({...tempPrinter, connection:{...tempPrinter?.connection, serial:value}})} />
+                                        <TextInputGroupMain id='printer-connection-serial' value={tempPrinter?.serial_number} onChange={(_event, value:any) => setTempPrinter({...tempPrinter, serial_number:value})} />
 
                                         {/* <TextInputGroupMain value={tempPrinter.connection?.serial} onChange={(_event, value:any) => tempPrinter?.connection?.serial == value } /> */}
 
@@ -226,7 +246,7 @@ export default function newPrinter () {
                                     <TextInputGroup>
                                         {/* <TextInputGroupMain value={printer?.[0]?.connection?.accessCode} onChange={(_event, value:any) => setPrinter({...printer, [0]:{connection:{accessCode:value}}})} /> */}
                                         {/* <TextInputGroupMain id='printer-connection-accesscode' value={tempPrinter[0]?.connection?.accessCode} onChange={(_event, value:any) => setTempPrinter({...tempPrinter, [0]:{connection:{...tempPrinter[0]?.connection, accessCode:value}}})} /> */}
-                                        <TextInputGroupMain id='printer-connection-accesscode' value={tempPrinter?.connection?.accessCode} onChange={(_event, value:any) => setTempPrinter({...tempPrinter, connection:{...tempPrinter?.connection, accessCode:value}})} />
+                                        <TextInputGroupMain id='printer-connection-accesscode' value={tempPrinter?.access_code} onChange={(_event, value:any) => setTempPrinter({...tempPrinter, access_code:value})} />
 
                                         {/* <TextInputGroupMain value={tempPrinter.connection?.accessCode} onChange={(_event, value:any) => tempPrinter?.connection?.accessCode == value} /> */}
 
@@ -234,16 +254,23 @@ export default function newPrinter () {
                                 </GridItem>
                                 {/* </FormGroup> */}
                             </Grid>
+                            <Grid>
+                                {/* <FormGroup fieldId="pritner-connection-accesscode"> */}
+                                <GridItem span={3}>
+                                    <Content>{'TYPE:'}</Content>
+                                </GridItem>
+                                <GridItem span={8}>
+                                    <TextInputGroup>
+                                        {/* <TextInputGroupMain value={printer?.[0]?.connection?.accessCode} onChange={(_event, value:any) => setPrinter({...printer, [0]:{connection:{accessCode:value}}})} /> */}
+                                        {/* <TextInputGroupMain id='printer-connection-accesscode' value={tempPrinter[0]?.connection?.accessCode} onChange={(_event, value:any) => setTempPrinter({...tempPrinter, [0]:{connection:{...tempPrinter[0]?.connection, accessCode:value}}})} /> */}
+                                        <TextInputGroupMain placeholder='eg. FDM' id='printer-type' value={tempPrinter?.type} onChange={(_event, value:any) => setTempPrinter({...tempPrinter, type:value})} />
 
-                            {/* <Content>{'IP ADDRESS: '+ ' ~Sortage test~'}</Content> */}
-                
-                            {/* <Content>{'STORAGE LOCATION: '+ ' ~Sortage test~'}</Content> */}
-                    
-                            {/* <Content>{'MATERIAL: '+ ' ~Material test~'}</Content> */}
-                    
-                            {/* <Content>{'MATERIAL REQUIRED: '+ ' ~Material Required test~'}</Content> */}
-                        
-                            {/* <Content>{'DURATION: '+ ' ~Duration test~'}</Content> */}
+                                        {/* <TextInputGroupMain value={tempPrinter.connection?.accessCode} onChange={(_event, value:any) => tempPrinter?.connection?.accessCode == value} /> */}
+
+                                    </TextInputGroup>
+                                </GridItem>
+                                {/* </FormGroup> */}
+                            </Grid>
                            
                         </Form>
                         {/* </PageSection> */}
@@ -291,6 +318,7 @@ export default function newPrinter () {
                             // //     }
                                 
                             // // })
+                            
                             updatePrinterList(tempPrinter);
                             // printer.push(tempPrinter);
                             // console.log(printer);
@@ -298,9 +326,10 @@ export default function newPrinter () {
                             // setPrinter(printer);
                             // printer.push(tempPrinter);
 
-                            console.log('Adding new Printer')
-                            setIsPrinterAddModalOpen(false)
-                            setTempPrinter({});
+                            // add back in after
+                            // console.log('Adding new Printer')
+                            // setIsPrinterAddModalOpen(false)
+                            // setTempPrinter({});
                         }}
                     >
                         {'ADD'}

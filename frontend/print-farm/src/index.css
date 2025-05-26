@@ -1,10 +1,12 @@
 :root {
+  border-radius: 21px;
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color-scheme: light dark;
   color: black;
-  background-color: #d1d1d1;
+  /* background-color: #d1d1d1; */
+  background-color: #1B1A4F;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;

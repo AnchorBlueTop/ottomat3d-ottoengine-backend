@@ -17,18 +17,23 @@
   height: 100vh;
 }
 .App-header {
-  background-color: var(--background-color-light);
+  background-color: transparent !important;
 
   color: black;
   color-scheme: light dark;
   /* font-size: calc(10px + 2vmin); */
-  height: 2.5rem;
+  height: 3.5rem;
   justify-content: center;
   display: flex;
   padding-bottom: 0.05rem;
   padding-top: 0.05rem;
   margin: 0.05rem;
-  border-radius: 5px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.pf-v6-c-timestamp {
+  color: white; 
 }
 
 .card {
@@ -47,13 +52,18 @@
   /* width: 15rem; */
   width: 100%;
   min-width: min-content;
-  
-  border-radius: var(--border-radius-m);
+  color: white !important;
+  /* border-radius: var(--border-radius-m); */
   background-color: var(--background-color-dark--blue);
   /* margin: 0.05rem; */
   justify-self: center;
   /* height: calc(100vh - 3.6rem); */
   height: 100%;
+  border-radius: 5rem ;
+}
+
+.pf-c-padding-right {
+  padding-right: 1rem;
 }
 
 .pf-custom-top-toolbar {
@@ -63,17 +73,18 @@
   background-color: var(--box-color-light);
   border-radius: var(--border-radius-m);
   margin-bottom: 0.2rem;
-  display: inline-flex;
+  display: flex;
   justify-content: center;
   padding: 0.2rem;
   align-items: flex-end;
   justify-content: flex-start;
+  padding-right: 0.5rem !important;
 }
 
 .pf-v6-c-page__main-section {
   margin: 0;
   border-radius: 10px;
-  height: calc(100vh - 0.1rem);
+  height: calc(100vh - 4.5rem);
 }
 
 .pf-custom-main {
@@ -98,17 +109,17 @@
 }
 
 .pf-c-navbar-button-active {
-  padding-inline: 0;
-  font-size: large;
-  color: var(--neon-lime);
+  padding-inline: 0 !important;
+  font-size: large !important;
+  color: var(--neon-lime) !important;
   border-radius: 0.5rem !important;
   background-color: transparent !important;
 }
 .pf-c-navbar-button {
-  padding-inline: 0;
-  font-size: large;
+  padding-inline: 0 !important;
+  font-size: large !important;
   border-radius: 0.5rem !important;
-  color: var(--background-color-light);
+  color: var(--background-color-light) !important;
   background-color: transparent !important;
 }
 
@@ -141,10 +152,12 @@
 }
 
 .pf-custom-dashboard {
-  background-color: var(--box-color-light);
+  background-color: var(--box-color-light) !important;
   border-radius: 10px;
-  height: calc(100vh - 8.55rem);
+  /* height: calc(100vh - 4.5rem); */
+  height: 100%;
   display: flex;
+  margin-right: 0.75rem;
   /* align-items: center; */
 }
 
@@ -199,8 +212,22 @@
 
 .pf-custom-new-print-job-modal {
   display: flex;
-  width: 45%;
+  width: 60%;
   align-items: center;
+}
+
+.pf-custom-new-printer-modal {
+  display: flex !important;
+  width: 60% !important;
+  align-items: center !important;
+  /* padding: 1rem !important; */
+}
+
+.pf-custom-new-ottoeject-modal {
+  display: flex !important;
+  width: 60% !important;
+  align-items: center !important;
+  /* padding: 1rem !important; */
 }
 
 .pf-custom-new-print-job {
@@ -210,12 +237,41 @@
   justify-self: center;
 }
 
+.pf-custom-new-printer {
+  height: auto !important;
+  padding: 2rem !important;
+  border-radius: 10px !important;
+  justify-self: center !important;
+}
+
+.pf-custom-new-ottoeject {
+  height: auto !important;
+  padding: 2rem !important;
+  border-radius: 10px !important;
+  justify-self: center !important;
+}
+
 .pf-custom-new-print-job-modal-footer {
+  padding-top: 1rem;
+}
+
+.pf-custom-align-center-vertically {
+  display: flex;
+  justify-content: center;
+  height: auto;
+}
+
+.pf-custom-new-ottoeject-modal-footer {
   padding-top: 1rem;
 }
 
 .pf-custom-text-align-left {
   text-align-last: left;
+}
+
+.pf-custom-align-center {
+  display: flex;
+  justify-content: center;
 }
 
 .pf-custom-upload-button-footer {

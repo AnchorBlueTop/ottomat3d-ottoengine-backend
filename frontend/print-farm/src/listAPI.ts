@@ -1,5 +1,5 @@
-import printerRepresentation from "./printerRepresentation";
-import readFile from "./readFileRepresentation";
+import printerRepresentation from "./representations/printerRepresentation";
+import readFile from "./representations/readFileRepresentation";
 
 const initHeader = () => {
     var myHeader = new Headers();

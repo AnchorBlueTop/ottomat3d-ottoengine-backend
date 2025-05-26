@@ -1,7 +1,7 @@
 import { moonraker } from "./listAPI";
 import { JobContext } from "./App";
 import { useContext, useEffect, useState } from "react";
-import printerRepresentation from "./printerRepresentation";
+import printerRepresentation from "./representations/printerRepresentation";
 
 export default function APILoader() {
     const {setPrinter} = useContext(JobContext);

@@ -21,7 +21,7 @@ import {
 } from '@patternfly/react-core';
 import UploadIcon from '@patternfly/react-icons/dist/esm/icons/upload-icon';
 import uploadBox from './public/box_icon.png';
-import readFile from './readFileRepresentation';
+import readFile from './representations/readFileRepresentation';
 
 export default function addPrintTask() {
     const { setIsPrintTaskModalOpen, setIsFileUploadModalOpen, setCurrentFiles, currentFiles, fileUploadModalOpen } = useContext(JobContext);
@@ -30,20 +30,20 @@ export default function addPrintTask() {
     const [showStatus, setShowStatus] = useState(false);
     const [statusIcon, setStatusIcon] = useState('inProgress');
 
-    console.log("IN ADD PRINT TASK")
-
+    // console.log("IN ADD PRINT TASK")
+    // setCurrentFiles([]);
     useEffect(() => {
-        if (readFileData.length < currentFiles.length) {
+        if (readFileData.length < currentFiles?.length) {
         setStatusIcon('inProgress');
         } else if (readFileData.every((file) => file.loadResult === 'success')) {
         setStatusIcon('success');
         } else {
         setStatusIcon('danger');
         }
-    }, [readFileData, currentFiles]);
+    }, [readFileData]);
 
     // only show the status component once a file has been uploaded, but keep the status list component itself even if all files are removed
-    if (!showStatus && currentFiles.length > 0) {
+    if (!showStatus && currentFiles?.length > 0) {
         setShowStatus(true);
     }
 
@@ -53,7 +53,7 @@ export default function addPrintTask() {
     // remove files from both state arrays based on their name
     const removeFiles = (namesOfFilesToRemove: string[]) => {
         const newCurrentFiles = currentFiles.filter(
-        (currentFile) => !namesOfFilesToRemove.some((fileName) => fileName === currentFile.name)
+        (currentFile : any) => !namesOfFilesToRemove.some((fileName) => fileName === currentFile.name)
         );
 
         setCurrentFiles(newCurrentFiles);
@@ -68,13 +68,13 @@ export default function addPrintTask() {
     /** Forces uploaded files to become corrupted if "Demonstrate error reporting by forcing uploads to fail" is selected in the example,
      * only used in this example for demonstration purposes */
     const updateCurrentFiles = (files: File[]) => {
-        setCurrentFiles((prevFiles) => [...prevFiles, ...files]);
+        setCurrentFiles((prevFiles: any) => [...prevFiles, ...files]);
     };
 
     // callback that will be called by the react dropzone with the newly dropped file objects
     const handleFileDrop = (_event: DropEvent, droppedFiles: File[]) => {
         // identify what, if any, files are re-uploads of already uploaded files
-        const currentFileNames = currentFiles.map((file) => file.name);
+        const currentFileNames = currentFiles.map((file: any) => file.name);
         const reUploads = droppedFiles.filter((droppedFile) => currentFileNames.includes(droppedFile.name));
 
         /** this promise chain is needed because if the file removal is done at the same time as the file adding react
@@ -115,9 +115,40 @@ export default function addPrintTask() {
     const uploadPrintFile = () => {
         setIsFileUploadModalOpen(false);
         setIsPrintTaskModalOpen(true);
-        console.log(currentFiles);
+        const readCurrentFile = currentFiles.map((item:any) => String(item)).join('\n');
+        // setCurrentFiles([]);
+        // console.log(readCurrentFile);
+        // console.log(currentFiles);
         // console.log(currentFiles[0].path)
     }
+
+    // Function to read the content of the uploaded GCODE files
+    // const readGcodeFiles = () => {
+    //     currentFiles.forEach((file) => {
+    //         const reader = new FileReader();
+    //         const fileResult = reader.readAsText(file);
+    //         console.log(fileResult);
+
+    //         reader.onload = () => {
+    //             if (reader.result) {
+    //                 handleReadSuccess(reader.result.toString(), file);
+    //             }
+    //         };
+    //         reader.onerror = () => {
+    //             if (reader.error) {
+    //                 handleReadFail(reader.error, file);
+    //             }
+    //         };
+    //         reader.readAsText(file);
+    //     });
+    // };
+
+    // // Trigger reading of files when files are updated
+    // useEffect(() => {
+    //     if (currentFiles.length > 0) {
+    //         readGcodeFiles();
+    //     }
+    // }, [currentFiles]);
 
     return (
         <>
@@ -152,7 +183,7 @@ export default function addPrintTask() {
                 />
                 {showStatus && (
                 <>
-                    {currentFiles.map((file) => (
+                    {currentFiles.map((file: any) => (
                     <MultipleFileUploadStatusItem
                         file={file}
                         key={file.name}
@@ -167,10 +198,11 @@ export default function addPrintTask() {
             </MultipleFileUpload>) : <>
                 {showStatus && (
                 <>
-                    {currentFiles.map((file) => (
+                    {currentFiles.map((file: any, index) => (
                         <MultipleFileUploadStatusItem
                             file={file}
-                            key={file.name}
+                            // key={file.name}
+                            key={index}
                             onClearClick={() => removeFiles([file.name])}
                             onReadSuccess={handleReadSuccess}
                             onReadFail={handleReadFail}
@@ -189,7 +221,7 @@ export default function addPrintTask() {
                     {'Close'}
                 </Button>
                 <Button 
-                    isDisabled={currentFiles.length==0}
+                    isDisabled={currentFiles?.length==0}
                     className="pf-custom-button"
                     onClick={() => uploadPrintFile()}
                 >

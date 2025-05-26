@@ -5,17 +5,23 @@ import addPrintTask from "../AddPrintTask";
 import newPrintJob from "../newPrintJob";
 import APILoader from "../loadAPI";
 import { moonraker } from "../listAPI";
+import AddNewPrintJobButton from "./buttons/addNewPrintJobButton";
+import { Printers } from "./Printers";
+import { Ottoeject } from "./OttoEject";
+import { Job } from "./Jobs";
 
 
 
 export default function Dashboard() {
-    const { printer, setIsFileUploadModalOpen, printTaskModalOpen, fileUploadModalOpen } = useContext(JobContext);
+    // const { printer, setIsFileUploadModalOpen, printTaskModalOpen, fileUploadModalOpen } = useContext(JobContext);
     // const [refresh] = useState(false);
     // const [workflow, setWorkflow] = useState<any>();
     // useEffect(() => {
     //     APILoader();
     // }, [refresh]);
-    APILoader();
+
+// COMMENT TEMPOARILY
+    // APILoader();
 
     // const workflow = () => {
     //     console.log(printer);
@@ -59,25 +65,32 @@ export default function Dashboard() {
                 </GridItem>
 
                 <GridItem span={10}> */}
-                    <GridItem rowSpan={1}>
+                    {/* <GridItem rowSpan={1}> */}
                         <PageSection id='top-toolbar' className="pf-custom-top-toolbar">
-                            <Button 
-                                id="add-print-button" 
-                                className="pf-custom-add-print-button"
-                                onClick={() => setIsFileUploadModalOpen(true)}
-                            >
-                                {'+ Add'}
-                            </Button>
+                            {/* {AddNewPrintJobButton()} */}
                         </PageSection>
-                    </GridItem>
+                    {/* </GridItem> */}
 
-                    <GridItem>
-                        <PageSection id='dashboard' className="pf-custom-dashboard">
-                            {/* {newPrintJob()}
-                            {addPrintTask()} */}
-                            {/* {workflow()} */}
-                        </PageSection>
-                    </GridItem>
+                    <Grid hasGutter> 
+                        <GridItem span={7} rowSpan={2}> 
+                            <PageSection>
+                                <Job />
+                            </PageSection>
+                        </GridItem>
+                        <GridItem span={5}>
+                            <Grid hasGutter>
+                                <GridItem span={12}>
+                                    <Printers />
+                                </GridItem>
+                                <GridItem span={12}>
+                                    <Ottoeject />
+                                </GridItem>
+                            </Grid>
+                        </GridItem>
+                        {/* {newPrintJob()}
+                            {addPrintTask()}
+                            {workflow()} */}
+                    </Grid>
                 {/* </GridItem> */}
                 
             </Grid>

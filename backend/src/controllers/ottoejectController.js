@@ -38,7 +38,7 @@ const ottoejectController = {
             res.status(201).json({
                 id: newOttoeject.id,
                 device_name: newOttoeject.device_name,
-                status: "ONLINE", // Default static response as per API doc example for creation; actual status is polled.
+                //status: "ONLINE", // Default static response as per API doc example for creation; actual status is polled.
                 message: "Ottoeject registered successfully"
             });
         } catch (error) {
@@ -65,7 +65,8 @@ const ottoejectController = {
             const responseOttoejects = ottoejectsFromDb.map(o => ({
                 id: o.id,
                 device_name: o.device_name,
-                status: "ONLINE", // Placeholder static status for list
+                //status: "ONLINE", // Placeholder static status for list
+                ip_address: o.ip_address,
                 // gantry_size_mm: null, // Placeholder or default
                 // storage_rack: null    // Placeholder or default
             }));
@@ -101,6 +102,7 @@ const ottoejectController = {
                 id: ottoejectFromDb.id,
                 device_name: ottoejectFromDb.device_name,
                 status: liveDeviceStatus, // Live status
+                ip_address: ottoejectFromDb.ip_address
                 // gantry_size_mm: null, // From DB if stored later
                 // storage_rack: null    // From DB if stored later
             });
@@ -134,7 +136,7 @@ const ottoejectController = {
             res.status(200).json({
                 id: updatedOttoeject.id,
                 device_name: updatedOttoeject.device_name,
-                status: "ONLINE", // Placeholder after update, actual is polled by /status
+                //status: "ONLINE", // Placeholder after update, actual is polled by /status
                 message: "Ottoeject updated successfully"
             });
         } catch (error) {

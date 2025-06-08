@@ -1,4 +1,4 @@
-OTTOMAT3D - Python Automation Scripts Quick Start
+# OTTOMAT3D - Python PoC Scripts 
 
 This guide covers running the Python scripts that control the 3D printer and OTTOeject automation via the backend API.
 
@@ -9,7 +9,7 @@ This guide covers running the Python scripts that control the 3D printer and OTT
 
 Running the Main Automation Loop Script
 
-The primary script is typically named `bambu_loop_via_backend_v0.1.py` or similar, located in the `python-scripts` directory.
+The primary script is typically named `bambu_loop_via_backend.py` or similar, located in the `python-scripts` directory.
 
 1. Setup Python Environment (one-time per machine/clone)
 
@@ -27,7 +27,7 @@ The primary script is typically named `bambu_loop_via_backend_v0.1.py` or simila
 
 2. Configure the Script
 
-   a. Open `bambu_loop_via_backend_v0.1.py` (or the current main loop script) in a text editor.
+   a. Open `bambu_loop_via_backend.py` (or the current main loop script) in a text editor.
 
    b. **Update these critical configuration variables at the top of the script:**
       *   `BACKEND_BASE_URL`: Set to the backend API URL (e.g., `"http://localhost:3000/api"`).

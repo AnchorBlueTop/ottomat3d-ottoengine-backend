@@ -1,0 +1,538 @@
+{
+	"info": {
+		"_postman_id": "0bc8d4e3-bca2-4da4-89a8-fe2edd9b489b",
+		"name": "Ottoengine APIs",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "45570471",
+		"_collection_link": "https://ottomat3d-4549719.postman.co/workspace/Ottomat3d's-Workspace~c9ec75ae-3bc9-4ce5-87b4-26d9e4d21d9e/collection/45570471-0bc8d4e3-bca2-4da4-89a8-fe2edd9b489b?action=share&source=collection_link&creator=45570471"
+	},
+	"item": [
+		{
+			"name": "Register a Printer",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\": \"My_P1P\",\r\n    \"brand\": \"Bambu Lab\",\r\n    \"model\": \"P1P\",\r\n    \"type\": \"FDM\",\r\n    \"ip_address\": \"192.168.68.68\",\r\n    \"access_code\": \"14358945\",\r\n    \"serial_number\": \"01S00C371700385\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/printers",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"printers"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get All Printers",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/printers",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"printers"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Printer by ID",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/printers/1",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"printers",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Printer Status by ID",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/printers/1/status",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"printers",
+						"1",
+						"status"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Send G-Code to Printer (Bed Movement)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"gcode\": \"G90\\nG1 Z150 F3000\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/printers/1/send-gcode",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"printers",
+						"1",
+						"send-gcode"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Start Print (File on Printer)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"filename\": \"PrintTestCubex1_V3.gcode.3mf\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/printers/1/start-print",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"printers",
+						"1",
+						"start-print"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Printer Details",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"ip_address\": \"192.168.68.68\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/printers/1/",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"printers",
+						"1",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete a Printer",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/printers/1",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"printers",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Register an Ottoeject",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"device_name\": \"OttoEject-Mk2\",\r\n    \"ip_address\": \"192.168.68.74\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/ottoeject",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"ottoeject"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get all Ottoeject Devices",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/ottoeject",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"ottoeject"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Retrieve Ottoeject by ID",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/ottoeject/1",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"ottoeject",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Retrieve Ottoeject Status by ID",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/ottoeject/1/status",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"ottoeject",
+						"1",
+						"status"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Ottoeject details",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"ip_address\": \"pi31.local\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/ottoeject/1",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"ottoeject",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Delete an Ottoeject",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/ottoeject/1",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"ottoeject",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Home Ottoeject",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"macro\": \"OTTOEJECT_HOME\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/ottoeject/1/macros",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"ottoeject",
+						"1",
+						"macros"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Eject From P1",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"macro\": \"EJECT_FROM_P1\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/ottoeject/1/macros",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"ottoeject",
+						"1",
+						"macros"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Store To Slot 3",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"macro\": \"STORE_TO_SLOT_3\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/ottoeject/1/macros",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"ottoeject",
+						"1",
+						"macros"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Grab From Slot 1",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"macro\": \"GRAB_FROM_SLOT_1\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/ottoeject/1/macros",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"ottoeject",
+						"1",
+						"macros"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Load Onto P1",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"macro\": \"LOAD_ONTO_P1\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/ottoeject/1/macros",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"ottoeject",
+						"1",
+						"macros"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Park Ottoeject",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"macro\": \"GRAB_FROM_SLOT_1\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/ottoeject/1/macros",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"ottoeject",
+						"1",
+						"macros"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		}
+	]
+}

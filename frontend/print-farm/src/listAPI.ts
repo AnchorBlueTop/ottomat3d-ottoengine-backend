@@ -1,4 +1,4 @@
-import printerRepresentation from "./representations/printerRepresentation";
+import { PrinterRepresentation } from "./representations/printerRepresentation";
 import readFile from "./representations/readFileRepresentation";
 
 const initHeader = () => {
@@ -35,7 +35,7 @@ export class moonraker {
     // PRINTER API
     fetchPrinterInfo = async (
         printerURL: String
-    ): Promise<printerRepresentation> => {
+    ): Promise<PrinterRepresentation> => {
         var requestOptions = {
             method: 'GET',
             headers: initHeader()

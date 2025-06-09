@@ -8,7 +8,7 @@ export default function AddNewPrintJobButton () {
     return ( 
         <Button 
             id="add-print-button" 
-            className="pf-custom-add-print-button"
+            className="pf-custom-add-button"
             onClick={() => {setCurrentFiles([]),setIsFileUploadModalOpen(true)}}
         >
             {'+ Add New Print Job'}

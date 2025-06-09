@@ -10,7 +10,8 @@ import {
 
 
 // const BASE_URL = import.meta.env.BASE_URL || 'http://localhost:3000'; 
-const BASE_URL = 'http://localhost:3000';
+// const BASE_URL = 'http://localhost:3000';
+const BASE_URL = 'http://100.79.73.105:3000';
 
 /////// OTTO PRINTER APIs ///////
 export const registerPrinter = async (printerData: PrinterRegistrationRepresentation): Promise<PrinterRepresentation> => {
@@ -104,6 +105,20 @@ export const deletePrinter = async (id: number): Promise<void> => {
       throw new Error(`Error deleting printer with ID ${id}: ${response.statusText}`);
     }
 };
+
+export const uploadFile = async (file: File, id: number) => {
+const formdata = new FormData();
+formdata.append("file", file, file.name);
+
+  const response = await fetch(`${BASE_URL}/api/printers/${id}/upload`, {
+    method: "POST",
+    body: formdata,
+  });
+  if (!response.ok) {
+    throw new Error(`Error uploading file: ${response.statusText}`);
+  }
+  return response.json();
+}
 
 /////// OTTO EJECT APIs ///////
 

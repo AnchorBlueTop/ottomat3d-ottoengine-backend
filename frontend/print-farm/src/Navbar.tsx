@@ -83,7 +83,9 @@
 import { Brand, Button, Content, ContentVariants, Nav, NavList, PageSection } from '@patternfly/react-core';
 import fullLogoWhite from './public/Ottomat3d Logo-White.png';
 import logoWhite from './public/Ottomat3d Logomark - White.png';
-// import { PrinterIcon, ListOrderedIcon, SettingsIcon, HomeIcon } from 'lucide-react';
+import PrintJobIcon from './public/PrintJob-Icon.svg';
+import PrinterIcon from './public/printer-Icon.svg'
+import OttoEjectIcon from './public/ottoEject-Icon.svg'
 interface NavbarProps {
     activeTab: string;
     setActiveTab: (tab: string) => void;
@@ -98,16 +100,16 @@ export function Navbar({
         // icon: HomeIcon
     }, {
         id: 'jobs',
-        label: 'Print Jobs'
-        // icon:
+        label: 'Print Jobs',
+        icon: PrintJobIcon
     }, {
         id: 'printers',
         label: 'Printers',
-        // icon: PrinterIcon
+        icon: PrinterIcon
     }, {
         id: 'eject',
         label: 'OTTOeject',
-        // icon: ListOrderedIcon
+        icon: OttoEjectIcon
     }, {
         id: 'rack',
         label: 'OTTOrack',
@@ -131,6 +133,7 @@ export function Navbar({
                         className={activeTab === item.id ? 'pf-c-navbar-button-active' : 'pf-c-navbar-button'}
                     >
                         {/* <item.icon className="mr-3 h-5 w-5" /> */}
+                        {/* <Brand src={item.icon} alt={item.label} className='pf-custom-nav-icon'/> */}
                         <Content className={activeTab === item.id ? 'pf-c-navbar-button-active' : 'pf-c-navbar-button'} content={ContentVariants.h2}>{item.label}</Content>
                     </Button>
                 </li>)}

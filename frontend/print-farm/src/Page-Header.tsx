@@ -6,12 +6,7 @@ export function PageHeader() {
     const currentDate = new Date();
     return (
         <Masthead className='App-header'>
-            {/* <Content> */}
-                {/* <Content component={ContentVariants.h1}> */}
-                    {/* <Brand src={fullLogoWhite} alt={"print job thumbnail"} style={{height:'2.5rem'}}/> */}
-                    <Timestamp date={currentDate} dateFormat={TimestampFormat.full} />
-                {/* </Content> */}
-            {/* </Content> */}
+            <Timestamp date={currentDate} dateFormat={TimestampFormat.full} />
         </Masthead>
     )
 }

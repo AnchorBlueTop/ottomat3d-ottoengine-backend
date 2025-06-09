@@ -7,7 +7,7 @@ export default function AddNewOttoejectButton () {
     return ( 
         <Button 
             id="add-ottoeject-button" 
-            className="pf-custom-add-print-button"
+            className="pf-custom-add-button"
             onClick={() => setIsOttoejectAddModalOpen(true)}
         >
             {'+ Add New OTTOeject'}

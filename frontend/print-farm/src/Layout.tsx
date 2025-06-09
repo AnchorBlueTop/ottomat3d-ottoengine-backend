@@ -1,6 +1,6 @@
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode, useContext, useState } from 'react';
 import { QueueManagement } from './components/QueueManagement';
-import { Brand, Content, ContentVariants, Divider, Grid, GridItem, Masthead, PageSection } from '@patternfly/react-core';
+import { AlertGroup, Brand, Content, ContentVariants, Divider, Grid, GridItem, Masthead, PageSection } from '@patternfly/react-core';
 import { Navbar } from './Navbar';
 import { Printers } from './components/Printers';
 import { PageHeader } from './Page-Header';
@@ -8,6 +8,8 @@ import Dashboard from './components/Dashboard';
 import fullLogoWhite from './public/Ottomat3d Logo-White.png';
 import { Job } from './components/Jobs';
 import { Ottoeject } from './components/OttoEject';
+import { JobContext } from './App';
+import { Ottorack } from './components/OttoRack';
 // import { Job } from './Jobs';
 // import { PrinterStatus } from './PrinterStatus';
 // import { JobDetails } from './JobDetails';
@@ -39,7 +41,7 @@ export function Layout({
             case 'eject':
                 return <Ottoeject />;
             case 'rack':
-                return <></>;
+                return <Ottorack/>;
             default:
                 return <Dashboard />;
         }
@@ -55,7 +57,7 @@ export function Layout({
                 <PageHeader />
                 <PageSection className="pf-custom-dashboard">{
                     <>
-                        <Masthead className='App-header'>
+                        <Masthead className='Main-header'>
                             <Content content={ContentVariants.h2}>
                                 {activeTab === 'dashboard' && 'Dashboard'}
                                 {activeTab === 'jobs' && ("Print Jobs")}

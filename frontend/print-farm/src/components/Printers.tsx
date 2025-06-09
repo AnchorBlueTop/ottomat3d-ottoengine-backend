@@ -9,7 +9,7 @@ import {
     Tr,
     Td
 } from "@patternfly/react-table";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect } from "react";
 import { JobContext } from "../App";
 import newPrinter from "./modals/newPrinterModal";
 import editPrinter from "./modals/editPrinter";
@@ -18,31 +18,27 @@ import { getAllPrinters, getPrinterById } from "../ottoengine_API";
 import { PrinterRepresentation } from "../representations/printerRepresentation";
 
 export function Printers() {
-    const { printer, setPrinter, setIsPrinterAddModalOpen, setIsPrinterEditModalOpen, printerIndex, setPrinterIndex } = useContext(JobContext);
+    const { printer, setPrinter, setIsPrinterEditModalOpen, setPrinterIndex } = useContext(JobContext);
     const printerFecth = async () => {
         var tempPrinterList: PrinterRepresentation[] = [];
 
-
         // TODO: UPDATE PRINT BED TEMP MORE FREQUENTLY
         getAllPrinters().then((allPrinters) => {
-            allPrinters.map((value, index) => {
+            allPrinters.map((value) => {
                 if (value.id && !printer.find((e) => e.id === value.id)?.id) {
                     getPrinterById(value.id).then((printerData) => {
                         tempPrinterList.push(printerData);
                         setPrinter(tempPrinterList);
                     })
                 }
-
             })
         });
-
     }
 
     const printerList = () => {
         if (printer) {
             return (
                 <>
-
                     <Table>
                         <Thead>
                             <Tr>
@@ -68,10 +64,9 @@ export function Printers() {
                                 </Tr>
                             ))}
                         </Tbody>
-
                     </Table>
-
-                </>)
+                </>
+            )
         }
     }
 

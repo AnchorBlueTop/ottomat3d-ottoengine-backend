@@ -1,8 +1,6 @@
 import {
     Brand,
     Button,
-    Card,
-    CardHeader,
     Content,
     ContentVariants,
     Form,
@@ -17,7 +15,7 @@ import {
     TextInputGroup,
     TextInputGroupMain
 } from "@patternfly/react-core";
-import { Component, useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { JobContext } from "../../App.tsx";
 import PrinterIcon from '../../public/printer-Icon.svg'
 import thumbnail from '../../public/thumbnail.png';
@@ -39,18 +37,11 @@ export default function editPrinter() {
         }
     }
 
-    // async () => {
-    // while(printerEditModalOpen) {
-        console.log( 'in while loop')
         async() => {
             if(printerIndex || printerIndex == 0) {
-                
                 const printerStatus = getPrinterStatusById(printer[printerIndex!].id!).then(async e => {
-            // }
-            console.log(e);
             setTempPrinter({...tempPrinter, status: e.status});
             if (e.status === 'ONLINE') {
-                
                 // result = taskResult;
             } else if (e.status === 'FAILED') {
                 throw new Error(`Task ${printerStatus} failed!`);
@@ -63,7 +54,6 @@ export default function editPrinter() {
         }
         await new Promise(resolve => setTimeout(resolve, 3000));
     }
-    // }
 
     const deletingPrinter = (id?: any) => {
         deletePrinter(id);

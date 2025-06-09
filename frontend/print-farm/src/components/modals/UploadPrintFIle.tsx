@@ -50,7 +50,6 @@ export default function uploadPrintFile() {
     };
 
     const updateCurrentFiles = (files: File[]) => {
-        console.log(files);
         setCurrentFiles((prevFiles: any) => [...prevFiles, ...files]);
     };
 
@@ -88,10 +87,7 @@ export default function uploadPrintFile() {
     const uploadPrintFile = async () => {
         setIsFileUploadModalOpen(false);
         setIsPrintTaskModalOpen(true);
-        console.log(currentFiles[0]);
-        
         await uploadFile(currentFiles[0], 1);
-        
         const readCurrentFile = currentFiles.map((item: any) => String(item)).join('\n');
     }
 

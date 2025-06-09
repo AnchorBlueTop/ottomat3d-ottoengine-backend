@@ -11,11 +11,8 @@ import {
 } from "@patternfly/react-table";
 import { useContext, useEffect, useState } from "react";
 import { JobContext } from "../App";
-// import { getAllOttoracks, getOttorackById } from "../ottoengine_API";
 import AddNewOttorackButton from "./buttons/addNewOttorackButton";
 import newOttorack from "./modals/newOttorackModal";
-// import editOttorack from "./modals/editOttorack";
-// import { OttoejectDevice } from "../representations/ottoejectRepresentation";
 import { OttoRack } from "../representations/ottorackRepresentation";
 import editOttorack from "./modals/editOttorack";
 
@@ -23,9 +20,9 @@ export function Ottorack() {
     const { ottorack, setOttorack, ottorackIndex, setOttorackIndex, setIsOttorackEditModalOpen } = useContext(JobContext);
 
     const ottoRackFecth = async () => {
-    var tempOttorackList: OttoRack[] = [];
+        var tempOttorackList: OttoRack[] = [];
 
-//  TODO: IMPLEMENT ONCE API EXITS
+        //  TODO: IMPLEMENT ONCE API EXITS
         // getAllOttoracks().then((allOttoracks) => {
         //     allOttoracks.map((value, index) => {
         //         if (value.id && !ottorack.find((e) => e.id === value.id)?.id) {
@@ -43,31 +40,31 @@ export function Ottorack() {
         if (ottorack) {
             return (
                 <>
-                  {ottorack.length ? 
-                    <Table>
-                        <Thead>
-                            <Tr>
-                                <Th>{'Name'}</Th>
-                                <Th>{'Number of Shelves'}</Th>
-                            </Tr>
-                        </Thead>
-                        <Tbody>
-                            {ottorack.map((value, index) => (
-                                <Tr
-                                    key={index}
-                                    onClick={() => {
-                                        setOttorackIndex(index);
-                                        setIsOttorackEditModalOpen(true);
-                                    }}
-                                >
-                                    <Td>{value.name}</Td>
-                                    <Td>{value.shelves?.length}</Td>
+                    {ottorack.length ?
+                        <Table>
+                            <Thead>
+                                <Tr>
+                                    <Th>{'Name'}</Th>
+                                    <Th>{'Number of Shelves'}</Th>
                                 </Tr>
-                            ))}
-                        </Tbody>
+                            </Thead>
+                            <Tbody>
+                                {ottorack.map((value, index) => (
+                                    <Tr
+                                        key={index}
+                                        onClick={() => {
+                                            setOttorackIndex(index);
+                                            setIsOttorackEditModalOpen(true);
+                                        }}
+                                    >
+                                        <Td>{value.name}</Td>
+                                        <Td>{value.shelves?.length}</Td>
+                                    </Tr>
+                                ))}
+                            </Tbody>
 
-                    </Table> : ''
-                  }
+                        </Table> : ''
+                    }
                 </>)
         }
     }

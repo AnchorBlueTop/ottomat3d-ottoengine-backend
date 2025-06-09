@@ -1,27 +1,27 @@
-import { Brand, Button, Card, CardHeader, Content, ContentVariants, Form, FormGroup, Grid, GridItem, Modal, ModalFooter, ModalHeader, PageSection } from "@patternfly/react-core";
-import { Component, useContext, useDebugValue, useEffect, useState } from "react";
+import { Brand, Button, Content, ContentVariants, Form, FormGroup, Grid, GridItem, Modal, ModalFooter, ModalHeader, PageSection } from "@patternfly/react-core";
+import { useContext, useEffect, useState } from "react";
 import { JobContext } from "../../App";
 import PrintJobIcon from '../../public/PrintJob-Icon.svg'
 import thumbnail from '../../public/thumbnail.png';
 import PrintJobRepresentation from "../../representations/printJobRepresentation";
+import JSZip from 'jszip';
 
 export default function newPrintJob() {
-    const { printer, setPrinter, currentFiles, printTaskModalOpen, setIsPrintTaskModalOpen, setCurrentFiles, printJob, setPrintJob, setPrintFile, printFile } = useContext(JobContext);
+    const { currentFiles, printTaskModalOpen, setIsPrintTaskModalOpen, setCurrentFiles, setPrintJob, setPrintFile, printFile } = useContext(JobContext);
     const [fileRead, setFileRead] = useState();
     var uniqueId: number | string = '';
     var fileDetails: PrintJobRepresentation = {};
 
     const generateJobId = () => {
-        const timestamp = new Date().getTime();
         uniqueId = (Math.random().toString(36).substring(2));
         return uniqueId;
     };
 
     const readUploadedFile = (file: any[]): Promise<string | any> => {
-        const fileRead = new Promise((resolve, reject) => {
+        const fileRead = new Promise(async () => {
             const reader = new FileReader();
-            if (file?.[0]) {
-                
+            if (file?.[0] && !file?.[0].name?.includes('3mf')) {
+
                 reader.onload = (event) => {
                     const result = event.target?.result as string;
                     const processedResult = result.split('\n').map((item: any) => String(item)).join('\n');
@@ -94,10 +94,98 @@ export default function newPrintJob() {
                     }
                     setPrintFile(fileDetails);
                     return result;
-                }
+                };
 
                 if (file && file[0] instanceof Blob) {
                     reader.readAsText(file[0]);
+                }
+            } else if (file?.[0] && file?.[0].name?.includes('3mf')) {
+                try {
+                    const zip = new JSZip();
+
+                    // Read the .3mf file as a ZIP archive
+                    const fileData = await file[0]?.arrayBuffer();
+                    const zipContent = await zip.loadAsync(fileData);
+
+                    // Find the main XML file (e.g., ".gcode")
+                    const mainFile = Object.keys(zipContent.files).find((fileName) =>
+                        fileName.toLowerCase().endsWith('.gcode')
+                    );
+                    const fileContent = await zipContent.files[mainFile!].async('text');
+                    if (typeof mainFile === 'string') {
+                        const processedResult = fileContent.split('\n').map((item: any) => String(item)).join('\n');
+                        setCurrentFiles([processedResult]);
+
+                        //PRINTER MODEL EXTRACT
+                        const printerRegex = /printer_model = (.*)/;
+                        const matchPrinter = processedResult.match(printerRegex);
+                        const matchedPrinter = () => {
+                            if (matchPrinter && matchPrinter[1]) {
+                                return matchPrinter[1].trim();
+                            } else {
+                                return 'Unknown Printer';
+                            }
+                        }
+
+                        // PRINTFILE DURATION EXTRACT 
+                        const printDurationRegex = /total estimated time: (.*)/;
+                        const matchPrintDuration = processedResult.match(printDurationRegex);
+                        const matchedPrintDuration = () => {
+                            if (matchPrintDuration && matchPrintDuration[1]) {
+                                return matchPrintDuration[1].trim();
+                            } else {
+                                return 'Unknown Duration';
+                            }
+                        }
+
+                        // PRINTFILE FILAMENT_TYPE EXTRACT 
+                        const printFilamentTypeRegex = /filament_type = (.*)/;
+                        const matchFilamentType = processedResult.match(printFilamentTypeRegex);
+                        const matchedFilamentType = () => {
+                            if (matchFilamentType && matchFilamentType[1]) {
+                                return matchFilamentType[1].trim();
+                            } else {
+                                return 'Unknown Filament Type';
+                            }
+                        }
+
+                        // PRINTFILE FILAMENT_REQ_WEIGHT EXTRACT 
+                        const printFilamentWeightRegex = /total filament weight \[g\] : (.*)/;
+                        const matchFilamentWeight = processedResult.match(printFilamentWeightRegex);
+                        const matchedFilamentWeight = () => {
+                            if (matchFilamentWeight && matchFilamentWeight[1]) {
+                                return matchFilamentWeight[1].trim() + ' (grams)';
+                            } else {
+                                return 'Unknown Filament Weight';
+                            }
+                        }
+
+                        // PRINTFILE FILAMENT_REQ_LENGTH EXTRACT 
+                        const printFilamentLengthRegex = /total filament length \[mm\] : (.*)/;
+                        const matchFilamentLength = processedResult.match(printFilamentLengthRegex);
+                        const matchedFilamentLength = () => {
+                            if (matchFilamentLength && matchFilamentLength[1]) {
+                                return matchFilamentLength[1].trim() + ' (mm)';
+                            } else {
+                                return 'Unknown Filament Length';
+                            }
+                        }
+
+                        fileDetails = {
+                            id: uniqueId.toString(),
+                            name: file?.[0]?.name,
+                            printer: matchedPrinter(),
+                            duration: matchedPrintDuration(),
+                            filament: matchedFilamentType(),
+                            filament_weight: matchedFilamentWeight(),
+                            filament_length: matchedFilamentLength(),
+                            status: 'NEW'
+                        }
+                        setPrintFile(fileDetails);
+                        return processedResult;
+                    }
+                } catch (error) {
+                    console.error('Error processing .3mf file:', error);
                 }
             }
         });

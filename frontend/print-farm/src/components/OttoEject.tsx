@@ -9,7 +9,7 @@ import {
     Tr,
     Td
 } from "@patternfly/react-table";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect } from "react";
 import { JobContext } from "../App";
 import { getAllOttoejectDevices, getOttoejectById } from "../ottoengine_API";
 import AddNewOttoejectButton from "./buttons/addNewOttoejectButton";
@@ -18,13 +18,13 @@ import editOttoeject from "./modals/editOttoeject";
 import { OttoejectDevice } from "../representations/ottoejectRepresentation";
 
 export function Ottoeject() {
-    const { ottoeject, setOttoeject, ottoejectIndex, setOttoejectIndex, setIsOttoejectEditModalOpen } = useContext(JobContext);
+    const { ottoeject, setOttoeject, setOttoejectIndex, setIsOttoejectEditModalOpen } = useContext(JobContext);
 
     const ottoEjectFecth = async () => {
         var tempOttoejectList: OttoejectDevice[] = [];
 
         getAllOttoejectDevices().then((allOttoejects) => {
-            allOttoejects.map((value, index) => {
+            allOttoejects.map((value) => {
                 if (value.id && !ottoeject.find((e) => e.id === value.id)?.id) {
                     getOttoejectById(value.id).then((ottoejectData) => {
                         tempOttoejectList.push(ottoejectData);
@@ -40,7 +40,6 @@ export function Ottoeject() {
         if (ottoeject) {
             return (
                 <>
-
                     <Table>
                         <Thead>
                             <Tr>
@@ -62,9 +61,7 @@ export function Ottoeject() {
                                 </Tr>
                             ))}
                         </Tbody>
-
                     </Table>
-
                 </>)
         }
     }

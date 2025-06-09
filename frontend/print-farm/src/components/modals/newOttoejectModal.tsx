@@ -1,8 +1,6 @@
 import {
     Brand,
     Button,
-    Card,
-    CardHeader,
     Content,
     ContentVariants,
     Form,

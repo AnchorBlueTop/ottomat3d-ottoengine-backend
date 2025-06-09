@@ -3,15 +3,15 @@ import { useContext, useEffect, useState } from "react";
 import { JobContext } from "../../App";
 import { QueueRepresentation } from "../../representations/printJobRepresentation";
 import { Table, Thead, Tr, Th, Tbody, Td } from "@patternfly/react-table";
-import  startQueue  from '../Queue.tsx';
+import startQueue from '../Queue.tsx';
 
-export default function newJobQueue() { 
-    const { queue, setQueue, jobQueueModalOpen, setIsJobQueueModalOpen, selectedJobIDs, printer, setQueueIndex, queueIndex, ottoeject, setPrintJob, printJob } = useContext(JobContext);
+export default function newJobQueue() {
+    const { setQueue, jobQueueModalOpen, setIsJobQueueModalOpen, selectedJobIDs, printer, ottoeject, setPrintJob, printJob } = useContext(JobContext);
     const [tempQueue, setTempQueue] = useState<QueueRepresentation[]>([]);
 
     useEffect(() => {
         if (selectedJobIDs.length > 0) {
-            if(printJob){
+            if (printJob) {
                 const initialQueue: QueueRepresentation[] = selectedJobIDs.map(idRef => ({
                     fileName: printJob.find(e => e.id === idRef)?.name,
                     printJobId: idRef,
@@ -49,11 +49,9 @@ export default function newJobQueue() {
     };
 
     const createQueue = () => {
-        console.log('Creating Queue:', tempQueue);
         setQueue(tempQueue);
         startQueue(tempQueue, ottoeject, setPrintJob);
         setIsJobQueueModalOpen(false);
-
     }
 
     return (
@@ -94,7 +92,7 @@ export default function newJobQueue() {
                                                 </Td>
                                                 <Td data-label="Printer" width={50}>
                                                     <FormSelect
-                                                        value={job.printer?.model || ''} 
+                                                        value={job.printer?.model || ''}
                                                         onChange={(_event, value) => handlePrinterChange(index, value)}
                                                         aria-label={`Select printer for ${job.fileName}`}
                                                     >

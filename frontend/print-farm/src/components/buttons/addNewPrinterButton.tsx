@@ -7,7 +7,7 @@ export default function AddNewPrinterButton () {
     return ( 
         <Button 
             id="add-printer-button" 
-            className="pf-custom-add-print-button"
+            className="pf-custom-add-button"
             onClick={() => setIsPrinterAddModalOpen(true)}
         >
             {'+ Add New Printer'}

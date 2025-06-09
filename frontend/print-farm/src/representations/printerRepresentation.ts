@@ -31,5 +31,6 @@ export interface GCodePayload {
 
 export interface StartPrintPayload {
     filename: string;
+    printJobId?: string;
 }
 

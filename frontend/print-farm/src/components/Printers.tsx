@@ -1,7 +1,5 @@
 import {
-    PageSection,
-    Button,
-    Content,
+    PageSection
 } from "@patternfly/react-core";
 import {
     Table,
@@ -13,8 +11,8 @@ import {
 } from "@patternfly/react-table";
 import { useContext, useEffect, useState } from "react";
 import { JobContext } from "../App";
-import newPrinter from "./newPrinterModal";
-import editPrinter from "./editPrinter";
+import newPrinter from "./modals/newPrinterModal";
+import editPrinter from "./modals/editPrinter";
 import AddNewPrinterButton from "./buttons/addNewPrinterButton";
 import { getAllPrinters, getPrinterById } from "../ottoengine_API";
 import { PrinterRepresentation } from "../representations/printerRepresentation";
@@ -24,6 +22,8 @@ export function Printers() {
     const printerFecth = async () => {
         var tempPrinterList: PrinterRepresentation[] = [];
 
+
+        // TODO: UPDATE PRINT BED TEMP MORE FREQUENTLY
         getAllPrinters().then((allPrinters) => {
             allPrinters.map((value, index) => {
                 if (value.id && !printer.find((e) => e.id === value.id)?.id) {
@@ -46,10 +46,10 @@ export function Printers() {
                     <Table>
                         <Thead>
                             <Tr>
-                                <Th>Name</Th>
-                                <Th>Brand</Th>
-                                <Th>Model</Th>
-                                <Th>Bed Temperature</Th>
+                                <Th>{'Name'}</Th>
+                                <Th>{'Brand'}</Th>
+                                <Th>{'Model'}</Th>
+                                <Th>{'Bed Temperature'}</Th>
                             </Tr>
                         </Thead>
                         <Tbody>
@@ -82,7 +82,6 @@ export function Printers() {
 
     return (
         <>
-            <h2 className="text-2xl font-bold mb-6">Printer Management</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
                 <PageSection id='top-toolbar' className="pf-custom-top-toolbar">

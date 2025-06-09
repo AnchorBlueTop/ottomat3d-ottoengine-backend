@@ -1,11 +1,13 @@
 import {
+  AlertProps,
   // Button,
   Page,
   PageSection,
+  Spinner,
   // PageSection
 } from "@patternfly/react-core";
 // import './App.css';
-import React, { createContext, ReactNode, useContext, useState } from "react";
+import React, { createContext, ReactNode, useContext, useEffect, useState } from "react";
 // import { moonraker } from "./listAPI";
 import { PageHeader } from "./Page-Header";
 // import addPrintTask from "./AddPrintTask";
@@ -20,262 +22,175 @@ import { Layout } from "./Layout";
 import { QueueManagement } from "./components/QueueManagement";
 import './App.css';
 import { OttoejectDevice } from "./representations/ottoejectRepresentation";
-import PrintJobRepresentation from "./representations/printJobRepresentation";
-
+import PrintJobRepresentation, { QueueRepresentation } from "./representations/printJobRepresentation";
+import { OttoRack } from "./representations/ottorackRepresentation";
 
 interface Props {
   children: ReactNode;
 }
 
-//FROM GEN
-// export type JobStatus = 'pending' | 'printing' | 'completed' | 'failed' | 'paused';
-// export interface PrintJob {
-//   id?: string;
-//   name?: string;
-//   fileName?: string;
-//   filamentType?: string;
-//   filamentColor?: string;
-//   estimatedTime?: number; // in minutes
-//   progress?: number; // 0-100
-//   status?: JobStatus;
-//   printer?: string;
-//   createdAt?: Date;
-//   startedAt?: Date;
-//   completedAt?: Date;
-//   thumbnailUrl?: string;
-//   settings?: {
-//     layerHeight: number;
-//     infill: number;
-//     supportEnabled: boolean;
-//     temperature: number;
-//     bedTemperature: number;
-//   };
-// }
-
-
 type ContextType = {
-  //Original old
+  // Printer context
   printer: PrinterRepresentation[];
   setPrinter: React.Dispatch<React.SetStateAction<PrinterRepresentation[]>>;
-  ottoeject: OttoejectDevice[];
-  setOttoeject: React.Dispatch<React.SetStateAction<OttoejectDevice[]>>;
-  printTaskModalOpen: boolean;
-  setIsPrintTaskModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  fileUploadModalOpen: boolean;
-  setIsFileUploadModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   printerAddModalOpen: boolean;
   setIsPrinterAddModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  printerEditModalOpen: boolean;
+  setIsPrinterEditModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  printerIndex: number | undefined;
+  setPrinterIndex: React.Dispatch<React.SetStateAction<number | undefined>>;
+
+  // Otto - Eject context
+  ottoeject: OttoejectDevice[];
+  setOttoeject: React.Dispatch<React.SetStateAction<OttoejectDevice[]>>;
   ottoejectAddModalOpen: boolean;
   setIsOttoejectAddModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   ottoejectEditModalOpen: boolean;
   setIsOttoejectEditModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  ottoejectIndex: number | undefined;
+  setOttoejectIndex: React.Dispatch<React.SetStateAction<number | undefined>>;
+
+  // Otto - Rack context
+  ottorack: OttoRack[];
+  setOttorack: React.Dispatch<React.SetStateAction<OttoRack[]>>;
+  ottorackAddModalOpen: boolean;
+  setIsOttorackAddModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  ottorackEditModalOpen: boolean;
+  setIsOttorackEditModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  ottorackIndex: number | undefined;
+  setOttorackIndex: React.Dispatch<React.SetStateAction<number | undefined>>;
+
+  // Print Job context
+  printTaskModalOpen: boolean;
+  setIsPrintTaskModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  fileUploadModalOpen: boolean;
+  setIsFileUploadModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   currentFiles: any[];
   setCurrentFiles: React.Dispatch<React.SetStateAction<any[]>>;
-  printerEditModalOpen: boolean;
-  setIsPrinterEditModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  printerIndex: number|undefined;
-  setPrinterIndex: React.Dispatch<React.SetStateAction<number|undefined>>;
-  ottoejectIndex: number|undefined;
-  setOttoejectIndex: React.Dispatch<React.SetStateAction<number|undefined>>;
+  printFile: any | undefined;
+  setPrintFile: React.Dispatch<React.SetStateAction<any | undefined>>;
   printJob: PrintJobRepresentation[];
   setPrintJob: React.Dispatch<React.SetStateAction<PrintJobRepresentation[]>>;
-  printJobIndex: number|undefined;
-  setPrintJobIndex: React.Dispatch<React.SetStateAction<number|undefined>>;
-  printFile: any|undefined;
-  setPrintFile: React.Dispatch<React.SetStateAction<any|undefined>>;
-  
+  printJobIndex: number | undefined;
+  setPrintJobIndex: React.Dispatch<React.SetStateAction<number | undefined>>;
+  selectedJobIDs: any[];
+  setSelectedJobIDs: React.Dispatch<React.SetStateAction<any[]>>;
 
-// FROM GEN
-  // jobs: PrintJob[];
-  // // printers: Printer[];
-  // // printers: printerRepresentation[];
-  // addJob: (job: Omit<PrintJob, 'id' | 'createdAt' | 'progress'>) => void;
-  // updateJob: (id: string, updates: Partial<PrintJob>) => void;
-  // removeJob: (id: string) => void;
-  // getJob: (id: string) => PrintJob | undefined;
-  // moveJobUp: (id: string) => void;
-  // moveJobDown: (id: string) => void;
-  // startJob: (id: string, printerId: string) => void;
-  // pauseJob: (id: string) => void;
-  // resumeJob: (id: string) => void;
-  // cancelJob: (id: string) => void;
+  // Print Queue
+  jobQueueModalOpen: boolean;
+  setIsJobQueueModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  queue: QueueRepresentation[];
+  setQueue: React.Dispatch<React.SetStateAction<QueueRepresentation[]>>;
+  queueIndex: number | undefined;
+  setQueueIndex: React.Dispatch<React.SetStateAction<number | undefined>>;
+
+  //common context
+  alerts: Partial<AlertProps>[];
+  setAlerts: React.Dispatch<React.SetStateAction<Partial<AlertProps>[]>>;
+
 }
 
 export const JobContext = createContext<ContextType>({} as ContextType);
 
-// FROM GEM
-// const sampleJobs: PrintJob[] = [];
-
 export const JobContextProvider: React.FC<Props> = ({children}) => {
-
-  const [printTaskModalOpen, setIsPrintTaskModalOpen] = useState(false);
-  const [fileUploadModalOpen, setIsFileUploadModalOpen] = useState(false);
+  // Printer
   const [printerAddModalOpen, setIsPrinterAddModalOpen] = useState(false);
   const [printerEditModalOpen, setIsPrinterEditModalOpen] = useState(false);
+  const [printerIndex, setPrinterIndex] = useState<number|undefined>();
+  const [printer, setPrinter] = useState<any|undefined>([]);
+
+  // Otto Eject
   const [ottoejectAddModalOpen, setIsOttoejectAddModalOpen] = useState(false);
   const [ottoejectEditModalOpen, setIsOttoejectEditModalOpen] = useState(false);
-  const [printerIndex, setPrinterIndex] = useState<number|undefined>();
   const [ottoejectIndex, setOttoejectIndex] = useState<number|undefined>();
-  const [printer, setPrinter] = useState<any|undefined>([]);
+  const [ottoeject, setOttoeject] = useState<OttoejectDevice[]>([]);
+
+  // Otto Rack
+  const [ottorackAddModalOpen, setIsOttorackAddModalOpen] = useState(false);
+  const [ottorackEditModalOpen, setIsOttorackEditModalOpen] = useState(false);
+  const [ottorackIndex, setOttorackIndex] = useState<number|undefined>();
+  const [ottorack, setOttorack] = useState<OttoRack[]>([]);
+
+  // Print Job
+  const [printTaskModalOpen, setIsPrintTaskModalOpen] = useState(false);
+  const [fileUploadModalOpen, setIsFileUploadModalOpen] = useState(false);
   const [currentFiles, setCurrentFiles] = useState<any[]>([]);
   const [printJob, setPrintJob] = useState<PrintJobRepresentation[]>([]);
   const [printJobIndex, setPrintJobIndex] = useState<number|undefined>();
-  const [ottoeject, setOttoeject] = useState<OttoejectDevice[]>([]);
   const [printFile, setPrintFile] = useState<any|undefined>();
+  const [selectedJobIDs, setSelectedJobIDs] = useState<string[]>([]);
+  const [jobQueueModalOpen, setIsJobQueueModalOpen] = useState(false);
 
-  // FROM GEN
-  // const [jobs, setJobs] = useState<PrintJob[]>([]);
-  // // const [printers, setPrinters] = useState<Printer[]>([]);
-  // const addJob = (job: Omit<PrintJob, 'id' | 'createdAt' | 'progress'>) => {
-  //   const newJob: PrintJob = {
-  //     ...job,
-  //     id: Date.now().toString(),
-  //     createdAt: new Date(),
-  //     progress: 0
-  //   };
-  //   setJobs([...jobs, newJob]);
-  // };
-  // const updateJob = (id: string, updates: Partial<PrintJob>) => {
-  //   setJobs(jobs.map(job => job.id === id ? {
-  //     ...job,
-  //     ...updates
-  //   } : job));
-  // };
-  // const removeJob = (id: string) => {
-  //   setJobs(jobs.filter(job => job.id !== id));
-  // };
-  // const getJob = (id: string) => {
-  //   return jobs.find(job => job.id === id);
-  // };
-  // const moveJobUp = (id: string) => {
-  //   const index = jobs.findIndex(job => job.id === id);
-  //   if (index <= 0) return;
-  //   const newJobs = [...jobs];
-  //   const temp = newJobs[index];
-  //   newJobs[index] = newJobs[index - 1];
-  //   newJobs[index - 1] = temp;
-  //   setJobs(newJobs);
-  // };
-  // const moveJobDown = (id: string) => {
-  //   const index = jobs.findIndex(job => job.id === id);
-  //   if (index === -1 || index >= jobs.length - 1) return;
-  //   const newJobs = [...jobs];
-  //   const temp = newJobs[index];
-  //   newJobs[index] = newJobs[index + 1];
-  //   newJobs[index + 1] = temp;
-  //   setJobs(newJobs);
-  // };
-  // const startJob = (id: string, printerId: string) => {
-  //   // Update job status
-  //   setJobs(jobs.map(job => job.id === id ? {
-  //     ...job,
-  //     status: 'printing',
-  //     startedAt: new Date(),
-  //     printer: printerId
-  //   } : job));
-  //   // Update printer status
-  //   setPrinter(printer.map((printer:any) => printer.id === printerId ? {
-  //     ...printer,
-  //     status: 'printing',
-  //     currentJob: id
-  //   } : printer));
-  // };
-  // const pauseJob = (id: string) => {
-  //   const job = jobs.find(j => j.id === id);
-  //   if (!job) return;
-  //   // Update job status
-  //   setJobs(jobs.map(job => job.id === id ? {
-  //     ...job,
-  //     status: 'paused'
-  //   } : job));
-  // };
-  // const resumeJob = (id: string) => {
-  //   const job = jobs.find(j => j.id === id);
-  //   if (!job) return;
-  //   // Update job status
-  //   setJobs(jobs.map(job => job.id === id ? {
-  //     ...job,
-  //     status: 'printing'
-  //   } : job));
-  // };
-  // const cancelJob = (id: string) => {
-  //   const job = jobs.find(j => j.id === id);
-  //   if (!job || job.status !== 'printing') return;
-  //   // Update job status
-  //   setJobs(jobs.map(job => job.id === id ? {
-  //     ...job,
-  //     status: 'failed'
-  //   } : job));
-  //   // Update printer status
-  //   setPrinter(printer.map((printer:any) => printer.currentJob === id ? {
-  //     ...printer,
-  //     status: 'idle',
-  //     currentJob: undefined
-  //   } : printer));
-  // };
+  // Print Queue
+  const [queue, setQueue] = useState<QueueRepresentation[]>([]);
+  const [queueIndex, setQueueIndex] = useState<number|undefined>();
+
+  // Common
+  const [alerts, setAlerts] = useState<Partial<AlertProps>[]>([]);
 
   return <JobContext.Provider value={{
-    // jobs,
-    // // printers,
-    // addJob,
-    // updateJob,
-    // removeJob,
-    // getJob,
-    // moveJobUp,
-    // moveJobDown,
-    // startJob,
-    // pauseJob,
-    // resumeJob,
-    // cancelJob,
+    // Priner context
+    printer,
+    setPrinter,
+    printerAddModalOpen,
+    setIsPrinterAddModalOpen,
+    printerEditModalOpen,
+    setIsPrinterEditModalOpen,
+    printerIndex,
+    setPrinterIndex,
 
+    // Otto - Eject context
+    ottoejectAddModalOpen,
+    setIsOttoejectAddModalOpen,
+    ottoejectEditModalOpen,
+    setIsOttoejectEditModalOpen,
+    ottoeject,
+    setOttoeject,
+    ottoejectIndex,
+    setOttoejectIndex,
+
+    // Otto - Rack context
+    ottorackAddModalOpen,
+    setIsOttorackAddModalOpen,
+    ottorackEditModalOpen,
+    setIsOttorackEditModalOpen,
+    ottorack,
+    setOttorack,
+    ottorackIndex,
+    setOttorackIndex,
+
+
+    // Print Job context
     printTaskModalOpen,
     setIsFileUploadModalOpen,
     fileUploadModalOpen,
     setIsPrintTaskModalOpen,
-    printerAddModalOpen, 
-    setIsPrinterAddModalOpen,
-    ottoejectAddModalOpen, 
-    setIsOttoejectAddModalOpen,
-    ottoejectEditModalOpen,
-    setIsOttoejectEditModalOpen,
-    printer,
-    setPrinter,
-    ottoeject, 
-    setOttoeject,
     currentFiles,
     setCurrentFiles,
-    printerEditModalOpen,
-    setIsPrinterEditModalOpen,
-    printerIndex, 
-    setPrinterIndex, 
-    ottoejectIndex, 
-    setOttoejectIndex, 
-    printJob, 
-    setPrintJob, 
+    printJob,
+    setPrintJob,
     printJobIndex,
-    setPrintJobIndex, 
+    setPrintJobIndex,
     printFile,
-    setPrintFile
+    setPrintFile,
+    selectedJobIDs, 
+    setSelectedJobIDs,
+
+    // Print Queue
+    queue,
+    setQueue,
+    jobQueueModalOpen, 
+    setIsJobQueueModalOpen,
+    queueIndex, 
+    setQueueIndex,
+
+    //common context
+    alerts,
+    setAlerts,
+
   }}>
     {children}
   </JobContext.Provider>;
-
-
-
-  // const [printer, setPrinter] = useState<any|undefined>();
-  // const [printTaskModalOpen, setIsPrintTaskModalOpen] = useState(false);
-  // const [fileUploadModalOpen, setIsFileUploadModalOpen] = useState(false);
-  // const [currentFiles, setCurrentFiles] = useState<File[]>([]);
-
-
-
-  // return <JobContext.Provider value = {
-  //   {
-  //     printer, setPrinter, 
-  //     printTaskModalOpen, setIsPrintTaskModalOpen,
-  //     fileUploadModalOpen, setIsFileUploadModalOpen,
-  //     currentFiles, setCurrentFiles
-  //   }}>{children}</JobContext.Provider>
 }
 
 export const useQueue = () => {
@@ -290,6 +205,11 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<any>('dashboard');
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [selectedPrinter, setSelectedPrinter] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(false);
+  },[])
 
   const renderContent = () => {
     switch (activeTab) {
@@ -298,7 +218,7 @@ export default function App() {
       case 'queue':
         return <QueueManagement onSelectJob={setSelectedJob} />;
       case 'job':
-        // return selectedJob ? <JobDetails job={selectedJob} /> : <QueueManagement onSelectJob={setSelectedJob} />;
+        return
       default:
         return <Printers />;
     }
@@ -307,25 +227,10 @@ export default function App() {
     <JobContextProvider>
       <PageSection className="App">
         <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
+          {loading ? <Spinner/> : ''}
           {renderContent()}
         </Layout>
       </PageSection>
     </JobContextProvider>
   );
-
-// OLD
-  // return (
-  //   <JobContextProvider>
-  //       <div className="App">
-  //         <Page masthead={<PageHeader/>}>
-
-  //           <Dashboard/>
-  //         </Page>
-  //       </div>
-  //   </JobContextProvider>
-
-  // )
-
-
-
 }

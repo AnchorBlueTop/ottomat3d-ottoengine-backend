@@ -245,10 +245,13 @@ const performEjectionSequence = async (ottoejectId: number, printerId: number, p
     return successEjectFromPrinter;
 };
 
-const resetPrintBed = async (ottoejectId: number, job_count: number, element: any) => {
+const resetPrintBed = async (ottoejectId: number, job_count: number, element: any, printerId: any) => {
 
     const emptyBedLoc = job_count+1; 
 
+    const bedLeveling = await sendGCodeToPrinter(printerId, {gcode: "G90\nG1 Z150 F3000"});
+    console.log(`Task printer bed leveling status: ${bedLeveling}`);
+    
     const successLoadToPrinter = await sendOttoejectMacro(ottoejectId, {macro: `GRAB_FROM_SLOT_${emptyBedLoc}`}).then(async (e) => {
         let taskComplete = false;
     
@@ -434,7 +437,7 @@ export default async function startQueue (queue: QueueRepresentation[], ottoejec
         if (job_id < job_count) { // Python's `job_details['id'] < job_count` where job_details['id'] is 1-indexed
             console.log("Cooling down and preparing for next job...");
 
-            const resetBed = await resetPrintBed(OTTOEJECT_ID, i, element);
+            const resetBed = await resetPrintBed(OTTOEJECT_ID, i, element, element.printer.id);
 
             if (resetBed) {
                     console.log(`Ejection sequence for job ${job_id} completed.`);

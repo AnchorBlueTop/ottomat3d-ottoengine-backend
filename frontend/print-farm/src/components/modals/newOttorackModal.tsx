@@ -1,13 +1,8 @@
 import {
-    Brand,
     Button,
-    Card,
-    CardHeader,
-    Checkbox,
     Content,
     ContentVariants,
     Form,
-    FormGroup,
     Grid,
     GridItem,
     Modal,
@@ -15,22 +10,13 @@ import {
     ModalHeader,
     NumberInput,
     PageSection,
-    TextInput,
-    TextInputGroup,
-    TextInputGroupMain
-} from "@patternfly/react-core";
+    TextInput} from "@patternfly/react-core";
 import { useContext, useState, useEffect } from "react";
 import { JobContext } from "../../App.tsx";
-import ottoEjectIcon from '../../public/ottorack-Icon.svg';
-import thumbnail from '../../public/thumbnail.png';
-import { registerOttoeject } from "../../ottoengine_API.ts";
-// import { OttoejectDevice } from "../../representations/ottoejectRepresentation.ts";
-import { OttoRackRegistration, OttoRack, Shelf } from "../../representations/ottorackRepresentation.ts";
-import { Table, Tbody, Td, Tr } from "@patternfly/react-table";
+import { OttoRackRegistration, Shelf } from "../../representations/ottorackRepresentation.ts";
 
 export default function newOttorack() {
     const { ottorack, setOttorack, ottorackAddModalOpen, setIsOttorackAddModalOpen } = useContext(JobContext);
-    // const [tempOttorack, setTempOttorack] = useState<OttoRackRegistration>({shelves: 1});
     const [tempOttorack, setTempOttorack] = useState<OttoRackRegistration>({shelves: []});
     const [rackVis, setRackVis] = useState<any[]>([]);
 
@@ -39,8 +25,6 @@ export default function newOttorack() {
     const maxValue = 6;
     var uniqueId: number | string = '';
     const [value, setValue] = useState<number>(minValue);
-    
-    // console.log(tempShelf);
     
     const generateRackId = () => {
         const timestamp = new Date().getTime();
@@ -56,14 +40,11 @@ export default function newOttorack() {
             generateRackId();
             tempShelf.push({id: uniqueId.toString()})
             setTempShelf(tempShelf);
-            // console.log(tempShelf);
         }
         // setTempShelf(tempShelf);
         tempOttorack.shelves = tempShelf
         setTempOttorack({shelves: tempShelf});
         if (!ottorack) {
-            // console.log('in !ottorack');
-
             // registerOttoeject(tempOttorack).then(() => { console.log('then in ottorack registration') });
             setOttorack([tempOttorack]);
             setTempOttorack({shelves: []});
@@ -103,7 +84,6 @@ export default function newOttorack() {
 
     const onMinus = () => {
         const newValue = normalizeBetween((value as number) - 1, minValue, maxValue);
-        // console.log(newValue)
         setValue(newValue);
         // tempShelf?.pop();
         // setTempOttorack({...tempOttorack, shelves: newValue});
@@ -113,9 +93,6 @@ export default function newOttorack() {
     const onChange = (event: React.FormEvent<HTMLInputElement>) => {
         const value = (event.target as HTMLInputElement).value;
         // setValue(value === '' ? value : +value);
-        
-        
-        // console.log(value);
         // setTempOttorack({...tempOttorack, shelves: (value === undefined ? value : +value)});
         rackVisualisation(value);
     };
@@ -142,26 +119,7 @@ export default function newOttorack() {
     const rackVisualisation = (value: any) => {
         const newRackVis = [];
         for (let i = 0; i < value; i++) {
-            // newRackVis.push(
-            //     <div key={i}>{
-            //         ">--------------------< " + (value-i)
-            //     }</div>
-            // );
-
             newRackVis.push(
-                // <Checkbox 
-                //     key={i} 
-                //     id={`stack-id-${i}`}
-                //     className="customCheckBoxInput"
-                //     label={
-                //         <div className={'customCheckBoxWrapper'}>
-                //             {/* Your custom structure for the label content */}
-                //             <div className={styles.customCheckBox}>
-                //                 <div className={styles.inner}>{labelContent}</div>
-                //             </div>
-                //         </div>
-                //     }
-                // />
                 <>
                     <input className="customCheckBoxInput" type="checkbox"/>
                     <label className="customCheckBoxWrapper">

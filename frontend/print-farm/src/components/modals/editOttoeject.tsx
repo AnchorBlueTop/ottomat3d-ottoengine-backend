@@ -15,7 +15,7 @@ import {
     TextInputGroup,
     TextInputGroupMain
 } from "@patternfly/react-core";
-import { Component, useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { JobContext } from "../../App.tsx";
 import ottoEjectIcon from '../../public/ottoEject-Icon.svg'
 import thumbnail from '../../public/thumbnail.png';

@@ -1,25 +1,11 @@
 import {
   AlertProps,
-  // Button,
-  Page,
   PageSection,
-  Spinner,
-  // PageSection
+  Spinner
 } from "@patternfly/react-core";
-// import './App.css';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from "react";
-// import { moonraker } from "./listAPI";
-import { PageHeader } from "./Page-Header";
-// import addPrintTask from "./AddPrintTask";
-import Dashboard from "./components/Dashboard";
-import loadAPI from "./loadAPI";
-import APILoader from "./loadAPI";
-import {PrinterRegistrationRepresentation, PrinterRepresentation} from "./representations/printerRepresentation";
-import readFile from "./representations/readFileRepresentation";
-
-import { Printers } from "./components/Printers";
+import { PrinterRepresentation } from "./representations/printerRepresentation";
 import { Layout } from "./Layout";
-import { QueueManagement } from "./components/QueueManagement";
 import './App.css';
 import { OttoejectDevice } from "./representations/ottoejectRepresentation";
 import PrintJobRepresentation, { QueueRepresentation } from "./representations/printJobRepresentation";
@@ -92,23 +78,23 @@ type ContextType = {
 
 export const JobContext = createContext<ContextType>({} as ContextType);
 
-export const JobContextProvider: React.FC<Props> = ({children}) => {
+export const JobContextProvider: React.FC<Props> = ({ children }) => {
   // Printer
   const [printerAddModalOpen, setIsPrinterAddModalOpen] = useState(false);
   const [printerEditModalOpen, setIsPrinterEditModalOpen] = useState(false);
-  const [printerIndex, setPrinterIndex] = useState<number|undefined>();
-  const [printer, setPrinter] = useState<any|undefined>([]);
+  const [printerIndex, setPrinterIndex] = useState<number | undefined>();
+  const [printer, setPrinter] = useState<any | undefined>([]);
 
   // Otto Eject
   const [ottoejectAddModalOpen, setIsOttoejectAddModalOpen] = useState(false);
   const [ottoejectEditModalOpen, setIsOttoejectEditModalOpen] = useState(false);
-  const [ottoejectIndex, setOttoejectIndex] = useState<number|undefined>();
+  const [ottoejectIndex, setOttoejectIndex] = useState<number | undefined>();
   const [ottoeject, setOttoeject] = useState<OttoejectDevice[]>([]);
 
   // Otto Rack
   const [ottorackAddModalOpen, setIsOttorackAddModalOpen] = useState(false);
   const [ottorackEditModalOpen, setIsOttorackEditModalOpen] = useState(false);
-  const [ottorackIndex, setOttorackIndex] = useState<number|undefined>();
+  const [ottorackIndex, setOttorackIndex] = useState<number | undefined>();
   const [ottorack, setOttorack] = useState<OttoRack[]>([]);
 
   // Print Job
@@ -116,14 +102,14 @@ export const JobContextProvider: React.FC<Props> = ({children}) => {
   const [fileUploadModalOpen, setIsFileUploadModalOpen] = useState(false);
   const [currentFiles, setCurrentFiles] = useState<any[]>([]);
   const [printJob, setPrintJob] = useState<PrintJobRepresentation[]>([]);
-  const [printJobIndex, setPrintJobIndex] = useState<number|undefined>();
-  const [printFile, setPrintFile] = useState<any|undefined>();
+  const [printJobIndex, setPrintJobIndex] = useState<number | undefined>();
+  const [printFile, setPrintFile] = useState<any | undefined>();
   const [selectedJobIDs, setSelectedJobIDs] = useState<string[]>([]);
   const [jobQueueModalOpen, setIsJobQueueModalOpen] = useState(false);
 
   // Print Queue
   const [queue, setQueue] = useState<QueueRepresentation[]>([]);
-  const [queueIndex, setQueueIndex] = useState<number|undefined>();
+  const [queueIndex, setQueueIndex] = useState<number | undefined>();
 
   // Common
   const [alerts, setAlerts] = useState<Partial<AlertProps>[]>([]);
@@ -159,7 +145,6 @@ export const JobContextProvider: React.FC<Props> = ({children}) => {
     ottorackIndex,
     setOttorackIndex,
 
-
     // Print Job context
     printTaskModalOpen,
     setIsFileUploadModalOpen,
@@ -173,15 +158,15 @@ export const JobContextProvider: React.FC<Props> = ({children}) => {
     setPrintJobIndex,
     printFile,
     setPrintFile,
-    selectedJobIDs, 
+    selectedJobIDs,
     setSelectedJobIDs,
 
     // Print Queue
     queue,
     setQueue,
-    jobQueueModalOpen, 
+    jobQueueModalOpen,
     setIsJobQueueModalOpen,
-    queueIndex, 
+    queueIndex,
     setQueueIndex,
 
     //common context
@@ -209,26 +194,13 @@ export default function App() {
 
   useEffect(() => {
     setLoading(false);
-  },[])
+  }, [])
 
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'printers':
-        return <Printers />;
-      case 'queue':
-        return <QueueManagement onSelectJob={setSelectedJob} />;
-      case 'job':
-        return
-      default:
-        return <Printers />;
-    }
-  };
   return (
     <JobContextProvider>
       <PageSection className="App">
         <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
-          {loading ? <Spinner/> : ''}
-          {renderContent()}
+          {loading ? <Spinner /> : ''}
         </Layout>
       </PageSection>
     </JobContextProvider>

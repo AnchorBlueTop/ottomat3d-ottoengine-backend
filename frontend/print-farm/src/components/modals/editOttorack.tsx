@@ -1,12 +1,8 @@
 import {
-    Brand,
     Button,
-    Card,
-    CardHeader,
     Content,
     ContentVariants,
     Form,
-    FormGroup,
     Grid,
     GridItem,
     Modal,
@@ -14,23 +10,15 @@ import {
     ModalHeader,
     NumberInput,
     PageSection,
-    TextInput,
-    TextInputGroup,
-    TextInputGroupMain
+    TextInput
 } from "@patternfly/react-core";
 import { useContext, useState, useEffect } from "react";
 import { JobContext } from "../../App.tsx";
-import ottoEjectIcon from '../../public/ottorack-Icon.svg';
-import thumbnail from '../../public/thumbnail.png';
-import { registerOttoeject } from "../../ottoengine_API.ts";
-// import { OttoejectDevice } from "../../representations/ottoejectRepresentation.ts";
-import { OttoRackRegistration, OttoRack, Shelf } from "../../representations/ottorackRepresentation.ts";
-import { Td, Tr } from "@patternfly/react-table";
+import { OttoRack, Shelf } from "../../representations/ottorackRepresentation.ts";
 
 export default function editOttorack() {
     const { ottorack, setOttorack, ottorackEditModalOpen, setIsOttorackEditModalOpen, ottorackIndex } = useContext(JobContext);
-    // const [tempOttorack, setTempOttorack] = useState<OttoRackRegistration>({shelves: 1});
-    const [tempOttorack, setTempOttorack] = useState<OttoRack>({name: ''});
+    const [tempOttorack, setTempOttorack] = useState<OttoRack>({ name: '' });
     const [rackVis, setRackVis] = useState<any[]>([]);
 
     const [tempShelf, setTempShelf] = useState<Shelf[]>();
@@ -38,18 +26,16 @@ export default function editOttorack() {
     const maxValue = 6;
     var uniqueId: number | string = '';
     const [value, setValue] = useState<number>(minValue);
-    
+
     const generateRackId = () => {
-        // const timestamp = new Date().getTime();
-        uniqueId = (Math.random().toString(36).substring(2)) ;
-        // setTempOttorack({...tempOttorack, id: uniqueId.toString()});
+        uniqueId = (Math.random().toString(36).substring(2));
         return uniqueId;
     };
 
     const editOttorackSave = () => {
         tempOttorack.shelves = tempShelf
-        setTempOttorack({...tempOttorack, shelves: tempShelf});
-        
+        setTempOttorack({ ...tempOttorack, shelves: tempShelf });
+
         if (tempOttorack) {
 
             ottorack[ottorackIndex!] = tempOttorack;
@@ -58,7 +44,7 @@ export default function editOttorack() {
     }
 
     const deletingOttorack = (id: any) => {
-        
+
         delete ottorack[id];
         setOttorack(ottorack)
     }
@@ -76,7 +62,6 @@ export default function editOttorack() {
 
     const onMinus = () => {
         const newValue = normalizeBetween((value as number) - 1, minValue, maxValue);
-        // console.log(newValue)
         setValue(newValue);
         tempShelf?.pop();
         setTempShelf(tempShelf);
@@ -87,7 +72,7 @@ export default function editOttorack() {
     const onChange = (event: React.FormEvent<HTMLInputElement>) => {
         const value = (event.target as HTMLInputElement).value;
         setValue(value === null ? value : +value);
-        
+
         // setTempOttorack({...tempOttorack, shelves: (value === undefined ? value : +value)});
         rackVisualisation(value);
     };
@@ -111,7 +96,7 @@ export default function editOttorack() {
         rackVisualisation(newValue);
         // setTempOttorack({...tempOttorack, shelves: newValue});
         generateRackId();
-        tempShelf?.push({id: uniqueId.toString()});
+        tempShelf?.push({ id: uniqueId.toString() });
         setTempShelf(tempShelf);
     };
 
@@ -119,20 +104,19 @@ export default function editOttorack() {
         const newRackVis = [];
         for (let i = 0; i < value; i++) {
             newRackVis.push(
-            <>
-                <input className="customCheckBoxInput" type="checkbox" />
-                <label className="customCheckBoxWrapper">
-                    <div onClick={() => {console.log(`shelf - ${value-i}`)}} className="customCheckBox">
-                    <div className="inner">{'>------------------< ' + (value-i)}</div>
-                    </div>
-                </label>
-            </>
-        );
+                <>
+                    <input className="customCheckBoxInput" type="checkbox" />
+                    <label className="customCheckBoxWrapper">
+                        <div onClick={() => { console.log(`shelf - ${value - i}`) }} className="customCheckBox">
+                            <div className="inner">{'>------------------< ' + (value - i)}</div>
+                        </div>
+                    </label>
+                </>
+            );
         }
-        
+
         setRackVis(newRackVis.reverse());
     };
-    
 
     useEffect(() => {
         if (ottorackIndex || ottorackIndex == 0) {
@@ -141,7 +125,7 @@ export default function editOttorack() {
             setTempShelf(ottorack[ottorackIndex].shelves);
             rackVisualisation(ottorack[ottorackIndex].shelves!.length);
         }
-        generateRackId();        
+        generateRackId();
     }, [ottorackEditModalOpen]);
 
     return (
@@ -204,22 +188,15 @@ export default function editOttorack() {
                         </Form>
                     </GridItem>
 
-                    {/* <GridItem span={4}>
-                        <FormGroup>
-                            <Content component={ContentVariants.h6}>{'THUMBNAIL'}</Content>
-                            <Brand src={thumbnail} alt={"ottorack thumbnail"} className="pf-custom-thumbnail" />
-                        </FormGroup>
-                    </GridItem> */}
-
                     <GridItem span={4} className="pf-custom-rack-render">
-                        
+
                         {rackVis}
-                        
+
                     </GridItem>
                 </Grid>
 
                 <ModalFooter className="pf-custom-new-ottorack-modal-footer">
-                <Button
+                    <Button
                         variant="secondary"
                         onClick={() => { setIsOttorackEditModalOpen(false) }}
                     >
@@ -230,7 +207,7 @@ export default function editOttorack() {
                         onClick={() => {
                             editOttorackSave();
                             setIsOttorackEditModalOpen(false)
-                            setTempOttorack({name:''});
+                            setTempOttorack({ name: '' });
                         }}
                     >
                         {'Save'}
@@ -241,7 +218,7 @@ export default function editOttorack() {
                         onClick={() => {
                             deletingOttorack(ottorack[ottorackIndex!].id);
                             setIsOttorackEditModalOpen(false)
-                            setTempOttorack({name: ''});
+                            setTempOttorack({ name: '' });
                         }}
                     >
                         {'Delete'}

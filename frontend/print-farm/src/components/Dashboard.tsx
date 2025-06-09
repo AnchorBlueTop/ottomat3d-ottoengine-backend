@@ -1,14 +1,9 @@
-import { JobContext } from "../App";
-import { Button, Grid, GridItem, PageSection, PageSectionVariants } from "@patternfly/react-core";
-import { useContext, useEffect, useState } from "react";
+import { Grid, GridItem, PageSection } from "@patternfly/react-core";
 import uploadPrintFile from "./modals/UploadPrintFIle";
 import newPrintJob from "./modals/newPrintJob";
-import APILoader from "../loadAPI";
 import { Printers } from "./Printers";
 import { Ottoeject } from "./OttoEject";
 import { Job } from "./Jobs";
-
-
 
 export default function Dashboard() {
     // COMMENT TEMPOARILY

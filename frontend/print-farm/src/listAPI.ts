@@ -1,123 +1,111 @@
-import { PrinterRepresentation } from "./representations/printerRepresentation";
-import readFile from "./representations/readFileRepresentation";
+// import { PrinterRepresentation } from "./representations/printerRepresentation";
+// import readFile from "./representations/readFileRepresentation";
 
-const initHeader = () => {
-    var myHeader = new Headers();
-    myHeader.append(
-        'Content-Type','any'
-    );
-    myHeader.append('Accept', '*/*');
-    return myHeader; 
-};
+// const initHeader = () => {
+//     var myHeader = new Headers();
+//     myHeader.append(
+//         'Content-Type','any'
+//     );
+//     myHeader.append('Accept', '*/*');
+//     return myHeader; 
+// };
 
-const initFile = (fileInput: File) => {
-    const formdata = new FormData();
-    formdata.append(
-        "", 
-        fileInput, 
-        "copyOfGCODe.gcode"
-    );
-};
+// const initFile = (fileInput: File) => {
+//     const formdata = new FormData();
+//     formdata.append(
+//         "", 
+//         fileInput, 
+//         "copyOfGCODe.gcode"
+//     );
+// };
 
-const fetchResponse = async (baseUrl:string, requestOptions: any) => {
-    return fetch(
-        baseUrl, 
-        requestOptions
-    ).then((response) => {
-        return response.json();
-    })
-    .catch((error) => {
-        return error.json();
-    });
-};
+// const fetchResponse = async (baseUrl:string, requestOptions: any) => {
+//     return fetch(
+//         baseUrl, 
+//         requestOptions
+//     ).then((response) => {
+//         return response.json();
+//     })
+//     .catch((error) => {
+//         return error.json();
+//     });
+// };
 
-export class moonraker {
-    // PRINTER API
-    fetchPrinterInfo = async (
-        printerURL: String
-    ): Promise<PrinterRepresentation> => {
-        var requestOptions = {
-            method: 'GET',
-            headers: initHeader()
-        };
-        return fetchResponse(
-            printerURL + '/printer/info',
-            requestOptions
-        )
-    };
+// export class moonraker {
+//     // PRINTER API
+//     fetchPrinterInfo = async (
+//         printerURL: String
+//     ): Promise<PrinterRepresentation> => {
+//         var requestOptions = {
+//             method: 'GET',
+//             headers: initHeader()
+//         };
+//         return fetchResponse(
+//             printerURL + '/printer/info',
+//             requestOptions
+//         )
+//     };
 
-    startPrint = async (
-        printerURL: String, 
-        fileName: String
-    ): Promise<any> => {
-        var requestOptions = {
-            method: 'POST',
-            headers: initHeader()
-        };
-        return fetchResponse(
-            printerURL + '/printer/print/start?filename=' + fileName,
-            requestOptions
-        )
-    };
-
-    
-    // TO-DO: REQUIRES IMPROVING
-    uploadFile = async (
-        printerURL: String, 
-        file: File
-    ): Promise<readFile> => {
-        const formdata = new FormData();
-        formdata.append(
-            file.name, 
-            file
-        );
-        var requestOptions = {
-            method: 'POST',
-            // Content-Disposition: 'form-data',
-            // name: file.path ,
-            'Accept': '*/*',
-            'filename': file.name,
-            'Content-Type': 'multipart/form-data',
-            'body': formdata
-        };
-        return fetchResponse(
-            printerURL + '/server/files/upload',
-            requestOptions
-        )
-    };
-
-//     POST /server/files/upload
-// Content-Type: multipart/form-data
-
-// ------FormBoundaryemap3PkuvKX0B3HH
-// Content-Disposition: form-data; name="file"; filename="myfile.gcode"
-// Content-Type: application/octet-stream
-
-// <binary data>
-// ------FormBoundaryemap3PkuvKX0B3HH--
-
-
-    // EJECTOBOT APIS
-    ejectobotEject = async (
-        ejectobotURL: String
-    ): Promise<any> => {
-        console.log(ejectobotURL);
-        var myHeader = new Headers();
-        myHeader.append(
-            'Content-Type','application/json'
-        );
-        myHeader.append('Accept', '*/*');
-
-        var requestOptions = {
-            method: 'POST',
-            headers: myHeader
-        };
-        return fetchResponse(
-            ejectobotURL + '/printer/gcode/script?script=START_EJECT',
-            requestOptions
-        )
-    };
+//     startPrint = async (
+//         printerURL: String, 
+//         fileName: String
+//     ): Promise<any> => {
+//         var requestOptions = {
+//             method: 'POST',
+//             headers: initHeader()
+//         };
+//         return fetchResponse(
+//             printerURL + '/printer/print/start?filename=' + fileName,
+//             requestOptions
+//         )
+//     };
 
     
+//     // TO-DO: REQUIRES IMPROVING
+//     uploadFile = async (
+//         printerURL: String, 
+//         file: File
+//     ): Promise<readFile> => {
+//         const formdata = new FormData();
+//         formdata.append(
+//             file.name, 
+//             file
+//         );
+//         var requestOptions = {
+//             method: 'POST',
+//             // Content-Disposition: 'form-data',
+//             // name: file.path ,
+//             'Accept': '*/*',
+//             'filename': file.name,
+//             'Content-Type': 'multipart/form-data',
+//             'body': formdata
+//         };
+//         return fetchResponse(
+//             printerURL + '/server/files/upload',
+//             requestOptions
+//         )
+//     };
 
-};
+//     // EJECTOBOT APIS
+//     ejectobotEject = async (
+//         ejectobotURL: String
+//     ): Promise<any> => {
+//         console.log(ejectobotURL);
+//         var myHeader = new Headers();
+//         myHeader.append(
+//             'Content-Type','application/json'
+//         );
+//         myHeader.append('Accept', '*/*');
+
+//         var requestOptions = {
+//             method: 'POST',
+//             headers: myHeader
+//         };
+//         return fetchResponse(
+//             ejectobotURL + '/printer/gcode/script?script=START_EJECT',
+//             requestOptions
+//         )
+//     };
+
+
+// };

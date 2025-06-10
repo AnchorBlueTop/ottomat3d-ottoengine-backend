@@ -23,10 +23,10 @@ export function Printers() {
         var tempPrinterList: PrinterRepresentation[] = [];
 
         // TODO: UPDATE PRINT BED TEMP MORE FREQUENTLY
-        getAllPrinters().then((allPrinters) => {
-            allPrinters.map((value) => {
+        await getAllPrinters().then((allPrinters) => {
+            allPrinters.map(async (value) => {
                 if (value.id && !printer.find((e) => e.id === value.id)?.id) {
-                    getPrinterById(value.id).then((printerData) => {
+                    await getPrinterById(value.id).then((printerData) => {
                         tempPrinterList.push(printerData);
                         setPrinter(tempPrinterList);
                     })

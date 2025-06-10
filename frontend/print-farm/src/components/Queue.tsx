@@ -171,6 +171,7 @@ const performEjectionSequence = async (ottoejectId: number, printerId: number, p
             }
             return f;
         });
+        const parkOttoeject = await sendOttoejectMacro(ottoejectId, { macro: 'PARK_OTTOEJECT' });
         return e;
 
     }).catch(() => {
@@ -224,6 +225,7 @@ const resetPrintBed = async (ottoejectId: number, job_count: number, element: an
             }
             return f;
         });
+        const parkOttoeject = await sendOttoejectMacro(ottoejectId, { macro: 'PARK_OTTOEJECT' });
         return e;
 
     }).catch(() => {

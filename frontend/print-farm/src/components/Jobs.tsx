@@ -20,7 +20,10 @@ export const Job: React.FunctionComponent = () => {
       const otherSelectedJobIDs = prevSelected.filter((r: any) => r !== printjob.id);
       return isSelecting && isJobSelectable(printjob) ? [...otherSelectedJobIDs, printjob.id] : otherSelectedJobIDs;
     });
-  const isJobSelected = (printJob: PrintJobRepresentation) => selectedJobIDs.includes(printJob.id!);
+    const selectAllJobs = (isSelecting = true) =>
+      setSelectedJobIDs(isSelecting ? selectableJobs.map((r:any) => r.name) : []);
+    const areAllReposSelected = selectedJobIDs.length === selectableJobs.length;
+    const isJobSelected = (printJob: PrintJobRepresentation) => selectedJobIDs.includes(printJob.id!);
 
   // To allow shift+click to select/deselect multiple rows
   const [recentSelectedRowIndex, setRecentSelectedRowIndex] = useState<number | null>(null);

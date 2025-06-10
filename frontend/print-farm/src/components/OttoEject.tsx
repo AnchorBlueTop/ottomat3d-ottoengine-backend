@@ -23,7 +23,7 @@ export function Ottoeject() {
     const ottoEjectFecth = async () => {
         var tempOttoejectList: OttoejectDevice[] = [];
 
-        getAllOttoejectDevices().then((allOttoejects) => {
+        await getAllOttoejectDevices().then((allOttoejects) => {
             allOttoejects.map((value) => {
                 if (value.id && !ottoeject.find((e) => e.id === value.id)?.id) {
                     getOttoejectById(value.id).then((ottoejectData) => {

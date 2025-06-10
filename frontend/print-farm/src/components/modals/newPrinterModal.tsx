@@ -20,13 +20,15 @@ import { JobContext } from "../../App.tsx";
 import printerIcon from '../../public/printer-Icon.svg';
 import thumbnail from '../../public/thumbnail.png';
 import { PrinterRegistrationRepresentation } from "../../representations/printerRepresentation.ts";
+import { registerPrinter } from "../../ottoengine_API.ts";
 
 export default function newPrinter() {
     const { printer, setPrinter, printerAddModalOpen, setIsPrinterAddModalOpen } = useContext(JobContext);
     const [tempPrinter, setTempPrinter] = useState<PrinterRegistrationRepresentation>();
 
     const updatePrinterList = (tempPrinter: any) => {
-        if (!printer) {
+        if (!printer && tempPrinter) {
+            const registeredResponse = registerPrinter(tempPrinter).then(() => { console.log('in printer registration') });
             setPrinter([tempPrinter]);
             setTempPrinter({});
         } else {
@@ -37,6 +39,7 @@ export default function newPrinter() {
                 setPrinter(printer);
                 setTempPrinter({});
             } else {
+                const registeredResponse = registerPrinter(tempPrinter).then(() => { console.log('in printer registration') });
                 printer.push(tempPrinter);
                 setPrinter(printer);
                 setIsPrinterAddModalOpen(false);

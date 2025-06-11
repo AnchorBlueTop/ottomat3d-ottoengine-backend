@@ -1,9 +1,9 @@
 import PrintJobRepresentation, { QueueRepresentation } from "../representations/printJobRepresentation.ts";
 import { OttoejectDevice } from "../representations/ottoejectRepresentation.ts";
-import { getOttoejectStatusById, getPrinterStatusById, sendGCodeToPrinter, sendOttoejectMacro, startPrint } from "../ottoengine_API.ts";
+import { getOttoejectStatusById, getPrinterStatusById, sendGCodeToPrinter, sendOttoejectMacro, startPrint, uploadFile } from "../ottoengine_API.ts";
 import { StartPrintPayload } from "../representations/printerRepresentation.ts";
 
-export default async function startQueue(queue: QueueRepresentation[], ottoeject: OttoejectDevice[], setPrintJob: any) {
+export default async function startQueue(queue: QueueRepresentation[], setPrintJob: any, currentFiles: any) {
     queue.sort((a, b) => a.storageLocation! - b.storageLocation!);
     const job_count = queue.length;
     let completed_jobs_successfully = 0;
@@ -13,7 +13,8 @@ export default async function startQueue(queue: QueueRepresentation[], ottoeject
         const job_id = i + 1;
 
         //TODO: ADD A DROPDOWN FOR OTTOEJECT SELECT TO GET ID
-        const OTTOEJECT_ID = 1; // Replace with your actual OTTOEJECT_ID logic if it's dynamic
+        const OTTOEJECT_ID = element.ottoeject?.id || 0;
+        // const OTTOEJECT_ID = 1; // Replace with your actual OTTOEJECT_ID logic if it's dynamic
         // For now, it's a placeholder as it wasn't directly in element in the Python.
         // If it's part of element.printer or element itself, adjust accordingly.
 
@@ -23,14 +24,14 @@ export default async function startQueue(queue: QueueRepresentation[], ottoeject
             console.error(`   ❌ Required data missing for job ${job_id}: Printer ID or filename is invalid. Halting automation.`);
             break;
         }
-
-        const printSuccess = await start_Print(element.printer.id, { filename: element.fileName, printJobId: element.printJobId }, setPrintJob);
+        
+        const printSuccess = await start_Print(element.printer.id, { filename: element.fileName, printJobId: element.printJobId }, setPrintJob, currentFiles);
 
         if (printSuccess) {
             console.log(`Print for job ${job_id} ('${element.fileName}') completed.`);
 
-            if (ottoeject) {
-                const ejectionSuccess = await performEjectionSequence(OTTOEJECT_ID, element.printer.id, ottoeject[0], element);
+            if (element.ottoeject) {
+                const ejectionSuccess = await performEjectionSequence(OTTOEJECT_ID, element.printer.id, element.ottoeject, element, setPrintJob, { filename: element.fileName, printJobId: element.printJobId });
 
                 if (ejectionSuccess) {
                     console.log(`Ejection sequence for job ${job_id} completed.`);
@@ -61,7 +62,7 @@ export default async function startQueue(queue: QueueRepresentation[], ottoeject
                 console.error(`Ejection sequence FAILED for job ${job_id}. Halting automation.`);
                 break;
             }
-            await new Promise(resolve => setTimeout(resolve, 15000)); // 15-second pause
+            await new Promise(resolve => setTimeout(resolve, 10000)); // 10-second pause
         } else {
             console.log("Final job in sequence processed.");
         }
@@ -70,25 +71,31 @@ export default async function startQueue(queue: QueueRepresentation[], ottoeject
     console.log(`\nAutomation finished. Successfully completed ${completed_jobs_successfully} out of ${job_count} jobs.`);
 };
 
-const start_Print = async (printerId: number, jobDetails: StartPrintPayload, setPrintJob: any): Promise<boolean> => {
+const start_Print = async (printerId: number, jobDetails: StartPrintPayload, setPrintJob: any, currentFiles: any): Promise<boolean> => {
     console.log(`Sending print command for file '${jobDetails.filename}' to printer ID ${printerId}...`);
 
     //TODO: UPLOAD FILE
+    // currentFiles.find(jobDetails.filename)
+    // console.log(currentFiles)
+    // await uploadFile(currentFiles.find(jobDetails.filename), printerId); 
+    // await uploadFile(currentFiles[0], 1);
+    
 
     const startedPrint = await startPrint(printerId, jobDetails);
-
+    console.log('task startedPrint: ', startedPrint);
+    console.log(printerId, jobDetails);
     //TODO: while should ping for status until changed? 
     let taskComplete = false;
 
     while (!taskComplete) {
-        await new Promise(resolve => setTimeout(resolve, 15000)); // Wait 3 seconds
+        await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
         const { status } = await getPrinterStatusById(printerId);
 
         updateStatus(setPrintJob, jobDetails, status);
 
         console.log(`Task ${startedPrint} status: ${status}`);
         if (status === 'IDLE') {
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            await new Promise(resolve => setTimeout(resolve, 3000));
         }
 
         if (status === 'FINISH') {
@@ -96,7 +103,7 @@ const start_Print = async (printerId: number, jobDetails: StartPrintPayload, set
         } else if (status === 'FAILED') {
             throw new Error(`Task ${startedPrint} failed!`);
         } else {
-            await new Promise(resolve => setTimeout(resolve, 30000)); // Wait 3 seconds
+            await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
         }
     }
 
@@ -108,7 +115,7 @@ const start_Print = async (printerId: number, jobDetails: StartPrintPayload, set
     return startedPrint;
 };
 
-const performEjectionSequence = async (ottoejectId: number, printerId: number, params: any, queue: any): Promise<boolean> => {
+const performEjectionSequence = async (ottoejectId: number, printerId: number, params: any, queue: any, setPrintJob: any, jobDetails: any): Promise<boolean> => {
     console.log(`Performing ejection sequence for OttoEject ID ${ottoejectId}, Printer ID ${printerId} with params:`, params, ` at storage Location: ${queue.storageLocation}`);
 
     if (queue.storageLocation >= 3 && queue.storageLocation <= 6) {
@@ -125,6 +132,7 @@ const performEjectionSequence = async (ottoejectId: number, printerId: number, p
         const { status } = await getOttoejectStatusById(ottoejectId);
 
         console.log(`Task ${homeOttoeject} status: ${status}`);
+        updateStatus(setPrintJob, jobDetails, status);
 
         if (status === 'ONLINE') {
             homeComplete = true;
@@ -144,6 +152,8 @@ const performEjectionSequence = async (ottoejectId: number, printerId: number, p
             const { status } = await getOttoejectStatusById(ottoejectId);
 
             console.log(`Task ${e} status: ${status}`);
+            updateStatus(setPrintJob, jobDetails, status);
+
 
             if (status === 'ONLINE') {
                 taskComplete = true;
@@ -160,6 +170,7 @@ const performEjectionSequence = async (ottoejectId: number, printerId: number, p
                 const { status } = await getOttoejectStatusById(ottoejectId);
 
                 console.log(`Task ${f} status: ${status}`);
+                updateStatus(setPrintJob, jobDetails, status);
 
                 if (status === 'ONLINE') {
                     task2Complete = true;
@@ -203,7 +214,7 @@ const resetPrintBed = async (ottoejectId: number, job_count: number, element: an
             } else if (status === 'FAILED') {
                 throw new Error(`Task ${e} failed!`);
             } else {
-                await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 3 seconds
             }
         }
 

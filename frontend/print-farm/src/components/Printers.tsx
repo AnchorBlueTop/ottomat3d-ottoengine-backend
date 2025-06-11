@@ -23,16 +23,14 @@ export function Printers() {
         var tempPrinterList: PrinterRepresentation[] = [];
 
         // TODO: UPDATE PRINT BED TEMP MORE FREQUENTLY
-        await getAllPrinters().then((allPrinters) => {
-            allPrinters.map(async (value) => {
-                if (value.id && !printer.find((e) => e.id === value.id)?.id) {
-                    await getPrinterById(value.id).then((printerData) => {
-                        tempPrinterList.push(printerData);
-                        setPrinter(tempPrinterList);
-                    })
-                }
-            })
-        });
+        const allPrinters = await getAllPrinters();
+        for (const value of allPrinters) {
+            if (value.id && !printer.find((e) => e.id === value.id)?.id) {
+                const printerData = await getPrinterById(value.id);
+                tempPrinterList.push(printerData);
+                setPrinter([...tempPrinterList]);
+            }
+        }
     }
 
     const printerList = () => {

@@ -1,3 +1,4 @@
+import { OttoejectDevice } from "./ottoejectRepresentation";
 import { PrinterRepresentation } from "./printerRepresentation";
 
 export default interface PrintJobRepresentation {
@@ -15,5 +16,6 @@ export interface QueueRepresentation {
     fileName?: string;
     printJobId?: string;
     storageLocation?: number;
+    ottoeject?: OttoejectDevice;
     printer?: PrinterRepresentation;
 }

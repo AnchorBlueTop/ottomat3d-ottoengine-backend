@@ -20,7 +20,7 @@ import { JobContext } from "../../App.tsx";
 import PrinterIcon from '../../public/printer-Icon.svg'
 import thumbnail from '../../public/thumbnail.png';
 import { PrinterRepresentation } from "../../representations/printerRepresentation.ts";
-import { deletePrinter, getPrinterStatusById, updatePrinterDetails } from "../../ottoengine_API.ts";
+import { deletePrinter, getPrinterStatusById, sendGCodeToPrinter, updatePrinterDetails } from "../../ottoengine_API.ts";
 
 export default function editPrinter() {
     const { printer, setPrinter, setIsPrinterEditModalOpen, printerEditModalOpen, printerIndex } = useContext(JobContext);
@@ -59,6 +59,11 @@ export default function editPrinter() {
         deletePrinter(id);
         delete printer[printerIndex!];
         setPrinter(printer)
+    }
+
+    const levelBed = async (id?: any) => {
+        console.log('Leveling Pinter Bed on printer ID: ', id);
+        await sendGCodeToPrinter(id, { gcode: "G90\nG1 Z150 F3000" });
     }
 
     useEffect(() => {
@@ -156,6 +161,13 @@ export default function editPrinter() {
                 </Grid>
 
                 <ModalFooter className="pf-custom-new-print-job-modal-footer">
+                    <Button
+                        variant="secondary"
+                        onClick={() => { levelBed(printer[printerIndex!].id) }}
+                    >
+                        {'Level Bed'}
+                    </Button>
+
                     <Button
                         variant="secondary"
                         onClick={() => { setIsPrinterEditModalOpen(false) }}

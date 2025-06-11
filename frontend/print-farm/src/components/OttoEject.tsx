@@ -24,15 +24,14 @@ export function Ottoeject() {
         var tempOttoejectList: OttoejectDevice[] = [];
 
         await getAllOttoejectDevices().then((allOttoejects) => {
-            allOttoejects.map((value) => {
+            allOttoejects.forEach((value) => {
                 if (value.id && !ottoeject.find((e) => e.id === value.id)?.id) {
                     getOttoejectById(value.id).then((ottoejectData) => {
                         tempOttoejectList.push(ottoejectData);
-                        setOttoeject(tempOttoejectList);
-                    })
+                        setOttoeject([...tempOttoejectList]);
+                    });
                 }
-
-            })
+            });
         });
     }
 

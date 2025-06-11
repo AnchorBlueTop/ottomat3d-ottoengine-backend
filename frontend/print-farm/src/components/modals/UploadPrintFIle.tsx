@@ -10,16 +10,19 @@ import {
     Modal,
     Button,
     ModalFooter,
+    FormSelect,
+    FormSelectOption,
 } from '@patternfly/react-core';
 import readFile from '../../representations/readFileRepresentation';
 import { UploadIcon } from '@patternfly/react-icons';
 import { uploadFile } from '../../ottoengine_API';
 
 export default function uploadPrintFile() {
-    const { setIsPrintTaskModalOpen, setIsFileUploadModalOpen, setCurrentFiles, currentFiles, fileUploadModalOpen } = useContext(JobContext);
+    const { setIsPrintTaskModalOpen, setIsFileUploadModalOpen, setCurrentFiles, currentFiles, fileUploadModalOpen, printer } = useContext(JobContext);
     const [readFileData, setReadFileData] = useState<readFile[]>([]);
     const [showStatus, setShowStatus] = useState(false);
     const [statusIcon, setStatusIcon] = useState('inProgress');
+    const [tempPrinter, setTempPrinter] = useState(0);
 
     useEffect(() => {
         if (readFileData.length < currentFiles?.length) {
@@ -87,9 +90,13 @@ export default function uploadPrintFile() {
     const uploadPrintFile = async () => {
         setIsFileUploadModalOpen(false);
         setIsPrintTaskModalOpen(true);
-        await uploadFile(currentFiles[0], 1);
+        await uploadFile(currentFiles[0], tempPrinter);
         const readCurrentFile = currentFiles.map((item: any) => String(item)).join('\n');
     }
+
+    const handlePrinterChange = (printerId: any) => {
+        setTempPrinter(printerId);
+    };
 
     return (
         <Modal
@@ -142,6 +149,21 @@ export default function uploadPrintFile() {
                 )}</>
             }
             <ModalFooter className='pf-custom-upload-button-footer'>
+                <FormSelect
+                    // value={value}
+                    onChange={(_event, value) => handlePrinterChange(value)}
+                    aria-label={`Select printer for Uploading`}
+                >
+                    <FormSelectOption key="default" value="" label="Select a printer" isDisabled />
+                    {printer.map((printerItem, printerIndex) => (
+                        <FormSelectOption
+                            key={printerIndex}
+                            value={printerItem.id}
+                            label={printerItem.model as string}
+                        />
+                    ))}
+                </FormSelect>
+                
                 <Button
                     className="pf-m-danger"
                     onClick={() => setIsFileUploadModalOpen(false)}

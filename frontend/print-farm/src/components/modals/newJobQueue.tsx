@@ -6,7 +6,7 @@ import { Table, Thead, Tr, Th, Tbody, Td } from "@patternfly/react-table";
 import startQueue from '../Queue.tsx';
 
 export default function newJobQueue() {
-    const { setQueue, jobQueueModalOpen, setIsJobQueueModalOpen, selectedJobIDs, printer, ottoeject, setPrintJob, printJob } = useContext(JobContext);
+    const { setQueue, jobQueueModalOpen, setIsJobQueueModalOpen, selectedJobIDs, printer, ottoeject, setPrintJob, printJob, currentFiles } = useContext(JobContext);
     const [tempQueue, setTempQueue] = useState<QueueRepresentation[]>([]);
 
     useEffect(() => {
@@ -48,9 +48,22 @@ export default function newJobQueue() {
         });
     };
 
+    const handleOttoejectChange = (index: number, ottoEjectID: number) => {
+        setTempQueue(prevQueue => {
+            const newQueue = [...prevQueue];
+            const selectedOttoEject = ottoeject.find(p => p.id === ottoEjectID);
+            console.log(selectedOttoEject);
+            newQueue[index] = {
+                ...newQueue[index],
+                ottoeject: selectedOttoEject
+            };
+            return newQueue;
+        });
+    };
+
     const createQueue = () => {
         setQueue(tempQueue);
-        startQueue(tempQueue, ottoeject, setPrintJob);
+        startQueue(tempQueue, setPrintJob, currentFiles);
         setIsJobQueueModalOpen(false);
     }
 
@@ -90,7 +103,7 @@ export default function newJobQueue() {
                                                         onChange={(_event, value) => handleStorageLocationChange(index, value)}
                                                     />
                                                 </Td>
-                                                <Td data-label="Printer" width={50}>
+                                                <Td data-label="Printer" width={30}>
                                                     <FormSelect
                                                         value={job.printer?.model || ''}
                                                         onChange={(_event, value) => handlePrinterChange(index, value)}
@@ -102,6 +115,22 @@ export default function newJobQueue() {
                                                                 key={printerIndex}
                                                                 value={printerItem.model}
                                                                 label={printerItem.model as string}
+                                                            />
+                                                        ))}
+                                                    </FormSelect>
+                                                </Td>
+                                                <Td data-label="OttoEject" width={50}>
+                                                    <FormSelect
+                                                        value={job.ottoeject?.id}
+                                                        onChange={(_event, value) => handleOttoejectChange(index, Number(value))}
+                                                        aria-label={`Select OTTOeject for ${job.fileName}`}
+                                                    >
+                                                        <FormSelectOption key="default" value="" label="Select a OTTOeject" isDisabled />
+                                                        {ottoeject.map((ottoEjectItem, ottoejectIndex) => (
+                                                            <FormSelectOption
+                                                                key={ottoejectIndex}
+                                                                value={ottoEjectItem.id}
+                                                                label={ottoEjectItem.device_name as string}
                                                             />
                                                         ))}
                                                     </FormSelect>

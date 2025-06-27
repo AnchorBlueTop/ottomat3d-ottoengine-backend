@@ -10,6 +10,8 @@ export default interface PrintJobRepresentation {
     filament_weight?: string,
     filament_length?: string,
     status?: string,
+    reamaining_time?: number,
+    ams?: any,
 }
 
 export interface QueueRepresentation {
@@ -18,4 +20,5 @@ export interface QueueRepresentation {
     storageLocation?: number;
     ottoeject?: OttoejectDevice;
     printer?: PrinterRepresentation;
+    ams?: any;
 }

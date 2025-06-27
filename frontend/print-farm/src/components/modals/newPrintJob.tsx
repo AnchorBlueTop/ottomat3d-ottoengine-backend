@@ -82,6 +82,17 @@ export default function newPrintJob() {
                         }
                     }
 
+                    // PRINTFILE AMS EXTRACT 
+                    const printAMSRegex = /M620(.*)|M621(.*)/;
+                    const matchAMS = processedResult.match(printAMSRegex);
+                    const matchedAMS = () => {
+                        if (matchAMS && matchAMS[1]) {
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    }
+
                     fileDetails = {
                         id: uniqueId.toString(),
                         name: file?.[0]?.name,
@@ -90,7 +101,8 @@ export default function newPrintJob() {
                         filament: matchedFilamentType(),
                         filament_weight: matchedFilamentWeight(),
                         filament_length: matchedFilamentLength(),
-                        status: 'NEW'
+                        status: 'NEW',
+                        ams: matchedAMS()
                     }
                     setPrintFile(fileDetails);
                     return result;
@@ -115,7 +127,7 @@ export default function newPrintJob() {
                     if (typeof mainFile === 'string') {
                         const processedResult = fileContent.split('\n').map((item: any) => String(item)).join('\n');
                         setCurrentFiles([processedResult]);
-
+                        console.log(processedResult);
                         //PRINTER MODEL EXTRACT
                         const printerRegex = /printer_model = (.*)/;
                         const matchPrinter = processedResult.match(printerRegex);
@@ -171,6 +183,17 @@ export default function newPrintJob() {
                             }
                         }
 
+                        // PRINTFILE AMS EXTRACT 
+                        const printAMSRegex = /M620(.*)|M621(.*)/;
+                        const matchAMS = processedResult.match(printAMSRegex);
+                        const matchedAMS = () => {
+                            if (matchAMS && matchAMS[1]) {
+                                return true;
+                            } else {
+                                return false;
+                            }
+                        }
+
                         fileDetails = {
                             id: uniqueId.toString(),
                             name: file?.[0]?.name,
@@ -179,9 +202,11 @@ export default function newPrintJob() {
                             filament: matchedFilamentType(),
                             filament_weight: matchedFilamentWeight(),
                             filament_length: matchedFilamentLength(),
-                            status: 'NEW'
+                            status: 'NEW', 
+                            ams: matchedAMS()
                         }
                         setPrintFile(fileDetails);
+                        console.log(fileDetails);
                         return processedResult;
                     }
                 } catch (error) {

@@ -60,10 +60,11 @@ export const Job: React.FunctionComponent = () => {
               /> */}
                 <Th width={10} aria-label='print-job-table-selectable' />
                 <Th width={10} aria-label='print-job-table-status'>{'Status'}</Th>
-                <Th width={15} aria-label='print-job-table-id'>{'ID'}</Th>
+                <Th width={10} aria-label='print-job-table-id'>{'ID'}</Th>
                 <Th width={30} aria-label='print-job-table-name'>{'Filename'}</Th>
-                <Th width={20} aria-label='print-job-table-printer'>{'Printer'}</Th>
-                <Th width={20} aria-label='print-job-table-duration'>{'Print Duration'}</Th>
+                <Th width={15} aria-label='print-job-table-printer'>{'Printer'}</Th>
+                <Th width={15} aria-label='print-job-table-duration'>{'Print Duration'}</Th>
+                <Th width={15} aria-label='print-job-table-time-remaining'>{'Time Remaining'}</Th>
               </Tr>
             </Thead>
             <Tbody>
@@ -91,6 +92,7 @@ export const Job: React.FunctionComponent = () => {
                   <Td>{value.name}</Td>
                   <Td>{value.printer}</Td>
                   <Td>{value.duration}</Td>
+                  <Td>{value.reamaining_time}</Td>
                 </Tr>
               ))}
             </Tbody>

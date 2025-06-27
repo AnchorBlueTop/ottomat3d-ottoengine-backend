@@ -20,6 +20,7 @@ import { JobContext } from "../../App.tsx";
 import ottoEjectIcon from '../../public/ottoEject-Icon.svg'
 import thumbnail from '../../public/thumbnail.png';
 import { OttoejectDevice } from "../../representations/ottoejectRepresentation.ts";
+import { sendOttoejectMacro } from "../../ottoengine_API.ts";
 
 export default function editOttoeject() {
     const { ottoeject, setOttoeject, setIsOttoejectEditModalOpen, ottoejectEditModalOpen, ottoejectIndex } = useContext(JobContext);
@@ -35,6 +36,11 @@ export default function editOttoeject() {
 
     const deleteOttoeject = (id?: any) => {
         delete ottoeject[ottoejectIndex!];
+    }
+
+    const homeOttoeject = async (id?: any) => {
+        console.log('Homing on OTTOeject ID: ', id);
+        await sendOttoejectMacro(id, { macro: "OTTOEJECT_HOME" });
     }
 
     useEffect(() => {
@@ -98,6 +104,12 @@ export default function editOttoeject() {
                 </Grid>
 
                 <ModalFooter className="pf-custom-new-ottoeject-modal-footer">
+                    <Button
+                        variant="secondary"
+                        onClick={() => { homeOttoeject(ottoeject[ottoejectIndex!].id) }}
+                    >
+                        {'Home OTTOeject'}
+                    </Button>
                     <Button
                         variant="secondary"
                         onClick={() => { setIsOttoejectEditModalOpen(false) }}

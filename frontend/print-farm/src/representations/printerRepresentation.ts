@@ -22,7 +22,8 @@ export interface PrinterRegistrationRepresentation {
 }
 
 export interface PrinterStatus {
-    status?: string; 
+    status?: string;
+    remaining_time_minutes?: number;
 }
 
 export interface GCodePayload {

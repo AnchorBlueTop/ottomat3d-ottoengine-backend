@@ -14,7 +14,7 @@ class PrinterStateManager extends EventEmitter {
     constructor() {
         super();
         this.activePrinters = activePrinters; // Make map accessible
-        logger.info('[PrinterStateManager-v0.1] Instance created.');
+        logger.info('[PrinterStateManager] Instance created.');
     }
 
     /**
@@ -26,7 +26,7 @@ class PrinterStateManager extends EventEmitter {
      *                                                access_code, serial_number, name.
      */
     async initialize(initialPrintersFromDb) {
-        logger.info(`[PrinterStateManager-v0.1] Initializing with ${initialPrintersFromDb.length} printers from DB...`);
+        logger.info(`[PrinterStateManager] Initializing with ${initialPrintersFromDb.length} printers from DB...`);
 
         for (const printerDbRecord of initialPrintersFromDb) {
             // Ensure printerId is treated as a number for map keys
@@ -34,16 +34,16 @@ class PrinterStateManager extends EventEmitter {
 
             if (String(printerDbRecord.brand).toLowerCase() === 'bambu lab') {
                 if (this.activePrinters.has(printerId)) {
-                    logger.warn(`[PrinterStateManager-v0.1] Instance for printer ID ${printerId} already exists. Skipping re-initialization.`);
+                    logger.warn(`[PrinterStateManager] Instance for printer ID ${printerId} already exists. Skipping re-initialization.`);
                     continue;
                 }
 
                 if (!printerDbRecord.ip_address || !printerDbRecord.access_code || !printerDbRecord.serial_number) {
-                    logger.error(`[PrinterStateManager-v0.1] Cannot manage printer ID ${printerId} (${printerDbRecord.name || 'N/A'}): Missing IP, Access Code, or Serial in DB record.`);
+                    logger.error(`[PrinterStateManager] Cannot manage printer ID ${printerId} (${printerDbRecord.name || 'N/A'}): Missing IP, Access Code, or Serial in DB record.`);
                     continue; 
                 }
 
-                logger.info(`[PrinterStateManager-v0.1] Creating and connecting instance for Bambu printer: ${printerDbRecord.name} (ID: ${printerId}, IP: ${printerDbRecord.ip_address})`);
+                logger.info(`[PrinterStateManager] Creating and connecting instance for Bambu printer: ${printerDbRecord.name} (ID: ${printerId}, IP: ${printerDbRecord.ip_address})`);
                 
                 try {
                     const instance = new bl_api.Printer({
@@ -58,23 +58,23 @@ class PrinterStateManager extends EventEmitter {
                     // Setup basic MQTT event listeners on this instance for logging/debugging.
                     // These do NOT update the main application's database in this v0.1 proxy version.
                     instance.on('mqtt_connect', () => {
-                        logger.info(`[PrinterStateManager-v0.1][ID:${printerId}] >>> MQTT Connected: ${printerDbRecord.name}. Requesting full status (pushall).`);
+                        logger.info(`[PrinterStateManager] [ID:${printerId}] >>> MQTT Connected: ${printerDbRecord.name}. Requesting full status (pushall).`);
                         if (typeof instance.pushall === 'function') {
                             instance.pushall()
-                                .then(() => logger.info(`[PrinterStateManager-v0.1][ID:${printerId}] pushall command sent successfully.`))
-                                .catch(err => logger.error(`[PrinterStateManager-v0.1][ID:${printerId}] Error sending pushall: ${err.message}`));
+                                .then(() => logger.info(`[PrinterStateManager] [ID:${printerId}] pushall command sent successfully.`))
+                                .catch(err => logger.error(`[PrinterStateManager] [ID:${printerId}] Error sending pushall: ${err.message}`));
                         } else {
-                            logger.error(`[PrinterStateManager-v0.1][ID:${printerId}] Instance for ${printerDbRecord.name} is missing pushall method!`);
+                            logger.error(`[PrinterStateManager] [ID:${printerId}] Instance for ${printerDbRecord.name} is missing pushall method!`);
                         }
                     });
 
                     instance.on('mqtt_close', () => {
-                        logger.warn(`[PrinterStateManager-v0.1][ID:${printerId}] <<< MQTT Closed: ${printerDbRecord.name}. Library should attempt to reconnect.`);
+                        logger.warn(`[PrinterStateManager] [ID:${printerId}] <<< MQTT Closed: ${printerDbRecord.name}. Library should attempt to reconnect.`);
                         // Clear any locally cached summary if needed, or let getters handle unavailable data
                     });
 
                     instance.on('mqtt_error', (err) => {
-                        logger.error(`[PrinterStateManager-v0.1][ID:${printerId}] !!! MQTT Error for ${printerDbRecord.name}: ${err.message || err}`);
+                        logger.error(`[PrinterStateManager] [ID:${printerId}] !!! MQTT Error for ${printerDbRecord.name}: ${err.message || err}`);
                     });
 
                     instance.on('update', (data) => { 
@@ -82,35 +82,35 @@ class PrinterStateManager extends EventEmitter {
                     });
                     
                     instance.on('print_error', (errorCode) => { // Listen for specific print error events
-                        logger.error(`[PrinterStateManager-v0.1][ID:${printerId}] Print Error Event Code for ${printerDbRecord.name}: ${errorCode}`);
+                        logger.error(`[PrinterStateManager] [ID:${printerId}] Print Error Event Code for ${printerDbRecord.name}: ${errorCode}`);
                     });
 
 
                     // Attempt to connect the instance
                     if (typeof instance.connect === 'function') {
-                        logger.info(`[PrinterStateManager-v0.1][ID:${printerId}] Calling connect() for ${printerDbRecord.name}...`);
+                        logger.info(`[PrinterStateManager][ID:${printerId}] Calling connect() for ${printerDbRecord.name}...`);
                         await instance.connect(); // Assumes connect is async and handles its own internal logic
                         // A small delay might allow the first status messages to come through,
                         // but the instance should manage its own readiness.
                         // await new Promise(resolve => setTimeout(resolve, 2000)); 
-                        logger.info(`[PrinterStateManager-v0.1][ID:${printerId}] connect() call completed for ${printerDbRecord.name}. is_connected: ${instance.is_connected ? instance.is_connected() : 'N/A'}`);
+                        logger.info(`[PrinterStateManager][ID:${printerId}] connect() call completed for ${printerDbRecord.name}. is_connected: ${instance.is_connected ? instance.is_connected() : 'N/A'}`);
                         
                         // Remove post-connect verbose state checks and delay
                     } else {
-                        logger.error(`[PrinterStateManager-v0.1][ID:${printerId}] Printer instance for ${printerDbRecord.name} is missing a 'connect' method.`);
+                        logger.error(`[PrinterStateManager][ID:${printerId}] Printer instance for ${printerDbRecord.name} is missing a 'connect' method.`);
                         this.activePrinters.delete(printerId); // Don't keep unconnectable instance
                     }
                 } catch (initError) {
-                    logger.error(`[PrinterStateManager-v0.1][ID:${printerId}] Error initializing or connecting instance for ${printerDbRecord.name}: ${initError.message}`, initError.stack);
+                    logger.error(`[PrinterStateManager][ID:${printerId}] Error initializing or connecting instance for ${printerDbRecord.name}: ${initError.message}`, initError.stack);
                     if (this.activePrinters.has(printerId)) {
                         this.activePrinters.delete(printerId); // Clean up if instance was added but failed
                     }
                 }
             } else {
-                logger.info(`[PrinterStateManager-v0.1] Skipping printer ID ${printerDbRecord.id} (${printerDbRecord.name || 'N/A'}) - not 'Bambu Lab' brand (brand is '${printerDbRecord.brand}').`);
+                logger.info(`[PrinterStateManager] Skipping printer ID ${printerDbRecord.id} (${printerDbRecord.name || 'N/A'}) - not 'Bambu Lab' brand (brand is '${printerDbRecord.brand}').`);
             }
         }
-        logger.info('[PrinterStateManager-v0.1] Initialization loop for all printers complete.');
+        logger.info('[PrinterStateManager] Initialization loop for all printers complete.');
     }
 
     /**
@@ -122,7 +122,7 @@ class PrinterStateManager extends EventEmitter {
         const id = parseInt(String(printerId)); // Ensure key is a number
         const instance = this.activePrinters.get(id);
         if (!instance) {
-            logger.warn(`[PrinterStateManager-v0.1] No managed instance found for printer ID: ${id}`);
+            logger.warn(`[PrinterStateManager] No managed instance found for printer ID: ${id}`);
             return null;
         }
         
@@ -213,30 +213,47 @@ class PrinterStateManager extends EventEmitter {
          const id = parseInt(String(printerId));
          const instance = this.activePrinters.get(id);
          if (instance) {
-            logger.info(`[PrinterStateManager-v0.1] Removing and disconnecting instance for printer ID: ${id}`);
+            logger.info(`[PrinterStateManager] Removing and disconnecting instance for printer ID: ${id}`);
             if (typeof instance.disconnect === 'function') {
                 try { 
                     await instance.disconnect(); // If disconnect is async
-                } catch (e) { logger.warn(`[PrinterStateManager-v0.1] Error during instance.disconnect for ${id}: ${e.message}`);}
+                } catch (e) { logger.warn(`[PrinterStateManager] Error during instance.disconnect for ${id}: ${e.message}`);}
             }
             if (typeof instance.removeAllListeners === 'function') {
                 instance.removeAllListeners(); // Clean up listeners on the instance itself
             }
             this.activePrinters.delete(id);
-            logger.info(`[PrinterStateManager-v0.1] Instance for printer ID ${id} removed.`);
+            logger.info(`[PrinterStateManager] Instance for printer ID ${id} removed.`);
             return true;
          }
-         logger.warn(`[PrinterStateManager-v0.1] removePrinterInstance: No instance found for ID ${id}.`);
+         logger.warn(`[PrinterStateManager] removePrinterInstance: No instance found for ID ${id}.`);
          return false;
+    }
+
+    /**
+     * Disconnects all active printer instances.
+     */
+    async disconnectAll() {
+        logger.info(`[PrinterStateManager] Disconnecting all ${this.activePrinters.size} printer(s)...`);
+        const disconnectPromises = [];
+        for (const [id, instance] of this.activePrinters.entries()) {
+            if (instance && typeof instance.disconnect === 'function') {
+                logger.info(`[PrinterStateManager] Disconnecting instance for printer ID: ${id}`);
+                disconnectPromises.push(instance.disconnect());
+            }
+        }
+        await Promise.all(disconnectPromises);
+        this.activePrinters.clear();
+        logger.info('[PrinterStateManager] All printer instances have been disconnected and cleared.');
     }
 
     /**
      * Gracefully disconnects all managed printer instances on shutdown.
      */
     async gracefulShutdown() {
-        logger.info('[PrinterStateManager-v0.1] Initiating graceful shutdown: disconnecting all printers...');
+        logger.info('[PrinterStateManager] Initiating graceful shutdown: disconnecting all printers...');
         await this.disconnectAll();
-        logger.info('[PrinterStateManager-v0.1] Graceful shutdown complete.');
+        logger.info('[PrinterStateManager] Graceful shutdown complete.');
     }
 }
 

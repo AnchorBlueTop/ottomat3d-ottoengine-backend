@@ -21,7 +21,7 @@ const printerController = {
     async registerPrinter(req, res, next) {
         try {
             const printerData = req.body;
-            logger.info(`[Ctrl v0.1] Registering printer:`, printerData);
+            logger.info(`[PrinterController] Registering printer:`, printerData);
             // Basic validation of top-level fields expected by API doc for POST /printers
             if (!printerData.name || !printerData.type || !printerData.ip_address) {
                 return res.status(400).json({ error: 'Bad Request', message: 'name, type, and ip_address are required for printer registration.' });
@@ -33,11 +33,11 @@ const printerController = {
 
             res.status(201).json({
                 id: newPrinter.id,
-                name: newPrinter.name, // Ensure service returns at least these from DB record
+                name: newPrinter.name,
                 message: "Printer registered successfully"
             });
         } catch (error) {
-            logger.error(`[Ctrl v0.1] RegisterPrinter Error: ${error.message}`, error.stack);
+            logger.error(`[PrinterController] RegisterPrinter Error: ${error.message}`, error.stack);
             if (error.message.includes('Missing required') || error.message.includes('Invalid')) {
                 return res.status(400).json({ error: 'Bad Request', message: error.message });
             }
@@ -51,13 +51,11 @@ const printerController = {
     // GET /api/printers/
     async getAllPrinters(req, res, next) {
         try {
-            logger.info('[Ctrl v0.1] Request to get all printers.');
-            // printerService.getAllPrinters() returns static DB data + placeholder status/filament
-            // as per API doc for list view.
+            logger.info('[PrinterController] Request to get all printers.');
             const printers = await printerService.getAllPrinters();
             res.status(200).json(printers);
         } catch (error) {
-            logger.error(`[Ctrl v0.1] GetAllPrinters Error: ${error.message}`, error.stack);
+            logger.error(`[PrinterController] GetAllPrinters Error: ${error.message}`, error.stack);
             next(error);
         }
     },
@@ -66,7 +64,7 @@ const printerController = {
     async getPrinterById(req, res, next) { // This endpoint returns full live details
         try {
             const printerId = validateIdParam(req.params.id);
-            logger.info(`[Ctrl v0.1] Request to get printer by ID (full live details): ${printerId}`);
+            logger.info(`[PrinterController] Request to get printer by ID (full live details): ${printerId}`);
             
             // This service method fetches live status/filament and combines with stored DB info
             const result = await printerService.getPrinterLiveDetails(printerId);
@@ -79,7 +77,7 @@ const printerController = {
                 res.status(502).json({ error: 'Device Communication Error', message: result.message || `Could not retrieve details for printer ${printerId}.`});
             }
         } catch (error) {
-            logger.error(`[Ctrl v0.1] GetPrinterById (live) Error: ${error.message}`, error.stack);
+            logger.error(`[PrinterController] GetPrinterById (live) Error: ${error.message}`, error.stack);
             if (error.statusCode === 400) { // From validateIdParam
                  return res.status(400).json({ error: 'Bad Request', message: error.message });
             }
@@ -96,7 +94,7 @@ const printerController = {
                 return res.status(400).json({ error: 'Bad Request', message: 'Request body cannot be empty for update.' });
             }
 
-            logger.info(`[Ctrl v0.1] Request to update printer ID ${printerId}`);
+            logger.info(`[PrinterController] Request to update printer ID ${printerId}`);
             // printerService.updatePrinter updates the DB.
             // The service also now notifies PrinterStateManager if connection details changed.
             const updatedPrinterRecordFromDb = await printerService.updatePrinter(printerId, updateData);
@@ -105,7 +103,7 @@ const printerController = {
                  return res.status(404).json({ error: 'Not Found', message: `Printer with ID ${printerId} not found.` });
             }
             
-            logger.info(`[Ctrl v0.1] Printer ${printerId} DB record updated. Fetching live details for response...`);
+            logger.info(`[PrinterController] Printer ${printerId} DB record updated. Fetching live details for response...`);
             const resultWithLiveDetails = await printerService.getPrinterLiveDetails(printerId);
             
             let responseBody;
@@ -116,7 +114,7 @@ const printerController = {
                 };
             } else {
                 // Fallback if live details fetch fails post-update
-                logger.warn(`[Ctrl v0.1] UpdatePrinter: Succeeded DB update for ${printerId} but failed to fetch live details for response. Message: ${resultWithLiveDetails.message}`);
+                logger.warn(`[PrinterController] UpdatePrinter: Succeeded DB update for ${printerId} but failed to fetch live details for response. Message: ${resultWithLiveDetails.message}`);
                 const dbData = { ...updatedPrinterRecordFromDb }; // Use data directly from DB update
                 if (dbData.build_volume_json) { try { dbData.build_volume = JSON.parse(dbData.build_volume_json); } catch(e){ dbData.build_volume = null;} }
                 delete dbData.build_volume_json;
@@ -135,7 +133,7 @@ const printerController = {
             res.status(200).json(responseBody);
 
         } catch (error) {
-            logger.error(`[Ctrl v0.1] UpdatePrinterDetails Error: ${error.message}`, error.stack);
+            logger.error(`[PrinterController] UpdatePrinterDetails Error: ${error.message}`, error.stack);
              if (error.statusCode === 400) return res.status(400).json({ error: 'Bad Request', message: error.message });
              if (error.message.includes('UNIQUE constraint failed')) return res.status(409).json({ error: 'Conflict', message: error.message });
             next(error);
@@ -146,7 +144,7 @@ const printerController = {
     async deletePrinter(req, res, next) {
         try {
             const printerId = validateIdParam(req.params.id);
-            logger.info(`[Ctrl v0.1] Request to delete printer ID ${printerId}`);
+            logger.info(`[PrinterController] Request to delete printer ID ${printerId}`);
             // printerService.deletePrinter now also informs PrinterStateManager
             const success = await printerService.deletePrinter(printerId);
             if (success) {
@@ -155,7 +153,7 @@ const printerController = {
                 res.status(404).json({ error: 'Not Found', message: `Printer with ID ${printerId} not found.` });
             }
         } catch (error) {
-            logger.error(`[Ctrl v0.1] DeletePrinter Error: ${error.message}`, error.stack);
+            logger.error(`[PrinterController] DeletePrinter Error: ${error.message}`, error.stack);
             if (error.statusCode === 400) return res.status(400).json({ error: 'Bad Request', message: error.message });
             next(error);
         }
@@ -167,26 +165,25 @@ const printerController = {
     async getPrinterLiveStatus(req, res, next) {
         try {
             const printerId = validateIdParam(req.params.id);
-            logger.info(`[Ctrl v0.1] Request for live status of printer ID: ${printerId}`);
+            logger.info(`[PrinterController] Request for live status of printer ID: ${printerId}`);
             const result = await printerService.getPrinterLiveDetails(printerId); // Service gets live data
 
             if (result.success && result.data) {
                 res.status(200).json({
                     id: result.data.id,
                     name: result.data.name,
-                    brand: result.data.brand, // ADD brand
-                    model: result.data.model, // ADD model
+                    brand: result.data.brand, 
+                    model: result.data.model, 
                     status: result.data.status, // Main gcode_state
                     current_stage: result.data.current_stage,
                     progress_percent: result.data.progress_percent,
                     remaining_time_minutes: result.data.remaining_time_minutes
-                    // REMOVED type, filament, bed_temperature, nozzle_temperature as requested
                 });
             } else {
                 res.status(502).json({ error: 'Device Communication Error', message: result.message || `Could not retrieve status for printer ${printerId}.`});
             }
         } catch (error) {
-            logger.error(`[Ctrl v0.1] GetPrinterLiveStatus Error: ${error.message}`, error.stack);
+            logger.error(`[PrinterController] GetPrinterLiveStatus Error: ${error.message}`, error.stack);
             if (error.statusCode === 400) return res.status(400).json({ error: 'Bad Request', message: error.message });
             next(error);
         }
@@ -200,40 +197,40 @@ const printerController = {
             if (!filename) {
                 return res.status(400).json({ error: 'Bad Request', message: 'Missing "filename" in request body.' });
             }
-            logger.info(`[Ctrl v0.1] Request to start print of file '${filename}' on printer ID: ${printerId}`);
+            logger.info(`[PrinterController] Request to start print of file '${filename}' on printer ID: ${printerId}`);
             
-            const result = await printerService.commandStartPrint(printerId, filename, req.body); // Pass full req.body as options
+            const result = await printerService.commandStartPrint(printerId, filename, req.body);
 
             if (result.success) {
-                res.status(202).json({ message: result.message }); // 202 Accepted
+                res.status(202).json({ message: result.message }); 
             } else {
                 res.status(result.statusCode || 409).json({ error: 'Command Failed or Printer Issue', message: result.message });
             }
         } catch (error) {
-            logger.error(`[Ctrl v0.1] StartPrintOnFile Error: ${error.message}`, error.stack);
+            logger.error(`[PrinterController] StartPrintOnFile Error: ${error.message}`, error.stack);
             if (error.statusCode === 400) return res.status(400).json({ error: 'Bad Request', message: error.message });
             next(error);
         }
     },
 
     // POST /api/printers/:id/send-gcode
-    async sendGcodeToPrinter(req, res, next) { // Renamed from sendGcodeCommand
+    async sendGcodeToPrinter(req, res, next) { 
         try {
             const printerId = validateIdParam(req.params.id);
             const { gcode } = req.body;
             if (!gcode || typeof gcode !== 'string') {
                 return res.status(400).json({ error: 'Bad Request', message: 'Request body must include a string "gcode" field.' });
             }
-            logger.info(`[Ctrl v0.1] Request to send G-code to printer ID: ${printerId}`);
+            logger.info(`[PrinterController] Request to send G-code to printer ID: ${printerId}`);
             const result = await printerService.commandSendGcode(printerId, gcode);
 
             if (result.success) {
-                res.status(202).json({ message: result.message }); // 202 Accepted
+                res.status(202).json({ message: result.message }); 
             } else {
                 res.status(result.statusCode || 409).json({ error: 'Command Failed', message: result.message });
             }
         } catch (error) {
-            logger.error(`[Ctrl v0.1] SendGcodeToPrinter Error: ${error.message}`, error.stack);
+            logger.error(`[PrinterController] SendGcodeToPrinter Error: ${error.message}`, error.stack);
             if (error.statusCode === 400) return res.status(400).json({ error: 'Bad Request', message: error.message });
             next(error);
         }
@@ -263,20 +260,17 @@ const printerController = {
             }
 
             // Optional: Client can specify a remote filename, or we use original.
-            // For v0.1, let's assume the remote filename is the same as the original.
-            // If you want to allow client to specify, get it from req.body.remote_filename
             const remoteFilenameOnPrinter = req.body.remote_filename || originalFilename;
 
-            logger.info(`[Ctrl v0.1] Request to upload file '${originalFilename}' (as '${remoteFilenameOnPrinter}') to printer ID ${printerId}. Temp path: ${tempFilePath}, Size: ${fileSizeReadable}`);
+            logger.info(`[PrinterController] Request to upload file '${originalFilename}' (as '${remoteFilenameOnPrinter}') to printer ID ${printerId}. Temp path: ${tempFilePath}, Size: ${fileSizeReadable}`);
 
             const result = await printerService.commandUploadFile(printerId, tempFilePath, remoteFilenameOnPrinter);
 
             if (result.success) {
-                // Construct the new response structure
                 res.status(200).json({ 
-                    filename: remoteFilenameOnPrinter, // Or originalFilename if preferred for this field
+                    filename: remoteFilenameOnPrinter,
                     file_size: fileSizeReadable,
-                    upload_time: new Date().toISOString(), // Current time as upload_time
+                    upload_time: new Date().toISOString(), 
                     message: result.message || `File '${remoteFilenameOnPrinter}' uploaded successfully to printer ${printerId}.`
                 });
             } else {
@@ -287,7 +281,7 @@ const printerController = {
                 });
             }
         } catch (error) {
-            logger.error(`[Ctrl v0.1] UploadFileToPrinter Error: ${error.message}`, error.stack);
+            logger.error(`[PrinterController] UploadFileToPrinter Error: ${error.message}`, error.stack);
             if (error.statusCode === 400) { // From validateIdParam
                 return res.status(400).json({ error: 'Bad Request', message: error.message });
             }
@@ -297,16 +291,72 @@ const printerController = {
             if (tempFilePath) {
                 try {
                     await fs.unlink(tempFilePath);
-                    logger.info(`[Ctrl v0.1] Deleted temporary uploaded file: ${tempFilePath}`);
+                    logger.info(`[PrinterController] Deleted temporary uploaded file: ${tempFilePath}`);
                 } catch (unlinkError) {
-                    logger.error(`[Ctrl v0.1] Failed to delete temporary file ${tempFilePath}: ${unlinkError.message}`);
+                    logger.error(`[PrinterController] Failed to delete temporary file ${tempFilePath}: ${unlinkError.message}`);
                 }
             }
         }
+    },
+
+    // --- ADDED: Printer Control Handlers ---
+
+    async pausePrint(req, res, next) {
+        try {
+            const printerId = validateIdParam(req.params.id);
+            logger.info(`[PrinterController] Request to PAUSE print on printer ID: ${printerId}`);
+            const result = await printerService.commandPausePrint(printerId);
+            if (result.success) {
+                res.status(202).json({ message: result.message });
+            } else {
+                res.status(result.statusCode || 500).json({ error: 'Command Failed', message: result.message });
+            }
+        } catch (error) {
+            logger.error(`[PrinterController] PausePrint Error: ${error.message}`, error);
+            if (error.statusCode) {
+                return res.status(error.statusCode).json({ error: 'Bad Request', message: error.message });
+            }
+            next(error);
+        }
+    },
+
+    async resumePrint(req, res, next) {
+        try {
+            const printerId = validateIdParam(req.params.id);
+            logger.info(`[PrinterController] Request to RESUME print on printer ID: ${printerId}`);
+            const result = await printerService.commandResumePrint(printerId);
+            if (result.success) {
+                res.status(202).json({ message: result.message });
+            } else {
+                res.status(result.statusCode || 500).json({ error: 'Command Failed', message: result.message });
+            }
+        } catch (error) {
+            logger.error(`[PrinterController] ResumePrint Error: ${error.message}`, error);
+            if (error.statusCode) {
+                return res.status(error.statusCode).json({ error: 'Bad Request', message: error.message });
+            }
+            next(error);
+        }
+    },
+
+    async stopPrint(req, res, next) {
+        try {
+            const printerId = validateIdParam(req.params.id);
+            logger.info(`[PrinterController] Request to STOP print on printer ID: ${printerId}`);
+            const result = await printerService.commandStopPrint(printerId);
+            if (result.success) {
+                res.status(202).json({ message: result.message });
+            } else {
+                res.status(result.statusCode || 500).json({ error: 'Command Failed', message: result.message });
+            }
+        } catch (error) {
+            logger.error(`[PrinterController] StopPrint Error: ${error.message}`, error);
+            if (error.statusCode) {
+                return res.status(error.statusCode).json({ error: 'Bad Request', message: error.message });
+            }
+            next(error);
+        }
     }
-    // Removed controller methods for direct file management (upload, list, delete) and pause/resume/stop
-    // as these are not in the primary v0.1 Python script interaction loop via backend proxy.
-    // If needed, they would call corresponding simplified relay methods in printerService.
 };
 
 module.exports = printerController;

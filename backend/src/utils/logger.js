@@ -19,8 +19,18 @@ const currentLogLevel = LOG_LEVELS[currentLogLevelName.toUpperCase()] ?? LOG_LEV
  * @returns {string} Formatted log string.
  */
 function formatMessage(level, message, optionalParams) {
-    const timestamp = new Date().toISOString(); // Use ISO format for better sorting/parsing
-    const levelStr = `[${level.padEnd(5)}]`.toUpperCase(); // Padded level string (e.g., [INFO ])
+    const now = new Date();
+    const pad = (num) => String(num).padStart(2, '0');
+    
+    const day = pad(now.getDate());
+    const month = pad(now.getMonth() + 1); // Months are 0-indexed
+    const year = now.getFullYear();
+    
+    const hours = pad(now.getHours());
+    const minutes = pad(now.getMinutes());
+    const seconds = pad(now.getSeconds());
+    const timestamp = `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+    const levelStr = `[${level.padEnd(5)}]`.toUpperCase();
     const mainMessage = `${timestamp} ${levelStr} ${message}`;
 
     // Format optional parameters (handle objects/errors specifically)

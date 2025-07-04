@@ -16,7 +16,7 @@ Node.js/Express.js backend for OTTOMAT3D, serving as an API proxy for controllin
     *   The `.env` file configures `SQLITE_DB_PATH=db/ottomat3d.db`.
     *   **To initialize/reset DB:** Stop server, delete `db/ottomat3d.db`, then run:
         ```bash
-        sqlite3 db/ottomat3d.db < db/001_initial_schema.sql
+        sqlite3 db/ottomat3d.db < db/schema.sql
         ```
         *(Ensure `sqlite3` CLI tool is installed.)*
 

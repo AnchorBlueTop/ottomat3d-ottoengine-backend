@@ -22,27 +22,24 @@ const ottoejectController = {
     async registerOttoeject(req, res, next) {
         try {
             const { device_name, ip_address } = req.body; // Matches new API doc fields for request
-            // For v0.1, status, gantry_size, storage_rack are not part of POST request body for DB storage.
             
             if (!device_name || !ip_address) {
                 return res.status(400).json({ error: 'Bad Request', message: 'device_name and ip_address are required for Ottoeject registration.' });
             }
 
-            // Service only expects device_name and ip_address for v0.1 DB schema
             const newOttoeject = await ottoejectService.createOttoeject({ device_name, ip_address });
 
             if (!newOttoeject) { // Should be caught by service throwing error
-                throw new Error('Ottoeject registration failed in service layer.');
+                throw new Error('[OttoejectController] Ottoeject registration failed in service layer.');
             }
             
             res.status(201).json({
                 id: newOttoeject.id,
                 device_name: newOttoeject.device_name,
-                //status: "ONLINE", // Default static response as per API doc example for creation; actual status is polled.
                 message: "Ottoeject registered successfully"
             });
         } catch (error) {
-            logger.error(`[Ctrl v0.1] RegisterOttoeject Error: ${error.message}`, error.stack);
+            logger.error(`[OttoejectController] RegisterOttoeject Error: ${error.message}`, error.stack);
             if (error.message.includes('Missing required') || error.message.includes('Invalid')) {
                 return res.status(400).json({ error: 'Bad Request', message: error.message });
             }
@@ -56,7 +53,7 @@ const ottoejectController = {
     // GET /api/ottoeject/
     async getAllOttoejects(req, res, next) {
         try {
-            logger.info('[Ctrl v0.1] Request to get all ottoejects.');
+            logger.info('[OttoejectController] Request to get all ottoejects.');
             const ottoejectsFromDb = await ottoejectService.getAllOttoejects(); // Gets basic info (id, device_name, ip_address)
             
             // API doc example for GET /ottoeject (list) shows status, gantry_size, storage_rack.
@@ -72,7 +69,7 @@ const ottoejectController = {
             }));
             res.status(200).json(responseOttoejects);
         } catch (error) {
-            logger.error(`[Ctrl v0.1] GetAllOttoejects Error: ${error.message}`, error.stack);
+            logger.error(`[OttoejectController] GetAllOttoejects Error: ${error.message}`, error.stack);
             next(error);
         }
     },
@@ -81,7 +78,7 @@ const ottoejectController = {
     async getOttoejectById(req, res, next) { // This endpoint returns stored details + live status
         try {
             const ottoejectId = validateIdParam(req.params.id);
-            logger.info(`[Ctrl v0.1] Request to get ottoeject by ID (with live status): ${ottoejectId}`);
+            logger.info(`[OttoejectController] Request to get ottoeject by ID (with live status): ${ottoejectId}`);
             
             const ottoejectFromDb = await ottoejectService.getOttoejectById(ottoejectId);
             if (!ottoejectFromDb) {
@@ -94,7 +91,7 @@ const ottoejectController = {
             if (statusResult.success && statusResult.data) {
                 liveDeviceStatus = statusResult.data.status; // e.g., ONLINE, EJECTING, from service mapping
             } else {
-                logger.warn(`[Ctrl v0.1] Failed to get live status for ottoeject ${ottoejectId} when fetching details. Message: ${statusResult.message}`);
+                logger.warn(`[OttoejectController] Failed to get live status for ottoeject ${ottoejectId} when fetching details. Message: ${statusResult.message}`);
             }
 
             // Construct response based on API doc (gantry_size, storage_rack deferred for v0.1 DB storage)
@@ -107,7 +104,7 @@ const ottoejectController = {
                 // storage_rack: null    // From DB if stored later
             });
         } catch (error) {
-            logger.error(`[Ctrl v0.1] GetOttoejectById Error: ${error.message}`, error.stack);
+            logger.error(`[OttoejectController] GetOttoejectById Error: ${error.message}`, error.stack);
             if (error.statusCode === 400) { // From validateIdParam
                  return res.status(400).json({ error: 'Bad Request', message: error.message });
             }
@@ -124,7 +121,7 @@ const ottoejectController = {
                 return res.status(400).json({ error: 'Bad Request', message: 'Request body cannot be empty for update.' });
             }
 
-            logger.info(`[Ctrl v0.1] Request to update ottoeject ID ${ottoejectId}`);
+            logger.info(`[OttoejectController] Request to update ottoeject ID ${ottoejectId}`);
             // Service will filter for valid fields (device_name, ip_address for v0.1)
             const updatedOttoeject = await ottoejectService.updateOttoeject(ottoejectId, updateData);
             
@@ -140,7 +137,7 @@ const ottoejectController = {
                 message: "Ottoeject updated successfully"
             });
         } catch (error) {
-            logger.error(`[Ctrl v0.1] UpdateOttoeject Error: ${error.message}`, error.stack);
+            logger.error(`[OttoejectController] UpdateOttoeject Error: ${error.message}`, error.stack);
              if (error.statusCode === 400) return res.status(400).json({ error: 'Bad Request', message: error.message });
              if (error.message.includes('UNIQUE constraint failed')) return res.status(409).json({ error: 'Conflict', message: error.message });
             next(error);
@@ -151,7 +148,7 @@ const ottoejectController = {
     async deleteOttoeject(req, res, next) {
         try {
             const ottoejectId = validateIdParam(req.params.id);
-            logger.info(`[Ctrl v0.1] Request to delete ottoeject ID ${ottoejectId}`);
+            logger.info(`[OttoejectController] Request to delete ottoeject ID ${ottoejectId}`);
             const success = await ottoejectService.deleteOttoeject(ottoejectId);
             if (success) {
                 res.status(200).json({ message: "Ottoeject deleted successfully" }); // API doc shows 200 with message
@@ -159,7 +156,7 @@ const ottoejectController = {
                 res.status(404).json({ error: 'Not Found', message: `Ottoeject with ID ${ottoejectId} not found.` });
             }
         } catch (error) {
-            logger.error(`[Ctrl v0.1] DeleteOttoeject Error: ${error.message}`, error.stack);
+            logger.error(`[OttoejectController] DeleteOttoeject Error: ${error.message}`, error.stack);
             if (error.statusCode === 400) return res.status(400).json({ error: 'Bad Request', message: error.message });
             next(error);
         }
@@ -171,7 +168,7 @@ const ottoejectController = {
     async getOttoejectLiveStatus(req, res, next) { // Name matches route
         try {
             const ottoejectId = validateIdParam(req.params.id);
-            logger.info(`[Ctrl v0.1] Request for live status of ottoeject ID: ${ottoejectId}`);
+            logger.info(`[OttoejectController] Request for live status of ottoeject ID: ${ottoejectId}`);
             const result = await ottoejectService.getOttoejectLiveStatus(ottoejectId);
 
             if (result.success && result.data) {
@@ -189,7 +186,7 @@ const ottoejectController = {
                 });
             }
         } catch (error) {
-            logger.error(`[Ctrl v0.1] GetOttoejectLiveStatus Error for ID ${req.params.id}: ${error.message}`, error.stack);
+            logger.error(`[OttoejectController] GetOttoejectLiveStatus Error for ID ${req.params.id}: ${error.message}`, error.stack);
             if (error.statusCode === 400) {
                  return res.status(400).json({ error: 'Bad Request', message: error.message });
             }
@@ -205,7 +202,7 @@ const ottoejectController = {
             if (!macro || typeof macro !== 'string' || macro.trim() === "") {
                  return res.status(400).json({ error: 'Bad Request', message: 'Request body must include a non-empty string "macro" field.' });
             }
-            logger.info(`[Ctrl v0.1] Request to execute macro '${macro}' on ottoeject ID: ${ottoejectId}`);
+            logger.info(`[OttoejectController] Request to execute macro '${macro}' on ottoeject ID: ${ottoejectId}`);
             const result = await ottoejectService.executeMacro(ottoejectId, macro, params || {});
 
             if (result.success) {
@@ -222,7 +219,7 @@ const ottoejectController = {
                 });
             }
         } catch (error) {
-            logger.error(`[Ctrl v0.1] ExecuteMacro Error for ID ${req.params.id}, Macro ${req.body.macro}: ${error.message}`, error.stack);
+            logger.error(`[OttoejectController] ExecuteMacro Error for ID ${req.params.id}, Macro ${req.body.macro}: ${error.message}`, error.stack);
             if (error.statusCode === 400) { // From validateIdParam
                  return res.status(400).json({ error: 'Bad Request', message: error.message });
             }

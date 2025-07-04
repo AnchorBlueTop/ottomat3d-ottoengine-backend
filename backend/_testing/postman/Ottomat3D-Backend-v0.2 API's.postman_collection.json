@@ -1,10 +1,10 @@
 {
 	"info": {
-		"_postman_id": "0bc8d4e3-bca2-4da4-89a8-fe2edd9b489b",
-		"name": "Ottoengine APIs",
+		"_postman_id": "4cbe8366-762e-4843-bb13-2139e1d15efb",
+		"name": "Ottomat3D Backend v0.1 API's",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "45570471",
-		"_collection_link": "https://ottomat3d-4549719.postman.co/workspace/Ottomat3d's-Workspace~c9ec75ae-3bc9-4ce5-87b4-26d9e4d21d9e/collection/45570471-0bc8d4e3-bca2-4da4-89a8-fe2edd9b489b?action=share&source=collection_link&creator=45570471"
+		"_exporter_id": "43548769",
+		"_collection_link": "https://harshilpatel-3555320.postman.co/workspace/dcaef52b-2fcf-4696-8e47-8216d00eaf86/collection/43548769-4cbe8366-762e-4843-bb13-2139e1d15efb?action=share&source=collection_link&creator=43548769"
 	},
 	"item": [
 		{
@@ -14,7 +14,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"name\": \"My_P1P\",\r\n    \"brand\": \"Bambu Lab\",\r\n    \"model\": \"P1P\",\r\n    \"type\": \"FDM\",\r\n    \"ip_address\": \"192.168.68.68\",\r\n    \"access_code\": \"14358945\",\r\n    \"serial_number\": \"01S00C371700385\"\r\n}",
+					"raw": "{\r\n    \"name\": \"My_P1P\",\r\n    \"brand\": \"Bambu Lab\",\r\n    \"model\": \"P1P\",\r\n    \"type\": \"FDM\",\r\n    \"ip_address\": \"192.168.68.58\",\r\n    \"access_code\": \"14358945\",\r\n    \"serial_number\": \"01S00C371700385\"\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -92,6 +92,36 @@
 			"response": []
 		},
 		{
+			"name": "Upload File to Printer",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": "/Users/harshilpatel/Desktop/Projects/MCP/ottostudio/backend/uploads/test_cube.gcode.3mf"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/printers/1/upload",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"printers",
+						"1",
+						"upload"
+					]
+				}
+			},
+			"response": []
+		},
+		{
 			"name": "Send G-Code to Printer (Bed Movement)",
 			"request": {
 				"method": "POST",
@@ -150,13 +180,81 @@
 			"response": []
 		},
 		{
+			"name": "Pause a Printer",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/printers/1/pause",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"printers",
+						"1",
+						"pause"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Resume a Printer",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\": \"My_P1P\",\r\n    \"brand\": \"Bambu Lab\",\r\n    \"model\": \"P1P\",\r\n    \"type\": \"FDM\",\r\n    \"ip_address\": \"192.168.68.58\",\r\n    \"access_code\": \"14358945\",\r\n    \"serial_number\": \"01S00C371700385\"\r\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/printers/1/resume",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"printers",
+						"1",
+						"resume"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Stop a Printer",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\": \"My_P1P\",\r\n    \"brand\": \"Bambu Lab\",\r\n    \"model\": \"P1P\",\r\n    \"type\": \"FDM\",\r\n    \"ip_address\": \"192.168.68.58\",\r\n    \"access_code\": \"14358945\",\r\n    \"serial_number\": \"01S00C371700385\"\r\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/printers/1/resume",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"printers",
+						"1",
+						"resume"
+					]
+				}
+			},
+			"response": []
+		},
+		{
 			"name": "Update Printer Details",
 			"request": {
 				"method": "PUT",
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\r\n    \"ip_address\": \"192.168.68.68\"\r\n}",
+					"raw": "{\r\n    \"build_volume\": {\r\n        \"width\": 250,\r\n        \"height\": 210,\r\n        \"depth\": 210,\r\n        \"unit\": \"mm\"\r\n    }\r\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -282,37 +380,6 @@
 			"response": []
 		},
 		{
-			"name": "Update Ottoeject details",
-			"request": {
-				"auth": {
-					"type": "noauth"
-				},
-				"method": "PUT",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\r\n    \"ip_address\": \"pi31.local\"\r\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "{{baseUrl}}/api/ottoeject/1",
-					"host": [
-						"{{baseUrl}}"
-					],
-					"path": [
-						"api",
-						"ottoeject",
-						"1"
-					]
-				}
-			},
-			"response": []
-		},
-		{
 			"name": "Delete an Ottoeject",
 			"request": {
 				"method": "DELETE",
@@ -361,13 +428,43 @@
 			"response": []
 		},
 		{
-			"name": "Eject From P1",
+			"name": "Upload & Parse Gcode File (Step 1)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"description": "Select a .gcode.3mf file from your computer",
+							"type": "file",
+							"src": "postman-cloud:///1f04458f-f87d-4c30-8ac4-9ef519baa4c6"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/print-jobs/upload",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"print-jobs",
+						"upload"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Print Job (Step 2)",
 			"request": {
 				"method": "POST",
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"macro\": \"EJECT_FROM_P1\"\n}",
+					"raw": "{\n    \"print_item_id\": 1,\n    \"printer_id\": 1,\n    \"ottoeject_id\": 1,\n    \"auto_start\": true,\n    \"priority\": 1\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -375,28 +472,64 @@
 					}
 				},
 				"url": {
-					"raw": "{{baseUrl}}/api/ottoeject/1/macros",
+					"raw": "{{baseUrl}}/api/print-jobs",
 					"host": [
 						"{{baseUrl}}"
 					],
 					"path": [
 						"api",
-						"ottoeject",
-						"1",
-						"macros"
+						"print-jobs"
 					]
 				}
 			},
 			"response": []
 		},
 		{
-			"name": "Store To Slot 3",
+			"name": "Get All Print Jobs",
 			"request": {
-				"method": "POST",
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/print-jobs/",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"print-jobs",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Specific Print Job",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/print-jobs/1",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"print-jobs",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Print Job",
+			"request": {
+				"method": "PUT",
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"macro\": \"STORE_TO_SLOT_3\"\n}",
+					"raw": "{\n    \"id\": 1,\n    \"priority\": 2\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -404,28 +537,27 @@
 					}
 				},
 				"url": {
-					"raw": "{{baseUrl}}/api/ottoeject/1/macros",
+					"raw": "{{baseUrl}}/api/print-jobs/1",
 					"host": [
 						"{{baseUrl}}"
 					],
 					"path": [
 						"api",
-						"ottoeject",
-						"1",
-						"macros"
+						"print-jobs",
+						"1"
 					]
 				}
 			},
 			"response": []
 		},
 		{
-			"name": "Grab From Slot 1",
+			"name": "Cancel Print Job",
 			"request": {
-				"method": "POST",
+				"method": "DELETE",
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"macro\": \"GRAB_FROM_SLOT_1\"\n}",
+					"raw": "",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -433,28 +565,27 @@
 					}
 				},
 				"url": {
-					"raw": "{{baseUrl}}/api/ottoeject/1/macros",
+					"raw": "{{baseUrl}}/api/print-jobs/1",
 					"host": [
 						"{{baseUrl}}"
 					],
 					"path": [
 						"api",
-						"ottoeject",
-						"1",
-						"macros"
+						"print-jobs",
+						"1"
 					]
 				}
 			},
 			"response": []
 		},
 		{
-			"name": "Load Onto P1",
+			"name": "Complete a Print Job",
 			"request": {
 				"method": "POST",
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"macro\": \"LOAD_ONTO_P1\"\n}",
+					"raw": "",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -462,77 +593,19 @@
 					}
 				},
 				"url": {
-					"raw": "{{baseUrl}}/api/ottoeject/1/macros",
+					"raw": "{{baseUrl}}/api/print-jobs/1/complete",
 					"host": [
 						"{{baseUrl}}"
 					],
 					"path": [
 						"api",
-						"ottoeject",
+						"print-jobs",
 						"1",
-						"macros"
+						"complete"
 					]
 				}
 			},
 			"response": []
-		},
-		{
-			"name": "Park Ottoeject",
-			"request": {
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "raw",
-					"raw": "{\n    \"macro\": \"GRAB_FROM_SLOT_1\"\n}",
-					"options": {
-						"raw": {
-							"language": "json"
-						}
-					}
-				},
-				"url": {
-					"raw": "{{baseUrl}}/api/ottoeject/1/macros",
-					"host": [
-						"{{baseUrl}}"
-					],
-					"path": [
-						"api",
-						"ottoeject",
-						"1",
-						"macros"
-					]
-				}
-			},
-			"response": []
-		}
-	],
-	"event": [
-		{
-			"listen": "prerequest",
-			"script": {
-				"type": "text/javascript",
-				"packages": {},
-				"exec": [
-					""
-				]
-			}
-		},
-		{
-			"listen": "test",
-			"script": {
-				"type": "text/javascript",
-				"packages": {},
-				"exec": [
-					""
-				]
-			}
-		}
-	],
-	"variable": [
-		{
-			"key": "baseUrl",
-			"value": "http://localhost:3000",
-			"type": "string"
 		}
 	]
 }

@@ -4,9 +4,8 @@
 const axios = require('axios');
 const logger = require('../utils/logger');
 
-// You increased this to 300000 (300s == 5min) before, which is probably good.
+// You increased this to 30000 (30s) before, which is probably good.
 const MOONRAKER_TIMEOUT_MS = (1000 * 300); // Check if this is still your preferred value
-
 
 const moonrakerService = {
     getBaseUrl(ipAddressOrHostname, port = 7125) {

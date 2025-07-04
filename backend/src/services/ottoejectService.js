@@ -17,15 +17,15 @@ const ottoejectService = {
         const sql = `INSERT INTO ottoejects (device_name, ip_address) VALUES (?, ?)`;
         const params = [device_name, ip_address];
         try {
-            logger.debug(`[Service v0.1] Creating ottoeject: ${device_name}`);
+            logger.debug(`[OttoejectService] Creating ottoeject: ${device_name}`);
             const result = await dbRun(sql, params);
             if (result.lastID) {
                 return await ottoejectService.getOttoejectById(result.lastID); // Use service name
             }
-            logger.warn('[Service v0.1] Ottoeject creation did not return a lastID.');
+            logger.warn('[OttoejectService] Ottoeject creation did not return a lastID.');
             return null;
         } catch (error) {
-            logger.error(`[Service v0.1] Error creating ottoeject "${device_name}": ${error.message}`);
+            logger.error(`[OttoejectService] Error creating ottoeject "${device_name}": ${error.message}`);
             if (error.message.includes('UNIQUE constraint failed')) {
                 throw new Error(`Failed to create ottoeject: Device with the same name or IP Address might already exist.`);
             }
@@ -35,22 +35,22 @@ const ottoejectService = {
 
     async getAllOttoejects() {
         try {
-            logger.debug('[Service v0.1] Fetching all ottoejects');
+            logger.debug('[OttoejectService] Fetching all ottoejects');
             // Fetches basic registration info. Status will be added live by controller if needed for list.
             return await dbAll('SELECT id, device_name, ip_address FROM ottoejects ORDER BY device_name ASC');
         } catch (error) {
-            logger.error(`[Service v0.1] Error fetching all ottoejects: ${error.message}`);
+            logger.error(`[OttoejectService] Error fetching all ottoejects: ${error.message}`);
             throw error;
         }
     },
 
     async getOttoejectById(id) { // Used to get IP for commands/status
         try {
-            logger.debug(`[Service v0.1] Fetching ottoeject by ID: ${id}`);
+            logger.debug(`[OttoejectService] Fetching ottoeject by ID: ${id}`);
             // Fetches basic registration info.
             return await dbGet('SELECT id, device_name, ip_address FROM ottoejects WHERE id = ?', [id]);
         } catch (error) {
-            logger.error(`[Service v0.1] Error fetching ottoeject by ID ${id}: ${error.message}`);
+            logger.error(`[OttoejectService] Error fetching ottoeject by ID ${id}: ${error.message}`);
             throw error;
         }
     },
@@ -61,18 +61,18 @@ const ottoejectService = {
         for (const key in allowedUpdates) { if (!validFields.includes(key)) delete allowedUpdates[key]; }
 
         if (Object.keys(allowedUpdates).length === 0) {
-            logger.warn(`[Service v0.1] UpdateOttoeject for ID ${id}: No valid fields to update.`);
+            logger.warn(`[OttoejectService] UpdateOttoeject for ID ${id}: No valid fields to update.`);
             return await ottoejectService.getOttoejectById(id); // Use service name
         }
         const setClause = Object.keys(allowedUpdates).map(field => `${field} = ?`).join(', ');
         const params = [...Object.values(allowedUpdates), id];
         const sql = `UPDATE ottoejects SET ${setClause} WHERE id = ?`;
         try {
-            logger.debug(`[Service v0.1] Attempting to update ottoeject ID ${id} with:`, allowedUpdates);
+            logger.debug(`[OttoejectService] Attempting to update ottoeject ID ${id} with:`, allowedUpdates);
             await dbRun(sql, params);
             return await ottoejectService.getOttoejectById(id); // Use service name
         } catch (error) {
-            logger.error(`[Service v0.1] Error updating ottoeject ${id}: ${error.message}`);
+            logger.error(`[OttoejectService] Error updating ottoeject ${id}: ${error.message}`);
             if (error.message.includes('UNIQUE constraint failed')) {
                 throw new Error(`Failed to update ottoeject: New device_name or IP might already be in use.`);
             }
@@ -82,11 +82,11 @@ const ottoejectService = {
 
     async deleteOttoeject(id) {
         try {
-            logger.debug(`[Service v0.1] Attempting to delete ottoeject ID: ${id}`);
+            logger.debug(`[OttoejectService] Attempting to delete ottoeject ID: ${id}`);
             const result = await dbRun('DELETE FROM ottoejects WHERE id = ?', [id]);
             return result.changes > 0;
         } catch (error) {
-            logger.error(`[Service v0.1] Error deleting ottoeject ${id}: ${error.message}`);
+            logger.error(`[OttoejectService] Error deleting ottoeject ${id}: ${error.message}`);
             throw error;
         }
     },
@@ -98,7 +98,7 @@ const ottoejectService = {
      * Called by GET /api/ottoeject/:id/status
      */
     async getOttoejectLiveStatus(ottoejectId) {
-        logger.debug(`[Service v0.1] Getting live status for Ottoeject ID: ${ottoejectId}`);
+        logger.debug(`[OttoejectService] Getting live status for Ottoeject ID: ${ottoejectId}`);
         try {
             const ottoeject = await ottoejectService.getOttoejectById(ottoejectId); // Use service name
             if (!ottoeject || !ottoeject.ip_address) {
@@ -123,9 +123,9 @@ const ottoejectService = {
                 } else {
                     apiStatus = "UNKNOWN_MOONRAKER_STATE";
                 }
-                logger.info(`[Service v0.1] Ottoeject ${ottoejectId} Klipper state: '${klipperState}', API status: '${apiStatus}'`);
+                logger.info(`[OttoejectService] Ottoeject ${ottoejectId} Klipper state: '${klipperState}', API status: '${apiStatus}'`);
             } else {
-                 logger.warn(`[Service v0.1] Failed to get valid idle_timeout state from Moonraker for Ottoeject ${ottoejectId}. Moonraker response:`, moonrakerResult.data);
+                 logger.warn(`[OttoejectService] Failed to get valid idle_timeout state from Moonraker for Ottoeject ${ottoejectId}. Moonraker response:`, moonrakerResult.data);
                  // apiStatus remains "OFFLINE"
             }
             
@@ -138,7 +138,7 @@ const ottoejectService = {
                 }
             };
         } catch (error) {
-            logger.error(`[Service v0.1] Error getting live status for Ottoeject ${ottoejectId}: ${error.message}`);
+            logger.error(`[OttoejectService] Error getting live status for Ottoeject ${ottoejectId}: ${error.message}`);
             // Return a structure that controller can use to send 502 or appropriate error
             return { 
                 success: false, 
@@ -153,7 +153,7 @@ const ottoejectService = {
      * Called by POST /api/ottoeject/:id/macros
      */
     async executeMacro(ottoejectId, macroName, params = {}) {
-        logger.info(`[Service v0.1] Relaying MACRO '${macroName}' to Ottoeject ID: ${ottoejectId}`, params);
+        logger.info(`[OttoejectService] Relaying MACRO '${macroName}' to Ottoeject ID: ${ottoejectId}`, params);
         try {
             const ottoeject = await ottoejectService.getOttoejectById(ottoejectId); // Use service name
             if (!ottoeject || !ottoeject.ip_address) {
@@ -174,7 +174,7 @@ const ottoejectService = {
             // moonrakerService.executeGcode returns {success, data} or throws
             const result = await moonrakerService.executeGcode(ottoeject.ip_address, gcodeScript);
             
-            logger.info(`[Service v0.1] Macro '${macroName}' command relayed via moonrakerService to Ottoeject ${ottoejectId}.`);
+            logger.info(`[OttoejectService] Macro '${macroName}' command relayed via moonrakerService to Ottoeject ${ottoejectId}.`);
             // The API doc for Ottoeject doesn't specify a response for commands.
             // We can return a simple success message.
             return { 
@@ -187,7 +187,7 @@ const ottoejectService = {
             if (error.message && (error.message.toLowerCase().includes('timeout') || error.message.toLowerCase().includes('econnaborted'))) {
                 returnMessage = `Command '${macroName}' sent to Ottoeject, but acknowledgement from device timed out. External polling for completion is required. Detail: ${error.message}`;
             }
-            logger.error(`[Service v0.1] Error relaying macro '${macroName}' to Ottoeject ${ottoejectId}: ${returnMessage}`);
+            logger.error(`[OttoejectService] Error relaying macro '${macroName}' to Ottoeject ${ottoejectId}: ${returnMessage}`);
             return { success: false, message: returnMessage, details: null };
         }
     }

@@ -38,20 +38,47 @@ router.use((req, res, next) => {
     next(); 
 });
 
-// --- Base Printer Management Routes (for setup) ---
-router.get('/', printerController.getAllPrinters);
+
+// POST /api/printers/ - Register a Printer
 router.post('/', printerController.registerPrinter);
+
+// GET /api/printers - Get all Printers 
+router.get('/', printerController.getAllPrinters);
+
+// GET /api/printers/{id} - Get Single Printer Details
 router.get('/:id', printerController.getPrinterById);
+
+// GET /api/printers/{id}/status - Retreieve a Single Printer Status
+router.get('/:id/status', printerController.getPrinterLiveStatus);
+
+// PUT /api/printers/{id} - Update Basic Details of a Printer
 router.put('/:id', printerController.updatePrinterDetails);
+
+// DELETE /api/printers/{id} - Delete a Printer.
 router.delete('/:id', printerController.deletePrinter);
 
-// --- v0.1 Core Proxy Routes ---
+// GET /api/printers/{id}/status - Retreieve a Single Printer Status
 router.get('/:id/status', printerController.getPrinterLiveStatus);
-router.post('/:id/start-print', printerController.startPrintOnFile); 
+
+// POST /api/printers/{id}/upload - Upload File to Printer.
+router.post('/:id/upload', upload.single('file'), printerController.uploadFileToPrinter); 
+
+// POST /api/printers/{id}/send-gcode - Start Gcode Command to Printer.
 router.post('/:id/send-gcode', printerController.sendGcodeToPrinter);
 
-// --- NEW File Upload Route (Modified) ---
-// Expects the file in a field named 'file'
-router.post('/:id/upload', upload.single('file'), printerController.uploadFileToPrinter); 
+// POST /api/printers/{id}/start-print - Start Print File on Printer
+router.post('/:id/start-print', printerController.startPrintOnFile); 
+
+// --- ADDED: Printer Control Routes ---
+
+// POST /api/printers/{id}/pause - Pause the current print job
+router.post('/:id/pause', printerController.pausePrint);
+
+// POST /api/printers/{id}/resume - Resume a paused print job
+router.post('/:id/resume', printerController.resumePrint);
+
+// POST /api/printers/{id}/stop - Stop (cancel) the current print job
+router.post('/:id/stop', printerController.stopPrint); 
+
 
 module.exports = router;

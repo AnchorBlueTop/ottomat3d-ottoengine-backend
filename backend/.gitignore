@@ -9,3 +9,5 @@
 # Python virtual environment in python-scripts
 python-scripts/venv/
 
+# macOS system files
+**/.DS_Store

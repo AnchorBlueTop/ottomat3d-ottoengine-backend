@@ -18,21 +18,21 @@ const path = require('path');
 
 // --- A1-MINI Configuration ---
 // Default values - can be overridden by command-line arguments
-const DEFAULT_CONFIG = {
-    ip: '192.168.68.59',         // Default to A1-MINI IP
-    serial: '0309EA470200493',   // Default to A1-MINI Serial
-    accessCode: '14306442',     // Default to A1-MINI Access Code
-    localfile: './verify_job.gcode' // Default LOCAL file path TO UPLOAD (relative to where you run node)
-};
+// const DEFAULT_CONFIG = {
+//     ip: '192.168.68.59',         // Default to A1-MINI IP
+//     serial: '0309EA470200493',   // Default to A1-MINI Serial
+//     accessCode: '14306442',     // Default to A1-MINI Access Code
+//     localfile: './verify_job.gcode' // Default LOCAL file path TO UPLOAD (relative to where you run node)
+// };
 
 // --- P1S Configuration ---
 // Default values - can be overridden by command-line arguments
-// const DEFAULT_CONFIG = {
-//     ip: '192.168.68.68',         // Default to P1S IP
-//     serial: '01P00A431300066',   // Default to P1S Serial
-//     accessCode: '31863230',     // Default to P1S Access Code
-//     localfile: './Cube10.gcode.3mf' // Default LOCAL file path TO UPLOAD (relative to where you run node)
-// };
+const DEFAULT_CONFIG = {
+    ip: '192.168.68.64',         // Default to P1S IP
+    serial: '01P00A431300066',   // Default to P1S Serial
+    accessCode: '31863230',     // Default to P1S Access Code
+    localfile: './phonestand.gcode.3mf' // Default LOCAL file path TO UPLOAD (relative to where you run node)
+};
 
 // --- P1P Configuration ---
 // Default values - can be overridden by command-line arguments

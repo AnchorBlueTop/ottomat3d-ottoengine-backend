@@ -17,7 +17,8 @@ const PrinterStateManager = require('./services/printerStateManager');
 // --- Import Routers ---
 const printerApiRoutes = require('./routes/printerApiRoutes');
 const ottoejectApiRoutes = require('./routes/ottoejectApiRoutes');
-const printJobApiRoutes = require('./routes/printJobApiRoutes'); 
+const printJobApiRoutes = require('./routes/printjobApiRoutes');
+const ottorackApiRoutes = require('./routes/ottorackApiRoutes'); 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -59,7 +60,8 @@ ensureDirExists(tempGcodeUploadsDir, 'G-code job uploads');
 logger.info('Mounting API routes...');
 app.use('/api/printers', printerApiRoutes);
 app.use('/api/ottoeject', ottoejectApiRoutes);
-app.use('/api/print-jobs', printJobApiRoutes); 
+app.use('/api/print-jobs', printJobApiRoutes);
+app.use('/api/ottoracks', ottorackApiRoutes); 
 
 // --- Basic Root Route for the API ---
 app.get('/api', (req, res) => {

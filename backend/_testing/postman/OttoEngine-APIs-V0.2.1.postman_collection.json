@@ -1,10 +1,10 @@
 {
 	"info": {
 		"_postman_id": "4cbe8366-762e-4843-bb13-2139e1d15efb",
-		"name": "Ottomat3D Backend v0.1 API's",
+		"name": "Ottomat3D APIs v0.2",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
 		"_exporter_id": "43548769",
-		"_collection_link": "https://harshilpatel-3555320.postman.co/workspace/dcaef52b-2fcf-4696-8e47-8216d00eaf86/collection/43548769-4cbe8366-762e-4843-bb13-2139e1d15efb?action=share&source=collection_link&creator=43548769"
+		"_collection_link": "https://harshilpatel-3555320.postman.co/workspace/Harshil-Patel's-Workspace~dcaef52b-2fcf-4696-8e47-8216d00eaf86/collection/43548769-4cbe8366-762e-4843-bb13-2139e1d15efb?action=share&source=collection_link&creator=43548769"
 	},
 	"item": [
 		{
@@ -602,6 +602,122 @@
 						"print-jobs",
 						"1",
 						"complete"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Ottorack",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"A\",\n  \"number_of_shelves\": 10,\n  \"shelf_spacing_mm\": 80,\n  \"bed_size\": \"256x256\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/ottoracks",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"ottoracks"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get all Ottoracks",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/ottoracks",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"ottoracks"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Ottorack Details by ID",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/ottoracks/1",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"ottoracks",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Update Shelf (Mark as Occupied)",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"occupied\": true,\n  \"print_job_id\": 1\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/ottoracks/1/shelves/1",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"ottoracks",
+						"1",
+						"shelves",
+						"1"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Reset Shelf (Mark as Empty)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/ottoracks/1/shelves/1/reset",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"ottoracks",
+						"1",
+						"shelves",
+						"1",
+						"reset"
 					]
 				}
 			},

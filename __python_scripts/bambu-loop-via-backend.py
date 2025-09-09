@@ -16,9 +16,9 @@ DEFAULT_PRINTER_REGISTRATION_DATA = {
     "brand": "Bambu Lab",
     "model": "P1P",
     "type": "FDM", 
-    "ip_address": "192.168.68.68", # TODO: USER - Ensure this is your P1P's IP
-    "access_code": "14358945",   # TODO: USER - Ensure this is your P1P's access code
-    "serial_number": "01S00C371700385", # TODO: USER - Ensure this is your P1P's serial
+        "ip_address": "192.168.68.64",
+        "access_code": "51879584",
+        "serial_number": "01S00C371700385",
 }
 
 DEFAULT_OTTOEJECT_REGISTRATION_DATA = {

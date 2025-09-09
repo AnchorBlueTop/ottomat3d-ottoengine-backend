@@ -9,7 +9,7 @@ const path = require('path');
 const fs = require('fs');
 
 const logger = require('./utils/logger');
-const db = require('./db');
+const { db, initializeDatabase } = require('./db');
 
 // --- Service Initialization ---
 const PrinterStateManager = require('./services/printerStateManager');
@@ -94,7 +94,11 @@ app.use((err, req, res, next) => {
 // --- Initialize Services and Start Server ---
 async function initializeAndStartServer() {
     try {
-        logger.info('Backend: Database connection initialized.');
+        // Initialize database first
+        logger.info('Initializing database...');
+        await initializeDatabase();
+        logger.info('Backend: Database connection and schema initialized.');
+        logger.info(`Database persistence mode: ${process.env.DB_PERSIST_DATA === 'true' ? 'ENABLED' : 'DISABLED'}`);
 
         const printersFromDb = await new Promise((resolve, reject) => {
             db.all("SELECT * FROM printers WHERE lower(brand) = 'bambu lab'", [], (err, rows) => {

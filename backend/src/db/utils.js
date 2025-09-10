@@ -1,6 +1,6 @@
 // backend/src/db/utils.js
 
-const db = require('./index'); // Import the initialized DB connection from index.js
+const { db } = require('./index'); // Import the initialized DB connection from index.js
 const logger = require('../utils/logger'); // Import logger
 
 /**

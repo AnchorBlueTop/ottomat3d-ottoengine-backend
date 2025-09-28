@@ -22,15 +22,76 @@ const _enrichJob = (job) => {
 
 const printJobService = {
 
+    /**
+     * === ENHANCED: File deduplication logic ===
+     * Updates existing print_item if filename exists, otherwise creates new one
+     */
+    async updateOrCreatePrintItem(fileData) {
+        const {
+            file_details_json, duration_details_json,
+            measurement_details_json, filament_details_json
+        } = fileData;
+
+        const filename = file_details_json.name;
+        
+        try {
+            // Check if print item already exists by filename
+            const existingItem = await dbGet(
+                'SELECT id FROM print_items WHERE JSON_EXTRACT(file_details_json, "$.name") = ?',
+                [filename]
+            );
+
+            if (existingItem) {
+                // Update existing record
+                logger.info(`[PrintJobService] Updating existing print_item for file: ${filename}`);
+                
+                const updateSql = `
+                    UPDATE print_items 
+                    SET file_details_json = ?,
+                        duration_details_json = ?,
+                        measurement_details_json = ?,
+                        filament_details_json = ?,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                `;
+                
+                await dbRun(updateSql, [
+                    JSON.stringify(file_details_json),
+                    JSON.stringify(duration_details_json),
+                    JSON.stringify(measurement_details_json),
+                    JSON.stringify(filament_details_json),
+                    existingItem.id
+                ]);
+                
+                return await this.getPrintItemById(existingItem.id);
+            } else {
+                // Create new record
+                logger.info(`[PrintJobService] Creating new print_item for file: ${filename}`);
+                return await this.createPrintItem(fileData);
+            }
+        } catch (error) {
+            logger.error(`[PrintJobService] Error in updateOrCreatePrintItem: ${error.message}`);
+            throw error;
+        }
+    },
+
+    /**
+     * Create a new print item record in the database
+     */
     async createPrintItem(fileData) {
         const {
             file_details_json, duration_details_json,
             measurement_details_json, filament_details_json
         } = fileData;
+        
         const sql = `
-            INSERT INTO print_items (file_details_json, duration_details_json, measurement_details_json, filament_details_json)
+            INSERT INTO print_items (
+                file_details_json, duration_details_json, 
+                measurement_details_json, filament_details_json
+            )
             VALUES (?, ?, ?, ?)
         `;
+        
         try {
             const result = await dbRun(sql, [
                 JSON.stringify(file_details_json),
@@ -45,9 +106,27 @@ const printJobService = {
         }
     },
 
+    /**
+     * Get print item by ID with parsed JSON fields
+     */
     async getPrintItemById(id) {
         try {
-            return await dbGet('SELECT * FROM print_items WHERE id = ?', [id]);
+            const sql = 'SELECT * FROM print_items WHERE id = ?';
+            const item = await dbGet(sql, [id]);
+            
+            if (!item) return null;
+            
+            // Parse JSON fields for easier access
+            try {
+                item.file_details = JSON.parse(item.file_details_json || '{}');
+                item.measurement_details = JSON.parse(item.measurement_details_json || '{}');
+                item.filament_details = JSON.parse(item.filament_details_json || '{}');
+                item.duration_details = JSON.parse(item.duration_details_json || '{}');
+            } catch (parseError) {
+                logger.warn(`[PrintJobService] Failed to parse JSON fields for print_item ${id}: ${parseError.message}`);
+            }
+            
+            return item;
         } catch (error) {
             logger.error(`[PrintJobService] Error getting print_item by ID ${id}: ${error.message}`);
             throw error;
@@ -74,11 +153,17 @@ const printJobService = {
         }
     },
 
+    /**
+     * Get print job with enriched data from print item
+     */
     async getPrintJobById(id) {
         const sql = `
             SELECT 
                 pj.*,
-                pi.duration_details_json
+                pi.duration_details_json,
+                pi.file_details_json,
+                pi.measurement_details_json,
+                pi.filament_details_json
             FROM print_jobs pj
             LEFT JOIN print_items pi ON pj.print_item_id = pi.id
             WHERE pj.id = ?
@@ -92,11 +177,17 @@ const printJobService = {
         }
     },
 
+    /**
+     * Get all print jobs with enriched data from print items
+     */
     async getAllPrintJobs() {
         const sql = `
             SELECT 
                 pj.*,
-                pi.duration_details_json
+                pi.duration_details_json,
+                pi.file_details_json,
+                pi.measurement_details_json,
+                pi.filament_details_json
             FROM print_jobs pj
             LEFT JOIN print_items pi ON pj.print_item_id = pi.id
             ORDER BY pj.submitted_at DESC

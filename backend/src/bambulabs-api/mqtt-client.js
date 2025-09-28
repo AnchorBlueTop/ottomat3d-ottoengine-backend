@@ -1,6 +1,7 @@
 const mqtt = require('mqtt');
 const EventEmitter = require('events');
 const { GcodeState, PrintStatus, getPrintStatusName } = require('./data/states'); 
+const { PrinterStatus } = require('./data/enhanced-models');
 const path = require('path'); 
 
 const DEFAULT_MQTT_PORT = 8883;
@@ -22,7 +23,8 @@ class PrinterMQTTClient extends EventEmitter {
 
         this._mqttClient = null;
         this._isConnected = false;
-        this._data = {}; 
+        this._data = {};
+        this._structuredStatus = null; // Enhanced PrinterStatus object 
         this._reportTopic = `device/${this._serialNumber}/report`;
         this._requestTopic = `device/${this._serialNumber}/request`;
         
@@ -238,6 +240,7 @@ class PrinterMQTTClient extends EventEmitter {
         if (topic !== this._reportTopic || !this._isConnected) return; 
         // this.log(`Received message on topic: ${topic}`); // Can be very verbose
         let messageJson;
+        let printerStatus = null; // Declare early for use in event emissions
         try {
             const messageString = buf.toString();
             if (this._debug && messageString.length > 0) { // Only log non-empty payloads in debug
@@ -256,16 +259,26 @@ class PrinterMQTTClient extends EventEmitter {
                  const newErrorCode = this._data?.print?.print_error || "0";
 
                  if (newState !== undefined && newState !== oldState) {
-                     this.emit('state_change', newState); 
+                     this.emit('state_change', newState, printerStatus); 
                  }
                  if (newErrorCode !== "0" && newErrorCode !== oldErrorCode) {
                       this.error(`Printer reported NEW error code: ${newErrorCode}`);
-                      this.emit('print_error', newErrorCode);
+                      this.emit('print_error', newErrorCode, printerStatus);
                  } else if (newErrorCode === "0" && oldErrorCode !== "0") {
                       this.info(`Printer error code cleared (was ${oldErrorCode}, now ${newErrorCode})`);
                  }
             }
-            this.emit('update', this._data);
+            // Create structured status if we have print data
+            if (messageJson.print || this._data.print) {
+                try {
+                    printerStatus = new PrinterStatus(this._data.print || {});
+                    this._structuredStatus = printerStatus;
+                } catch (err) {
+                    this.error('Failed to create structured PrinterStatus:', err.message);
+                }
+            }
+            
+            this.emit('update', this._data, printerStatus);
 
         } catch (err) {
             this.error('Failed to parse incoming message:', err.message);
@@ -527,6 +540,31 @@ class PrinterMQTTClient extends EventEmitter {
              return { subtask_id: subtaskId, print_error: printError };
         }
         return null; 
+    };
+
+    // NEW: Enhanced structured status methods
+    getStructuredStatus = () => {
+        return this._structuredStatus || null;
+    };
+
+    getApiStatus = () => {
+        if (this._structuredStatus) {
+            return this._structuredStatus.getNormalizedStatus();
+        }
+        
+        // Fallback to existing logic if no structured status
+        return {
+            status: this.get_state(),
+            current_stage: this.get_current_stage(),
+            progress_percent: this.getPrintPercentage(),
+            remaining_time_minutes: this.getRemainingTime(),
+            temperatures: {
+                nozzle: this.getNozzleTemperature(),
+                nozzle_target: this.getNozzleTargetTemperature(),
+                bed: this.getBedTemperature(),
+                bed_target: this.getBedTargetTemperature()
+            }
+        };
     };
 
     // Aliases for potential backward compatibility or different style preferences

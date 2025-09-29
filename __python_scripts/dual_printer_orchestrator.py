@@ -16,9 +16,9 @@ PRINTERS = {
         "brand": "Bambu Lab", 
         "model": "P1P",
         "type": "bambu",
-        "ip_address": "192.168.68.64",
-        "access_code": "51879584",
-        "serial_number": "01S00C371700385",
+        "ip_address": "192.168.1.100",
+        "access_code": "YOUR_ACCESS_CODE",
+        "serial_number": "YOUR_SERIAL_NUMBER",
         "filename": "OTTO_LOGO_P1P_PLA_V1.gcode.3mf",
         "rack_prefix": "A",
         "eject_macro": "EJECT_FROM_P1",
@@ -29,9 +29,9 @@ PRINTERS = {
         "brand": "Bambu Lab",
         "model": "P1S", 
         "type": "bambu",
-        "ip_address": "192.168.68.57",
-        "access_code": "16032181",
-        "serial_number": "01P00A431300066",
+        "ip_address": "192.168.1.101",
+        "access_code": "YOUR_ACCESS_CODE",
+        "serial_number": "YOUR_SERIAL_NUMBER",
         "filename": "OTTO_LOGO_P1S_PETG_V2.gcode.3mf",
         "rack_prefix": "B",
         "eject_macro": "EJECT_FROM_P_ONE_S",
@@ -42,7 +42,7 @@ PRINTERS = {
 # Ottoeject Configuration
 OTTOEJECT_CONFIG = {
     "device_name": "LongGantry_OttoEject_AutoReg",
-    "ip_address": "192.168.68.79"  # Update this with actual IP
+    "ip_address": "192.168.1.102"  # Update this with actual IP
 }
 
 # Rack Configurations

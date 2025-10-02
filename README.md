@@ -64,12 +64,12 @@ This incremental approach de-risked the migration and provided a working referen
 
 ```
 ┌─────────────────────────────────────────┐
-│         REST API Layer                  │
+│             REST API Layer              │
 │    (Express + Route Controllers)        │
-└──────────────┬──────────────────────────┘
-               │
-┌──────────────▼──────────────────────────┐
-│         Service Layer                   │
+└───────────────────┬─────────────────────┘
+                    │
+┌───────────────────▼─────────────────────┐
+│              Service Layer              │
 │  ┌──────────────┐  ┌────────────────┐   │
 │  │ Orchestrator │  │ Printer Adapter│   │
 │  │   Service    │  │  State Manager │   │
@@ -78,19 +78,19 @@ This incremental approach de-risked the migration and provided a working referen
 │  │ Slot Manager │  │ Event Emitter  │   │
 │  │  Algorithm   │  │ + Resolver     │   │
 │  └──────────────┘  └────────────────┘   │
-└──────────────┬──────────────────────────┘
-               │
-┌──────────────▼──────────────────────────┐
-│       Integration Layer                 │
+└───────────────────┬─────────────────────┘
+                    │
+┌───────────────────▼─────────────────────┐
+│            Integration Layer            │
 │  ┌──────────────┐  ┌────────────────┐   │
-│  │ Bambu Labs   │  │   Klipper      │   │
+│  │  Bambu Labs  │  │    Klipper     │   │
 │  │ (MQTT + FTP) │  │  (Moonraker)   │   │
 │  └──────────────┘  └────────────────┘   │
-└─────────────────────────────────────────┘
-               │
-┌──────────────▼──────────────────────────┐
-│         SQLite Database                 │
-│  (Jobs, Printers, Racks, State)         │
+└───────────────────┬─────────────────────┘
+                    │
+┌───────────────────▼─────────────────────┐
+│             SQLite Database             │
+│      (Jobs, Printers, Racks, State)     │
 └─────────────────────────────────────────┘
 ```
 

@@ -1,41 +1,46 @@
-// backend/src/services/printerService.js
-
-// - Uses PrinterStateManager for live Bambu Printer instances.
-// - getPrinterLiveDetails fetches live status/filament from managed instance.
-// - Command methods use managed instance.
-// - CRUD informs PrinterStateManager about new/deleted printers.
+// src/services/printerService.js
+// Enhanced printer service using Integration Adapters (Adapter-Only Implementation)
+// Legacy fallback methods have been removed - all operations now use the Integration Adapter pattern
 
 const db = require('../db');
 const { dbGet, dbAll, dbRun } = require('../db/utils');
 const logger = require('../utils/logger');
-// const bl_api = require('../bambulabs-api'); // No longer creating bl_api.Printer instances directly here
-const PrinterStateManager = require('../services/printerStateManager'); // Use the manager - use absolute path to ensure same instance
+const adapterStateManager = require('./adapterStateManager');
+const { AdapterError, JobSpec } = require('../../packages/integration-adapter');
 
-// Helper to check attribute existence safely (if not already globally available or in utils)
+// Fallback to original PrinterStateManager for non-adapter printers
+const PrinterStateManager = require('./printerStateManager');
+
+// Helper to check attribute existence safely
 function hasattr(obj, attr) {
     if (!obj) return false;
     return typeof obj[attr] === 'function' || obj[attr] !== undefined;
 }
 
 const printerService = {
-    // --- Basic CRUD for Printer Registration ---
+    // --- Enhanced CRUD with Adapter Support ---
+    
     async createPrinter(printerData) {
         const {
             name, brand = null, model = null, type,
             ip_address, access_code = null, serial_number = null,
-            build_volume = null // From API doc, service stores it as JSON
+            build_volume = null
         } = printerData;
 
         if (!name || !type || !ip_address) {
             throw new Error('Missing required fields: name, type, ip_address.');
         }
-        if (String(type).toLowerCase() === 'fdm' && String(brand).toLowerCase() === 'bambu lab' && (!access_code || !serial_number)) {
+        
+        // Validate required fields for supported printers
+        const brandLower = String(brand || '').toLowerCase();
+        if (String(type).toLowerCase() === 'fdm' && 
+            (brandLower === 'bambu lab' || brandLower === 'bambu' || brandLower === 'bambulab') && 
+            (!access_code || !serial_number)) {
             throw new Error('For Bambu Lab printers, access_code and serial_number are required.');
         }
 
         const buildVolumeJsonString = build_volume ? JSON.stringify(build_volume) : null;
 
-        // Schema for v0.1: printers(id, name, brand, model, type, ip_address, access_code, serial_number, build_volume_json, current_filament_json)
         const sql = `
             INSERT INTO printers (name, brand, model, type, ip_address, access_code, serial_number, build_volume_json, current_filament_json) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL) 
@@ -45,398 +50,552 @@ const printerService = {
         try {
             logger.debug(`[PrinterService] Creating printer: ${name}`);
             const result = await dbRun(sql, params);
+            
             if (result.lastID) {
-                const newPrinterRecord = await printerService.getPrinterById(result.lastID);
-                if (newPrinterRecord && String(newPrinterRecord.brand).toLowerCase() === 'bambu lab') {
-                    // Inform PrinterStateManager about the new printer so it can connect
-                    logger.info(`Informing PrinterStateManager to add and connect new Bambu Lab printer ID: ${newPrinterRecord.id}`);
-                    PrinterStateManager.addAndConnectPrinter(newPrinterRecord) // This is async but we don't need to await it here
-                        .then(instance => {
-                            if (instance) {
-                                logger.info(`PrinterStateManager successfully connected printer ID: ${newPrinterRecord.id}, Connected: ${instance.is_connected && instance.is_connected()}`);
-                            } else {
-                                logger.warn(`PrinterStateManager.addAndConnectPrinter returned null for printer ID: ${newPrinterRecord.id}`);
-                            }
-                        })
-                        .catch(err => logger.error(`Error connecting new printer ${newPrinterRecord.id} in PrinterStateManager: ${err.message}`));
+                const newPrinterRecord = await this.getPrinterById(result.lastID);
+                
+                if (newPrinterRecord) {
+                    // Try adapter first, fallback to original system
+                    const adapter = await adapterStateManager.addAndConnectAdapter(newPrinterRecord);
+                    
+                    if (!adapter && brandLower === 'bambu lab') {
+                        // Fallback to original PrinterStateManager
+                        logger.info(`[PrinterService] Adapter failed, falling back to PrinterStateManager for printer ${newPrinterRecord.id}`);
+                        PrinterStateManager.addAndConnectPrinter(newPrinterRecord)
+                            .catch(err => logger.error(`PrinterStateManager fallback failed: ${err.message}`));
+                    }
                 }
-                return newPrinterRecord; // Return the DB record
+                
+                return newPrinterRecord;
             }
             return null;
-        } catch (error) { logger.error(`[PrinterService] Error creating printer "${name}": ${error.message}`); throw error; }
+            
+        } catch (error) {
+            logger.error(`[PrinterService] Error creating printer "${name}": ${error.message}`);
+            throw error;
+        }
     },
 
     async getAllPrinters() {
-        logger.info('[PrinterService] Getting live details for ALL printers.');
+        logger.info('[PrinterService] Getting live details for ALL printers using adapters...');
+        
         try {
-            // 1. Get just the IDs of all printers from the DB.
             const allPrinterRecords = await dbAll('SELECT id FROM printers');
-
-            // 2. Create an array of promises, where each promise resolves
-            //    to the live details of one printer. This runs all the network
-            //    requests concurrently for better performance.
+            
             const printerDetailsPromises = allPrinterRecords.map(p => 
                 this.getPrinterLiveDetails(p.id)
             );
-
-            // 3. Wait for all the promises to resolve.
+            
             const results = await Promise.all(printerDetailsPromises);
-
-            // 4. Filter out any printers that failed to fetch and return just the data payload.
+            
             const successfulPrinters = results
                 .filter(res => res.success && res.data)
                 .map(res => res.data);
 
             return successfulPrinters;
-
+            
         } catch (error) {
-            logger.error(`[PrinterService] Error fetching all printers with live details: ${error.message}`);
+            logger.error(`[PrinterService] Error fetching all printers: ${error.message}`);
             throw error;
         }
     },
 
-    async getPrinterById(id) { // Fetches static data from DB
+    async getPrinterById(id) {
         try {
             return await dbGet(
                 'SELECT id, name, brand, model, type, ip_address, access_code, serial_number, build_volume_json, current_filament_json FROM printers WHERE id = ?', 
                 [id]
             );
+        } catch (error) {
+            logger.error(`[PrinterService] Error fetching printer by ID ${id}: ${error.message}`);
+            throw error;
         }
-        catch (error) { logger.error(`[PrinterService] Error fetching printer by ID ${id}: ${error.message}`); throw error; }
     },
     
     async updatePrinter(id, updateData) {
-        // ... (logic to update DB fields: name, brand, model, type, ip, auth, build_volume_json, current_filament_json) ...
-        // This method primarily updates the static configuration in the DB.
-        // If connection details (IP, auth) change for a Bambu printer, PrinterStateManager might need to be notified to reconnect.
         const { build_volume, filament, ...otherUpdates } = updateData;
         const allowedDirectUpdates = { ...otherUpdates };
         const validDirectFields = ['name', 'brand', 'model', 'type', 'ip_address', 'access_code', 'serial_number'];
-        for (const key in allowedDirectUpdates) { if (!validDirectFields.includes(key)) delete allowedDirectUpdates[key]; }
-
-        const updateFieldsSqlParts = []; const paramsForSql = [];
-        for (const field in allowedDirectUpdates) { updateFieldsSqlParts.push(`${field} = ?`); paramsForSql.push(allowedDirectUpdates[field]); }
-        if (build_volume !== undefined) { updateFieldsSqlParts.push(`build_volume_json = ?`); paramsForSql.push(build_volume ? JSON.stringify(build_volume) : null); }
-        if (filament !== undefined) {
-            let fo = null; if (Array.isArray(filament) && filament.length > 0) fo = filament[0]; else if (filament && typeof filament === 'object') fo = filament;
-            updateFieldsSqlParts.push(`current_filament_json = ?`); paramsForSql.push(fo ? JSON.stringify(fo) : null);
+        
+        for (const key in allowedDirectUpdates) {
+            if (!validDirectFields.includes(key)) delete allowedDirectUpdates[key];
         }
-        if (updateFieldsSqlParts.length === 0) return await printerService.getPrinterById(id);
+
+        const updateFieldsSqlParts = [];
+        const paramsForSql = [];
+        
+        for (const field in allowedDirectUpdates) {
+            updateFieldsSqlParts.push(`${field} = ?`);
+            paramsForSql.push(allowedDirectUpdates[field]);
+        }
+        
+        if (build_volume !== undefined) {
+            updateFieldsSqlParts.push(`build_volume_json = ?`);
+            paramsForSql.push(build_volume ? JSON.stringify(build_volume) : null);
+        }
+        
+        if (filament !== undefined) {
+            let fo = null;
+            if (Array.isArray(filament) && filament.length > 0) fo = filament[0];
+            else if (filament && typeof filament === 'object') fo = filament;
+            updateFieldsSqlParts.push(`current_filament_json = ?`);
+            paramsForSql.push(fo ? JSON.stringify(fo) : null);
+        }
+        
+        if (updateFieldsSqlParts.length === 0) {
+            return await this.getPrinterById(id);
+        }
+        
         paramsForSql.push(id);
         const sql = `UPDATE printers SET ${updateFieldsSqlParts.join(', ')} WHERE id = ?`;
+        
         try {
             await dbRun(sql, paramsForSql);
-            const updatedPrinterRecord = await printerService.getPrinterById(id);
-            // If connection-critical info changed for a Bambu printer, tell manager to refresh/reconnect
-            if (updatedPrinterRecord && String(updatedPrinterRecord.brand).toLowerCase() === 'bambu lab' &&
+            const updatedPrinterRecord = await this.getPrinterById(id);
+            
+            // If connection-critical info changed, refresh adapter/connection
+            if (updatedPrinterRecord && 
                 (allowedDirectUpdates.ip_address || allowedDirectUpdates.access_code || allowedDirectUpdates.serial_number)) {
-                logger.info(`[PrinterService] Connection details changed for Bambu printer ${id}. Notifying PrinterStateManager to refresh.`);
-                await PrinterStateManager.removePrinterInstance(id); // Remove old instance
-                await PrinterStateManager.addAndConnectPrinter(updatedPrinterRecord); // Add and connect with new details
+                
+                logger.info(`[PrinterService] Connection details changed for printer ${id}. Refreshing adapter...`);
+                
+                // Remove and reconnect adapter
+                await adapterStateManager.removeAdapter(id);
+                await adapterStateManager.addAndConnectAdapter(updatedPrinterRecord);
+                
+                // Also update original system if needed
+                const brandLower = String(updatedPrinterRecord.brand || '').toLowerCase();
+                if (brandLower === 'bambu lab') {
+                    await PrinterStateManager.removePrinterInstance(id);
+                    await PrinterStateManager.addAndConnectPrinter(updatedPrinterRecord);
+                }
             }
+            
             return updatedPrinterRecord;
-        } catch (error) { logger.error(`Error updating printer ${id}: ${error.message}`); throw error; }
+            
+        } catch (error) {
+            logger.error(`[PrinterService] Error updating printer ${id}: ${error.message}`);
+            throw error;
+        }
     },
 
     async deletePrinter(id) {
         try {
-            // Inform manager to disconnect and remove instance before deleting from DB
+            // Remove from both adapter manager and original system
+            await adapterStateManager.removeAdapter(id);
             await PrinterStateManager.removePrinterInstance(id);
+            
             const result = await dbRun('DELETE FROM printers WHERE id = ?', [id]);
             logger.info(`[PrinterService] Printer ID ${id} deleted from DB (changes: ${result.changes}).`);
             return result.changes > 0;
-        } catch (error) { logger.error(`Error deleting printer ${id}: ${error.message}`); throw error; }
+            
+        } catch (error) {
+            logger.error(`[PrinterService] Error deleting printer ${id}: ${error.message}`);
+            throw error;
+        }
     },
 
-    // --- v0.1 Core Proxy Methods using PrinterStateManager ---
+    // --- Enhanced Live Details with Adapter Support ---
+    
     async getPrinterLiveDetails(printerId) {
-        logger.info(`Getting live details for printer ID: ${printerId} via PrinterStateManager.`);
-        const printerFromDb = await printerService.getPrinterById(printerId);
+        logger.info(`[PrinterService] Getting live details for printer ID: ${printerId} using adapters`);
+        
+        const printerFromDb = await this.getPrinterById(printerId);
         if (!printerFromDb) {
-             return { success: false, message: `Printer ${printerId} not found in DB.`, data: null };
+            return { success: false, message: `Printer ${printerId} not found in DB.`, data: null };
         }
 
-        let liveStatus = "UNKNOWN";
-        let liveFilamentData = printerFromDb.current_filament_json ? JSON.parse(printerFromDb.current_filament_json) : { material: "N/A", color: "N/A" };
-        let buildVolumeObject = printerFromDb.build_volume_json ? JSON.parse(printerFromDb.build_volume_json) : null;
-        let liveBedTemp = null;
-        let liveNozzleTemp = null;
-        // New fields for enhanced status
-        let liveStage = "UNKNOWN";
-        let liveMcPercent = null;
-        let liveMcRemainingTime = null;
+        // Try adapter first
+        const adapter = adapterStateManager.getAdapter(printerId);
+        
+        if (adapter && adapter.isAuthenticated()) {
+            try {
+                const status = await adapter.getStatus();
+                const info = await adapter.getPrinterInfo();
+                
+                const responseData = {
+                    id: parseInt(printerFromDb.id),
+                    name: info.name,
+                    brand: info.brand,
+                    model: info.model,
+                    type: info.type,
+                    status: status.status,
+                    current_stage: status.current_stage,
+                    progress_percent: status.progress_percent,
+                    remaining_time_minutes: status.remaining_time_minutes,
+                    layer_progress: status.layer_progress,
+                    filament: status.filament,
+                    build_volume: printerFromDb.build_volume_json ? JSON.parse(printerFromDb.build_volume_json) : null,
+                    ip_address: printerFromDb.ip_address,
+                    serial_number: printerFromDb.serial_number,
+                    bed_temperature: status.temperatures.bed,
+                    nozzle_temperature: status.temperatures.nozzle,
+                    // Additional adapter info
+                    adapter_source: 'integration_adapter',
+                    last_update: status.last_update
+                };
+                
+                return { success: true, data: responseData };
+                
+            } catch (error) {
+                logger.error(`[PrinterService] Error getting status from adapter: ${error.message}`);
+            }
+        }
 
-        if (printerFromDb.brand && String(printerFromDb.brand).toLowerCase() === 'bambu lab') {
-            const instance = PrinterStateManager.getInstance(printerId);
-            // Instance capability checks removed for cleaner logs
-            
-            if (instance && hasattr(instance, 'is_connected') && instance.is_connected()) {
-                const statusDump = hasattr(instance, 'mqtt_dump') ? instance.mqtt_dump() : {};
-                liveStatus = (hasattr(instance, 'get_state') ? instance.get_state() : statusDump.print?.gcode_state) || "UNKNOWN";
-                
-                // Add temperature extraction
-                if (hasattr(instance, 'getBedTemperature')) {
-                    liveBedTemp = instance.getBedTemperature(); // Try camelCase method first
-                } else if (hasattr(instance, 'get_bed_temperature')) {
-                    liveBedTemp = instance.get_bed_temperature(); // Try snake_case method next
+        // FALLBACK: Try PrinterStateManager for Bambu Lab printers
+        logger.info(`[PrinterService] No adapter available, trying PrinterStateManager fallback for printer ${printerId}`);
+        
+        let printerInstance = PrinterStateManager.getInstance(printerId);
+        
+        // If no instance exists, try to create one
+        if (!printerInstance) {
+            logger.warn(`[PrinterService] No PrinterStateManager instance for printer ${printerId}, attempting to create one`);
+            const printerRecord = await this.getPrinterById(printerId);
+            if (printerRecord) {
+                try {
+                    await PrinterStateManager.addAndConnectPrinter(printerRecord);
+                    printerInstance = PrinterStateManager.getInstance(printerId);
+                    logger.info(`[PrinterService] Successfully created PrinterStateManager instance for printer ${printerId}`);
+                } catch (error) {
+                    logger.error(`[PrinterService] Failed to create PrinterStateManager instance: ${error.message}`);
                 }
-                
-                if (hasattr(instance, 'getNozzleTemperature')) {
-                    liveNozzleTemp = instance.getNozzleTemperature(); // Try camelCase method first
-                } else if (hasattr(instance, 'get_nozzle_temperature')) {
-                    liveNozzleTemp = instance.get_nozzle_temperature(); // Try snake_case method next
-                }
-                
-                // Extract new fields: stage, percent, remaining time
-                if (hasattr(instance, 'get_current_stage')) {
-                    liveStage = instance.get_current_stage();
-                }
-                if (hasattr(instance, 'get_percentage')) {
-                    liveMcPercent = instance.get_percentage();
-                }
-                if (hasattr(instance, 'get_time')) {
-                    liveMcRemainingTime = instance.get_time();
-                }
-                logger.debug(`LiveDetails ID:${printerId}] Status: ${liveStatus}, Bed: ${liveBedTemp}, Nozzle: ${liveNozzleTemp}, Stage: ${liveStage}, Percent: ${liveMcPercent}, RemainingTime: ${liveMcRemainingTime}`);
-                
-                // Filament extraction from live instance
-                const vtTrayInfo = statusDump?.print?.vt_tray; // Correct path: print.vt_tray
-                const amsInfo = statusDump?.print?.ams;     // Correct path: print.ams
-                let activeFilamentData = null;
-                
-                // Process filament info from vt_tray (external spool)
-                if (vtTrayInfo && vtTrayInfo.tray_type && vtTrayInfo.tray_type.trim() !== "") { 
-                    activeFilamentData = vtTrayInfo;
-                    logger.debug(`Filament determined from vt_tray: ${vtTrayInfo.tray_type}/${vtTrayInfo.tray_color}`);
-                }
-                // If no vt_tray info, try AMS unit
-                else if (amsInfo?.ams?.length > 0 && amsInfo.ams[0]?.tray?.length > 0) {
-                    const activeTrayId = String(amsInfo.tray_now);
-                    const activeTray = amsInfo.ams[0].tray.find(t => String(t.id) === activeTrayId);
-                    
-                    if (activeTray && activeTray.tray_type && activeTray.tray_type.trim() !== "") {
-                        activeFilamentData = activeTray;
-                        logger.debug(`Filament determined from AMS (activeTray ${activeTrayId}): ${activeTray.tray_type}/${activeTray.tray_color}`);
-                    } else {
-                        // Keep warning logs as they indicate real issues
-                        if (!activeTray) {
-                            logger.warn(`AMS activeTray not found for ID: ${activeTrayId}`);
-                        } else if (!activeTray.tray_type || activeTray.tray_type.trim() === "") {
-                            logger.warn(`AMS activeTray ${activeTrayId} found, but tray_type is missing or empty`);
-                        }
-                    }
-                }
-                
-                if (activeFilamentData) {
-                    liveFilamentData = {
-                        material: activeFilamentData.tray_type || "N/A", 
-                        color: activeFilamentData.tray_color || "N/A",
-                        name: activeFilamentData.name || null,
-                        source: activeFilamentData === vtTrayInfo ? "external_spool" : 
-                                `ams_unit_${amsInfo?.ams_exist_bits?.indexOf('1') ?? 0}_slot_${parseInt(activeFilamentData.id) + 1}`
-                    };
-                    
-                    // Add more properties only if they exist
-                    if (activeFilamentData.tray_sub_brands) {
-                        liveFilamentData.sub_brand = activeFilamentData.tray_sub_brands;
-                    }
-                    
-                    if (activeFilamentData.tray_weight) {
-                        liveFilamentData.weight = activeFilamentData.tray_weight;
-                    }
-                    
-                    if (activeFilamentData.tray_diameter) {
-                        liveFilamentData.diameter = activeFilamentData.tray_diameter;
-                    }
-                    
-                    // Try to parse remaining capacity if available
-                    if (activeFilamentData.cols && activeFilamentData.cols[0]) {
-                        try {
-                            const remainingPercent = (parseInt(activeFilamentData.cols[0], 16) / 255 * 100).toFixed(0);
-                            liveFilamentData.remaining_capacity_percent = `${remainingPercent}%`;
-                        } catch (e) {
-                            logger.warn(`Failed to parse remaining capacity:`, e.message);
-                        }
-                    }
-                } else {
-                    // If no active filament data found, keep the default or DB-loaded values but add source
-                    if (!liveFilamentData.source) {
-                        liveFilamentData.source = printerFromDb.current_filament_json ? "database_fallback" : "default_fallback";
-                    }
-                    logger.debug(`Using fallback filament data: ${liveFilamentData.source}`);
-                }
-            } else {
-                logger.warn(`[PrinterService] Bambu printer instance not connected or not found in manager. Reporting OFFLINE. Instance was: ${instance ? 'defined but not connected' : 'null'}.`);
-                liveStatus = "OFFLINE";
-                
-                // For fallback filament, ensure we have a source field
-                if (!liveFilamentData.source) {
-                    liveFilamentData.source = printerFromDb.current_filament_json ? "database_fallback" : "default_fallback";
-                }
-                logger.debug(`Using fallback filament data for OFFLINE printer`);
             }
-        } else {
-            liveStatus = "NOT_BAMBU_OR_MONITORED";
-            
-            // For non-Bambu printers, ensure we have a source field in the filament data
-            if (!liveFilamentData.source) {
-                liveFilamentData.source = printerFromDb.current_filament_json ? "database_fallback" : "default_fallback";
-            }
-            logger.debug(`Using fallback filament data for non-Bambu printer`);
         }
         
-        const responseData = {
-            id: parseInt(printerFromDb.id), name: printerFromDb.name, brand: printerFromDb.brand,
-            model: printerFromDb.model, type: printerFromDb.type, status: String(liveStatus).toUpperCase(),
-            // New fields
-            current_stage: liveStage,                // e.g., "PRINTING", "AUTO_BED_LEVELING"
-            progress_percent: liveMcPercent,          // e.g., 50 (for 50%) or null
-            remaining_time_minutes: liveMcRemainingTime, // e.g., 120 (for 120 minutes) or null
-            // Existing fields
-            filament: liveFilamentData, build_volume: buildVolumeObject,
-            ip_address: printerFromDb.ip_address, serial_number: printerFromDb.serial_number,
-            bed_temperature: liveBedTemp,
-            nozzle_temperature: liveNozzleTemp
+        if (printerInstance) {
+            try {
+                // Add timeout to prevent hanging
+                const timeout = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('PrinterStateManager timeout')), 5000);
+                });
+                
+                const statusPromise = Promise.resolve({
+                    status: printerInstance.get_state ? printerInstance.get_state() : 'UNKNOWN',
+                    bed_temperature: printerInstance.get_bed_temperature ? printerInstance.get_bed_temperature() : null,
+                    nozzle_temperature: printerInstance.get_nozzle_temperature ? printerInstance.get_nozzle_temperature() : null,
+                    progress: printerInstance.get_progress ? printerInstance.get_progress() : 0
+                });
+                const statusResult = await Promise.race([statusPromise, timeout]);
+                
+                const responseData = {
+                    id: parseInt(printerFromDb.id),
+                    name: printerFromDb.name,
+                    brand: printerFromDb.brand,
+                    model: printerFromDb.model,
+                    type: printerFromDb.type,
+                    status: statusResult.status || 'UNKNOWN',
+                    current_stage: 'N/A',
+                    progress_percent: statusResult.progress || 0,
+                    remaining_time_minutes: 0,
+                    layer_progress: null,
+                    filament: null,
+                    build_volume: printerFromDb.build_volume_json ? JSON.parse(printerFromDb.build_volume_json) : null,
+                    ip_address: printerFromDb.ip_address,
+                    serial_number: printerFromDb.serial_number,
+                    bed_temperature: statusResult.bed_temperature,
+                    nozzle_temperature: statusResult.nozzle_temperature,
+                    // Fallback source
+                    adapter_source: 'printer_state_manager_fallback',
+                    last_update: new Date().toISOString()
+                };
+                
+                logger.info(`[PrinterService] PrinterStateManager fallback successful for printer ${printerId}`);
+                return { success: true, data: responseData };
+                
+            } catch (error) {
+                logger.error(`[PrinterService] PrinterStateManager fallback failed: ${error.message}`);
+            }
+        }
+
+        // No connection available
+        return { 
+            success: false, 
+            message: `No adapter or PrinterStateManager connection available for printer ${printerId}`, 
+            data: null 
         };
-        return { success: true, data: responseData };
     },
 
+    // --- Enhanced Print Control with Adapter Support ---
+    
     async commandStartPrint(printerId, filename, options = {}) {
-        logger.info(`[PrinterService] Relaying START PRINT for printer ID: ${printerId}, File: ${filename}`);
-        try {
-            const instance = PrinterStateManager.getInstance(printerId);
-            if (!instance || (hasattr(instance, 'is_connected') && !instance.is_connected())) {
-                throw new Error(`Printer instance ${printerId} not available or not connected for start print.`);
+        logger.info(`[PrinterService] Starting print for printer ID: ${printerId}, File: ${filename}`);
+        
+        // Try adapter first
+        const adapter = adapterStateManager.getAdapter(printerId);
+        
+        if (adapter && adapter.isAuthenticated()) {
+            try {
+                const spec = new JobSpec({
+                    filename: filename,
+                    localPath: options.localPath, // For upload if needed
+                    plate_id: options.plate_idx,
+                    use_ams: options.useAms !== undefined ? options.useAms : true,
+                    ams_mapping: options.amsMapping || [0],
+                    skip_objects: options.skip_objects || null
+                });
+                
+                const result = await adapter.start(spec);
+                
+                if (result.success) {
+                    return { 
+                        success: true, 
+                        message: `Print started: ${filename}`,
+                        job_id: result.jobId,
+                        adapter_source: 'integration_adapter'
+                    };
+                } else {
+                    return { 
+                        success: false, 
+                        message: result.message || 'Print start failed',
+                        adapter_source: 'integration_adapter'
+                    };
+                }
+                
+            } catch (error) {
+                if (error instanceof AdapterError && error.type === 'UNSUPPORTED') {
+                    return { success: false, message: 'Start print not supported by this printer' };
+                } else {
+                    logger.error(`[PrinterService] Adapter start print error: ${error.message}`);
+                }
             }
-            const success = await instance.start_print(
-                filename, options.plate_idx || "", 
-                options.useAms === undefined ? true : options.useAms, 
-                options.amsMapping || [0], options.skip_objects || null
-            );
-            if (success) return { success: true, message: `Start print command for ${filename} sent.` };
-            return { success: false, message: `API library indicated failure for start_print ${filename}.` };
-        } catch (error) { 
-            logger.error(`[PrinterService] Error relaying start print for printer ${printerId}: ${error.message}`);
-            return { success: false, message: error.message };
         }
-    },
 
-    async commandSendGcode(printerId, gcodeString) {
-        logger.info(`[PrinterService] Relaying G-CODE to printer ID: ${printerId}`);
-        try {
-            const instance = PrinterStateManager.getInstance(printerId);
-            if (!instance || (hasattr(instance, 'is_connected') && !instance.is_connected())) {
-                throw new Error(`Printer instance ${printerId} not available or not connected for sendGcode.`);
-            }
-            const success = await instance.gcode(gcodeString);
-            if (success) return { success: true, message: `G-code sent.` };
-            return { success: false, message: `API library indicated failure for sendGcode.` };
-        } catch (error) { 
-            logger.error(`[PrinterService] Error relaying G-code to printer ${printerId}: ${error.message}`);
-            return { success: false, message: error.message };
-        }
-    },
-
-    async commandUploadFile(printerId, localFilePathOnServer, remoteFilenameOnPrinter) {
-        logger.info(`[PrinterService] Relaying UPLOAD FILE for printer ID: ${printerId}. Local: '${localFilePathOnServer}', Remote: '${remoteFilenameOnPrinter}'`);
-        try {
-            const instance = PrinterStateManager.getInstance(printerId);
-            if (!instance) { // Printer not managed (e.g., not Bambu or not found by PSM)
-                logger.warn(`[PrinterService] Printer instance ${printerId} not found in PrinterStateManager. Cannot upload.`);
-                return { success: false, message: `Printer ${printerId} not managed or not found.`, statusCode: 404, error: "Printer Not Managed" };
-            }
-            if (!hasattr(instance, 'is_connected') || !instance.is_connected()) {
-                logger.warn(`[PrinterService] Printer instance ${printerId} not connected. Cannot upload.`);
-                return { success: false, message: `Printer ${printerId} is not connected.`, statusCode: 503, error: "Printer Offline" };
-            }
-            if (!hasattr(instance, 'upload_file')) {
-                logger.error(`[PrinterService] Printer instance for ${printerId} is missing 'upload_file' method.`);
-                return { success: false, message: `Printer ${printerId} does not support file upload via this API instance.`, statusCode: 501, error: "Upload Not Supported By Instance" };
-            }
-
-            // instance.upload_file(localPath, remoteFilename) is from bambulabs-api/index.js
-            // which calls ftpClient.uploadFile, which returns FTPResponse or null
-            const ftpResponse = await instance.upload_file(localFilePathOnServer, remoteFilenameOnPrinter);
-            
-            if (ftpResponse && ftpResponse.code >= 200 && ftpResponse.code < 300) {
-                logger.info(`[PrinterService] File '${remoteFilenameOnPrinter}' successfully uploaded to printer ID ${printerId}. FTP Response: ${ftpResponse.code} ${ftpResponse.message}`);
-                return { success: true, message: `File '${remoteFilenameOnPrinter}' uploaded successfully to printer ${printerId}.` };
-            } else {
-                const ftpErrorMessage = ftpResponse ? `${ftpResponse.code} ${ftpResponse.message}` : "FTP client failed to return response.";
-                logger.error(`[PrinterService] Failed to upload file to printer ID ${printerId}. FTP Client Response: ${ftpErrorMessage}`);
-                return { 
-                    success: false, 
-                    message: `Failed to upload file to printer ${printerId}. Device reported: ${ftpErrorMessage}`,
-                    statusCode: 502, // Bad Gateway - problem communicating with the printer's FTP
-                    error: "Device FTP Error"
+        // FALLBACK: Try PrinterStateManager for Bambu Lab printers
+        logger.info(`[PrinterService] No adapter available, trying PrinterStateManager fallback for printer ${printerId}`);
+        
+        const printerInstance = PrinterStateManager.getInstance(printerId);
+        if (printerInstance) {
+            try {
+                // Add timeout to prevent hanging
+                const timeout = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('PrinterStateManager start timeout')), 10000);
+                });
+                
+                // Check if start_print method exists
+                if (!printerInstance.start_print || typeof printerInstance.start_print !== 'function') {
+                    throw new Error('PrinterStateManager instance does not have start_print method');
+                }
+                
+                // Use PrinterStateManager start method
+                logger.debug(`[PrinterService] Calling start_print with filename: ${filename}`);
+                const startPromise = Promise.resolve(printerInstance.start_print(filename));
+                const result = await Promise.race([startPromise, timeout]);
+                
+                logger.info(`[PrinterService] PrinterStateManager start print successful for printer ${printerId}`);
+                return {
+                    success: true,
+                    message: `Print started via PrinterStateManager: ${filename}`,
+                    adapter_source: 'printer_state_manager_fallback'
+                };
+                
+            } catch (error) {
+                logger.error(`[PrinterService] PrinterStateManager start print failed: ${error.message}`);
+                return {
+                    success: false,
+                    message: `PrinterStateManager start failed: ${error.message}`,
+                    adapter_source: 'printer_state_manager_fallback'
                 };
             }
-        } catch (error) { 
-            // This catch is for errors within the service logic itself or if instance.upload_file throws unexpectedly
-            logger.error(`[PrinterService] Critical error during file upload for printer ${printerId}: ${error.message}`, error.stack);
-            return { 
-                success: false, 
-                message: `Internal server error during file upload: ${error.message}`,
-                statusCode: 500,
-                error: "Internal Server Error"
-            };
         }
+
+        // No connection available - provide detailed debugging info
+        const debugInfo = {
+            adapterId: adapter ? 'exists' : 'null',
+            adapterAuth: adapter ? adapter.isAuthenticated() : 'n/a',
+            printerStateManager: PrinterStateManager.getInstance(printerId) ? 'exists' : 'null'
+        };
+        
+        logger.error(`[PrinterService] No connection available for printer ${printerId}. Debug: ${JSON.stringify(debugInfo)}`);
+        
+        return { 
+            success: false, 
+            message: 'Failed to start print: No adapter available for this printer'
+        };
     },
 
-    // --- ADDED: Printer Control Commands ---
-    
     async commandPausePrint(printerId) {
-        logger.info(`[PrinterService] Relaying PAUSE PRINT for printer ID: ${printerId}`);
-        try {
-            const instance = PrinterStateManager.getInstance(printerId);
-            if (!instance || !instance.is_connected()) {
-                return { success: false, message: `Printer instance ${printerId} not available or not connected.`, statusCode: 503 };
+        logger.info(`[PrinterService] Pausing print for printer ID: ${printerId}`);
+        
+        const adapter = adapterStateManager.getAdapter(printerId);
+        
+        if (adapter && adapter.isAuthenticated()) {
+            try {
+                const result = await adapter.pause();
+                return {
+                    success: result.success,
+                    message: result.message || (result.success ? 'Print paused' : 'Pause failed'),
+                    adapter_source: 'integration_adapter'
+                };
+                
+            } catch (error) {
+                if (error instanceof AdapterError && error.type === 'UNSUPPORTED') {
+                    return { success: false, message: 'Pause not supported by this printer' };
+                }
+                logger.error(`[PrinterService] Adapter pause error: ${error.message}`);
+                return { success: false, message: error.message };
             }
-            const success = await instance.pause_print();
-            if (success) {
-                return { success: true, message: `Pause print command sent to printer ${printerId}.` };
-            }
-            return { success: false, message: `API library failed to send pause_print command.`, statusCode: 500 };
-        } catch (error) {
-            logger.error(`[PrinterService] Error relaying pause print for printer ${printerId}: ${error.message}`);
-            return { success: false, message: error.message, statusCode: 500 };
         }
+
+        // No adapter available
+        return { success: false, message: 'No adapter available for this printer' };
     },
 
     async commandResumePrint(printerId) {
-        logger.info(`[PrinterService] Relaying RESUME PRINT for printer ID: ${printerId}`);
-        try {
-            const instance = PrinterStateManager.getInstance(printerId);
-            if (!instance || !instance.is_connected()) {
-                return { success: false, message: `Printer instance ${printerId} not available or not connected.`, statusCode: 503 };
+        logger.info(`[PrinterService] Resuming print for printer ID: ${printerId}`);
+        
+        const adapter = adapterStateManager.getAdapter(printerId);
+        
+        if (adapter && adapter.isAuthenticated()) {
+            try {
+                const result = await adapter.resume();
+                return {
+                    success: result.success,
+                    message: result.message || (result.success ? 'Print resumed' : 'Resume failed'),
+                    adapter_source: 'integration_adapter'
+                };
+                
+            } catch (error) {
+                if (error instanceof AdapterError && error.type === 'UNSUPPORTED') {
+                    return { success: false, message: 'Resume not supported by this printer' };
+                }
+                logger.error(`[PrinterService] Adapter resume error: ${error.message}`);
+                return { success: false, message: error.message };
             }
-            const success = await instance.resume_print();
-            if (success) {
-                return { success: true, message: `Resume print command sent to printer ${printerId}.` };
-            }
-            return { success: false, message: `API library failed to send resume_print command.`, statusCode: 500 };
-        } catch (error) {
-            logger.error(`[PrinterService] Error relaying resume print for printer ${printerId}: ${error.message}`);
-            return { success: false, message: error.message, statusCode: 500 };
         }
+
+        // No adapter available
+        return { success: false, message: 'No adapter available for this printer' };
     },
 
     async commandStopPrint(printerId) {
-        logger.info(`[PrinterService] Relaying STOP PRINT for printer ID: ${printerId}`);
-        try {
-            const instance = PrinterStateManager.getInstance(printerId);
-            if (!instance || !instance.is_connected()) {
-                return { success: false, message: `Printer instance ${printerId} not available or not connected.`, statusCode: 503 };
+        logger.info(`[PrinterService] Stopping print for printer ID: ${printerId}`);
+        
+        const adapter = adapterStateManager.getAdapter(printerId);
+        
+        if (adapter && adapter.isAuthenticated()) {
+            try {
+                const result = await adapter.cancel();
+                return {
+                    success: result.success,
+                    message: result.message || (result.success ? 'Print stopped' : 'Stop failed'),
+                    adapter_source: 'integration_adapter'
+                };
+                
+            } catch (error) {
+                if (error instanceof AdapterError && error.type === 'UNSUPPORTED') {
+                    return { success: false, message: 'Stop not supported by this printer' };
+                }
+                logger.error(`[PrinterService] Adapter stop error: ${error.message}`);
+                return { success: false, message: error.message };
             }
-            const success = await instance.stop_print();
-            if (success) {
-                return { success: true, message: `Stop print command sent to printer ${printerId}.` };
-            }
-            return { success: false, message: `API library failed to send stop_print command.`, statusCode: 500 };
-        } catch (error) {
-            logger.error(`[PrinterService] Error relaying stop print for printer ${printerId}: ${error.message}`);
-            return { success: false, message: error.message, statusCode: 500 };
         }
+
+        // No adapter available
+        return { success: false, message: 'No adapter available for this printer' };
+    },
+
+    async commandSendGcode(printerId, gcodeString) {
+        logger.info(`[PrinterService] Sending G-code to printer ID: ${printerId}`);
+        
+        const adapter = adapterStateManager.getAdapter(printerId);
+        
+        if (adapter && adapter.isAuthenticated()) {
+            try {
+                const result = await adapter.sendGcode(gcodeString);
+                return {
+                    success: result.success,
+                    message: result.message || (result.success ? 'G-code sent' : 'G-code send failed'),
+                    adapter_source: 'integration_adapter'
+                };
+                
+            } catch (error) {
+                if (error instanceof AdapterError && error.type === 'UNSUPPORTED') {
+                    return { success: false, message: 'G-code sending not supported by this printer' };
+                }
+                logger.error(`[PrinterService] Adapter G-code error: ${error.message}`);
+                return { success: false, message: error.message };
+            }
+        }
+
+        // No adapter available
+        return { success: false, message: 'No adapter available for this printer' };
+    },
+
+    async commandUploadFile(printerId, localFilePathOnServer, remoteFilenameOnPrinter) {
+        logger.info(`[PrinterService] Uploading file for printer ID: ${printerId}`);
+        
+        const adapter = adapterStateManager.getAdapter(printerId);
+        
+        if (adapter && adapter.isAuthenticated()) {
+            try {
+                const spec = new JobSpec({
+                    filename: remoteFilenameOnPrinter,
+                    localPath: localFilePathOnServer
+                });
+                
+                const result = await adapter.upload(spec);
+                return {
+                    success: result.success,
+                    message: result.message || (result.success ? 'File uploaded' : 'Upload failed'),
+                    adapter_source: 'integration_adapter'
+                };
+                
+            } catch (error) {
+                if (error instanceof AdapterError && error.type === 'UNSUPPORTED') {
+                    return { 
+                        success: false, 
+                        message: 'File upload not supported by this printer',
+                        statusCode: 501
+                    };
+                }
+                logger.error(`[PrinterService] Adapter upload error: ${error.message}`);
+                return { 
+                    success: false, 
+                    message: error.message,
+                    statusCode: 500
+                };
+            }
+        }
+
+        // No adapter available
+        return { 
+            success: false, 
+            message: 'No adapter available for this printer',
+            statusCode: 503
+        };
+    },
+
+    // --- Adapter-Specific Methods ---
+    
+    async getPrinterCapabilities(printerId) {
+        const adapter = adapterStateManager.getAdapter(printerId);
+        
+        if (adapter) {
+            try {
+                const capabilities = await adapter.getCapabilities();
+                return { success: true, capabilities };
+            } catch (error) {
+                logger.error(`[PrinterService] Error getting capabilities: ${error.message}`);
+                return { success: false, message: error.message };
+            }
+        }
+        
+        return { success: false, message: 'No adapter available for this printer' };
+    },
+
+    async getStatusStream(printerId) {
+        const adapter = adapterStateManager.getAdapter(printerId);
+        
+        if (adapter && adapter.isAuthenticated()) {
+            try {
+                return adapter.getStatusStream();
+            } catch (error) {
+                logger.error(`[PrinterService] Error creating status stream: ${error.message}`);
+                throw error;
+            }
+        }
+        
+        throw new Error('No authenticated adapter available for status stream');
     }
 };
 

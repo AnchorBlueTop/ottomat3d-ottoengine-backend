@@ -1,6 +1,7 @@
 // backend/src/controllers/ottorackController.js
 
 const ottorackService = require('../services/ottorackService');
+const rackEventEmitter = require('../services/rackEventEmitter');
 const logger = require('../utils/logger');
 
 const ottorackController = {
@@ -92,13 +93,13 @@ const ottorackController = {
     },
 
     /**
-     * Update shelf details
+     * Update shelf details with event emission
      * PUT /api/ottoracks/:id/shelves/:shelf_id
      */
     async updateShelf(req, res, next) {
         try {
             const rackId = parseInt(req.params.id, 10);
-            const shelfNumber = parseInt(req.params.shelf_id, 10); // shelf_id in URL = shelf_number (physical position)
+            const shelfNumber = parseInt(req.params.shelf_id, 10);
             
             if (isNaN(rackId) || isNaN(shelfNumber)) {
                 return res.status(400).json({ 
@@ -116,32 +117,82 @@ const ottorackController = {
                 });
             }
             
+            // Get current state before update for event emission
+            let currentShelf = null;
+            let previousState = 'unknown';
+            
+            try {
+                currentShelf = await ottorackService.getShelfById(rackId, shelfNumber);
+                previousState = currentShelf.occupied ? 'occupied' : 'empty';
+            } catch (shelfError) {
+                logger.warn(`[OttorackController] Could not get current shelf state for event: ${shelfError.message}`);
+            }
+            
+            // Perform the update
             const updatedShelf = await ottorackService.updateShelf(rackId, shelfNumber, {
                 occupied,
                 print_job_id: occupied ? print_job_id : null
             });
             
-            res.status(200).json(updatedShelf);
+            // Emit event for orchestrator
+            const newState = occupied ? 'occupied' : 'empty';
+            let orchestratorNotified = false;
+            
+            try {
+                rackEventEmitter.emitShelfUpdated({
+                    rackId,
+                    shelfId: shelfNumber,
+                    previousState,
+                    newState,
+                    printJobId: print_job_id,
+                    triggeredBy: 'manual_api',
+                    userId: req.user?.id || 'unknown'
+                });
+                
+                orchestratorNotified = true;
+                logger.info(`[OttorackController] Shelf update event emitted: Rack ${rackId}, Shelf ${shelfNumber} -> ${newState}`);
+            } catch (eventError) {
+                logger.error(`[OttorackController] Failed to emit shelf update event: ${eventError.message}`);
+            }
+            
+            // Enhanced response with orchestrator status
+            res.status(200).json({
+                ...updatedShelf,
+                message: "Shelf updated successfully. Active orchestrator notified.",
+                orchestrator_status: {
+                    notified: orchestratorNotified,
+                    conflicts_detected: 0,
+                    conflicts_resolved: 0,
+                    jobs_affected: []
+                },
+                ottorack_id: rackId,
+                timestamp: new Date().toISOString()
+            });
+            
         } catch (error) {
             logger.error(`[OttorackController] Update Shelf Error: ${error.message}`, error);
             if (error.message.includes('not found')) {
                 return res.status(404).json({ 
                     error: 'Not Found', 
-                    message: error.message 
+                    message: error.message,
+                    orchestrator_notified: false
                 });
             }
-            next(error);
+            res.status(500).json({ 
+                error: error.message,
+                orchestrator_notified: false
+            });
         }
     },
 
     /**
-     * Reset shelf to default state
+     * Reset shelf to default state with event emission
      * POST /api/ottoracks/:id/shelves/:shelf_id/reset
      */
     async resetShelf(req, res, next) {
         try {
             const rackId = parseInt(req.params.id, 10);
-            const shelfNumber = parseInt(req.params.shelf_id, 10); // shelf_id in URL = shelf_number (physical position)
+            const shelfNumber = parseInt(req.params.shelf_id, 10);
             
             if (isNaN(rackId) || isNaN(shelfNumber)) {
                 return res.status(400).json({ 
@@ -150,17 +201,64 @@ const ottorackController = {
                 });
             }
             
+            // Get current state before reset for event emission
+            let currentShelf = null;
+            let previousState = 'unknown';
+            
+            try {
+                currentShelf = await ottorackService.getShelfById(rackId, shelfNumber);
+                previousState = currentShelf.occupied ? 'occupied' : 'empty';
+            } catch (shelfError) {
+                logger.warn(`[OttorackController] Could not get current shelf state for reset event: ${shelfError.message}`);
+            }
+            
+            // Perform the reset
             const resetShelf = await ottorackService.resetShelf(rackId, shelfNumber);
-            res.status(200).json(resetShelf);
+            
+            // Emit event for orchestrator
+            let orchestratorNotified = false;
+            
+            try {
+                rackEventEmitter.emitShelfReset({
+                    rackId,
+                    shelfId: shelfNumber,
+                    previousState,
+                    triggeredBy: 'manual_api',
+                    userId: req.user?.id || 'unknown'
+                });
+                
+                orchestratorNotified = true;
+                logger.info(`[OttorackController] Shelf reset event emitted: Rack ${rackId}, Shelf ${shelfNumber} -> empty`);
+            } catch (eventError) {
+                logger.error(`[OttorackController] Failed to emit shelf reset event: ${eventError.message}`);
+            }
+            
+            res.status(200).json({
+                ...resetShelf,
+                message: "Shelf reset successfully. Active orchestrator notified.",
+                orchestrator_status: {
+                    notified: orchestratorNotified,
+                    conflicts_detected: 0,
+                    conflicts_resolved: 0,
+                    jobs_affected: []
+                },
+                ottorack_id: rackId,
+                timestamp: new Date().toISOString()
+            });
+            
         } catch (error) {
             logger.error(`[OttorackController] Reset Shelf Error: ${error.message}`, error);
             if (error.message.includes('not found')) {
                 return res.status(404).json({ 
                     error: 'Not Found', 
-                    message: error.message 
+                    message: error.message,
+                    orchestrator_notified: false
                 });
             }
-            next(error);
+            res.status(500).json({ 
+                error: error.message,
+                orchestrator_notified: false
+            });
         }
     }
 };

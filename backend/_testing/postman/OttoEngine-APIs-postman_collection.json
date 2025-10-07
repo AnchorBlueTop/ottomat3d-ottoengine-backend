@@ -1,0 +1,955 @@
+{
+	"info": {
+		"_postman_id": "7d443c40-8062-4d03-82ff-b732343ab59b",
+		"name": "OTTOMAT3D APIs v0.3 - Phase 3 Complete",
+		"description": "Complete API collection for OTTOMAT3D backend including Phase 3 orchestration endpoints",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "43548769",
+		"_collection_link": "https://harshilpatel-3555320.postman.co/workspace/Harshil-Patel's-Workspace~dcaef52b-2fcf-4696-8e47-8216d00eaf86/collection/43548769-7d443c40-8062-4d03-82ff-b732343ab59b?action=share&source=collection_link&creator=43548769"
+	},
+	"item": [
+		{
+			"name": "Printers API",
+			"item": [
+				{
+					"name": "Register a Printer",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"My_P1P\",\n    \"brand\": \"Bambu Lab\",\n    \"model\": \"P1P\",\n    \"type\": \"FDM\",\n    \"ip_address\": \"192.168.68.58\",\n    \"access_code\": \"14358945\",\n    \"serial_number\": \"01S00C371700385\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/printers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"printers"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Printers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/printers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"printers"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Printer by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/printers/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"printers",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Printer Status by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/printers/1/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"printers",
+								"1",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Upload File to Printer",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"description": "Select a .gcode.3mf file",
+									"type": "file",
+									"src": "/path/to/test_cube.gcode.3mf"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/printers/1/upload",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"printers",
+								"1",
+								"upload"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Send G-Code to Printer",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"gcode\": \"G90\\nG1 Z150 F3000\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/printers/1/send-gcode",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"printers",
+								"1",
+								"send-gcode"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Start Print",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"filename\": \"test_cube.gcode.3mf\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/printers/1/start-print",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"printers",
+								"1",
+								"start-print"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Pause Printer",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/printers/1/pause",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"printers",
+								"1",
+								"pause"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Resume Printer",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/printers/1/resume",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"printers",
+								"1",
+								"resume"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Stop Printer",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/printers/1/stop",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"printers",
+								"1",
+								"stop"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Printer",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Updated Printer Name\",\n    \"build_volume\": {\n        \"width_mm\": 256,\n        \"depth_mm\": 256,\n        \"height_mm\": 256\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/printers/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"printers",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Printer",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/printers/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"printers",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "OttoEject API",
+			"item": [
+				{
+					"name": "Register OttoEject",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"device_name\": \"OttoEject-Mk1\",\n    \"ip_address\": \"192.168.68.84\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ottoeject",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ottoeject"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All OttoEjects",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/ottoeject",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ottoeject"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get OttoEject by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/ottoeject/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ottoeject",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get OttoEject Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/ottoeject/1/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ottoeject",
+								"1",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Execute Macro - Home",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"macro\": \"OTTOEJECT_HOME\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ottoeject/1/macros",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ottoeject",
+								"1",
+								"macros"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Execute Macro - Eject from P1",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"macro\": \"EJECT_FROM_P1\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ottoeject/1/macros",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ottoeject",
+								"1",
+								"macros"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Execute Macro - Load onto P1",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"macro\": \"LOAD_ONTO_P1\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ottoeject/1/macros",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ottoeject",
+								"1",
+								"macros"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update OttoEject",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"device_name\": \"Updated OttoEject Name\",\n    \"ip_address\": \"192.168.68.75\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ottoeject/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ottoeject",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete OttoEject",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/ottoeject/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ottoeject",
+								"1"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Print Jobs API",
+			"item": [
+				{
+					"name": "Upload & Parse G-code File (Step 1)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"description": "Select a .gcode.3mf file",
+									"type": "file",
+									"src": "/Users/harshilpatel/Downloads/mano bosodo/a1/LOGO_PETG_Y170_V1.gcode.3mf"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/print-jobs/upload",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"print-jobs",
+								"upload"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Print Job (Step 2)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"print_item_id\": 1,\n    \"printer_id\": 1,\n    \"ottoeject_id\": 1,\n    \"auto_start\": true,\n    \"priority\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/print-jobs",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"print-jobs"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Print Jobs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/print-jobs",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"print-jobs"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Print Job by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/print-jobs/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"print-jobs",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Print Job",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"priority\": 2\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/print-jobs/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"print-jobs",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Print Job",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/print-jobs/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"print-jobs",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Complete Print Job",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/print-jobs/1/complete",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"print-jobs",
+								"1",
+								"complete"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "OttoRacks API",
+			"item": [
+				{
+					"name": "Create OttoRack",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Rack A\",\n    \"number_of_shelves\": 6,\n    \"shelf_spacing_mm\": 80,\n    \"bed_size\": \"256x256\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ottoracks",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ottoracks"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All OttoRacks",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/ottoracks",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ottoracks"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get OttoRack by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/ottoracks/1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ottoracks",
+								"1"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Shelf (Completed Print)",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"has_plate\": true,\n    \"plate_state\": \"with_print\",\n    \"print_job_id\": 1\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ottoracks/1/shelves/3",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ottoracks",
+								"1",
+								"shelves",
+								"3"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Shelf (Empty Plate)",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"has_plate\": true,\n    \"plate_state\": \"empty\",\n    \"print_job_id\": null\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ottoracks/1/shelves/3",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ottoracks",
+								"1",
+								"shelves",
+								"3"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Shelf (No Plate)",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"has_plate\": false,\n    \"plate_state\": null,\n    \"print_job_id\": null\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/ottoracks/1/shelves/3",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ottoracks",
+								"1",
+								"shelves",
+								"3"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Shelf (Mark as Empty)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/ottoracks/1/shelves/3/reset",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ottoracks",
+								"1",
+								"shelves",
+								"3",
+								"reset"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🚀 Phase 3: Orchestration API",
+			"item": [
+				{
+					"name": "Get Orchestration Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/orchestration/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orchestration",
+								"status"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Jobs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/orchestration/active-jobs",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orchestration",
+								"active-jobs"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/orchestration/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orchestration",
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Restart Print Dispatch Service",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/orchestration/restart",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"orchestration",
+								"restart"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		}
+	]
+}

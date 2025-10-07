@@ -60,9 +60,59 @@ function dbAll(sql, params = []) {
     });
 }
 
+/**
+ * FIXED: Add database transaction support
+ * Execute multiple database operations within a transaction
+ * @param {Function} callback - Async function that performs the database operations
+ * @returns {Promise<any>} - Result from the callback function
+ */
+function dbTransaction(callback) {
+    return new Promise((resolve, reject) => {
+        db.serialize(() => {
+            db.run("BEGIN TRANSACTION", (beginErr) => {
+                if (beginErr) {
+                    logger.error(`DB Transaction Begin Error: ${beginErr.message}`);
+                    return reject(beginErr);
+                }
+                
+                Promise.resolve(callback())
+                    .then(result => {
+                        db.run("COMMIT", (commitErr) => {
+                            if (commitErr) {
+                                logger.error(`DB Transaction Commit Error: ${commitErr.message}`);
+                                // Try to rollback on commit error
+                                db.run("ROLLBACK", (rollbackErr) => {
+                                    if (rollbackErr) {
+                                        logger.error(`DB Transaction Rollback Error: ${rollbackErr.message}`);
+                                    }
+                                    reject(commitErr);
+                                });
+                            } else {
+                                logger.debug('DB Transaction committed successfully');
+                                resolve(result);
+                            }
+                        });
+                    })
+                    .catch(err => {
+                        logger.error(`DB Transaction Error: ${err.message}`);
+                        db.run("ROLLBACK", (rollbackErr) => {
+                            if (rollbackErr) {
+                                logger.error(`DB Transaction Rollback Error: ${rollbackErr.message}`);
+                            } else {
+                                logger.debug('DB Transaction rolled back successfully');
+                            }
+                            reject(err);
+                        });
+                    });
+            });
+        });
+    });
+}
+
 // Export the helper functions
 module.exports = {
     dbRun,
     dbGet,
-    dbAll
+    dbAll,
+    dbTransaction
 };

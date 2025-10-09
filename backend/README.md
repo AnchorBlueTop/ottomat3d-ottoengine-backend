@@ -34,7 +34,23 @@ Node.js/Express.js backend for OTTOMAT3D, serving as an API proxy for controllin
 
 ---
 
-## 2. Python Control Scripts (`python-scripts/` directory)
+## 2. Database Architecture
+
+The backend uses SQLite with a normalized relational schema designed to support automated 3D printing workflows.
+
+![Database ERD](assets/database-erd.png)
+
+**Key Tables:**
+- `printers` - 3D printer registration and configuration
+- `ottoejects` - OTTOeject device management
+- `print_items` - Parsed G-code metadata with height information
+- `print_jobs` - Job lifecycle tracking with orchestration fields
+- `storage_racks` - Storage rack configuration
+- `rack_slots` - Individual slot state tracking
+
+---
+
+## 3. Python Control Scripts (`python-scripts/` directory)
 
 Orchestrates the automation workflow using the backend API.
 

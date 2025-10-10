@@ -8,8 +8,8 @@ import {
 } from "./representations/printerRepresentation";
 
 // const BASE_URL = import.meta.env.BASE_URL || 'http://localhost:3000'; 
-// const BASE_URL = 'http://localhost:3000';
-const BASE_URL = 'http://100.79.73.105:3000';
+const BASE_URL = 'http://localhost:3000';
+// const BASE_URL_rem = 'http://100.79.73.105:3000';
 
 /////// OTTO PRINTER APIs ///////
 export const registerPrinter = async (printerData: PrinterRegistrationRepresentation): Promise<PrinterRepresentation> => {
@@ -104,19 +104,23 @@ export const deletePrinter = async (id: number): Promise<void> => {
   }
 };
 
-export const uploadFile = async (file: File, id: number) => {
+export const uploadFile = async (file: File, fileId: number) => {
   const formdata = new FormData();
   formdata.append("file", file, file.name);
+  formdata.append("id", fileId.toString());
+  
+  console.log("Uploading file with FormData:", [...formdata.entries()]);
 
-  const response = await fetch(`${BASE_URL}/api/printers/${id}/upload`, {
-    method: "POST",
+  const response = await fetch(`${BASE_URL}/api/print-jobs/upload`, {
+    method: "POST", 
     body: formdata,
   });
+  console.log(response);
   if (!response.ok) {
     throw new Error(`Error uploading file: ${response.statusText}`);
   }
   return response.json();
-}
+};
 
 /////// OTTO EJECT APIs ///////
 
@@ -179,4 +183,59 @@ export const sendOttoejectMacro = async (id: number, macroPayload: OttoejectMacr
     throw new Error(`Error sending macro to Ottoeject device ID ${id}: ${response.statusText}`);
   }
   return response.json();
+};
+
+/////// PRINT JOB APIs ///////
+
+export const createPrintJob = async (printJobData: any): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/print-jobs`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(printJobData),
+  });
+  if (!response.ok) {
+    throw new Error(`Error creating print job: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+export const getAllPrintJobs = async (): Promise<any[]> => {
+  const response = await fetch(`${BASE_URL}/api/print-jobs`);
+  if (!response.ok) {
+    throw new Error(`Error fetching print jobs: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+export const getPrintJobById = async (id: string): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/print-jobs/${id}`);
+  if (!response.ok) {
+    throw new Error(`Error fetching print job with ID ${id}: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+export const updatePrintJob = async (id: number, updateData: any): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/print-jobs/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updateData),
+  });
+  if (!response.ok) {
+    throw new Error(`Error updating print job with ID ${id}: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+export const deletePrintJob = async (id: number): Promise<void> => {
+  const response = await fetch(`${BASE_URL}/api/print-jobs/${id}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(`Error deleting print job with ID ${id}: ${response.statusText}`);
+  }
 };

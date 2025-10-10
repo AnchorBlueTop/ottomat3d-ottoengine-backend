@@ -51,7 +51,7 @@ type ContextType = {
   setIsPrintTaskModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
   fileUploadModalOpen: boolean;
   setIsFileUploadModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  currentFiles: any[];
+  currentFiles: File[];
   setCurrentFiles: React.Dispatch<React.SetStateAction<any[]>>;
   printFile: any | undefined;
   setPrintFile: React.Dispatch<React.SetStateAction<any | undefined>>;
@@ -61,6 +61,8 @@ type ContextType = {
   setPrintJobIndex: React.Dispatch<React.SetStateAction<number | undefined>>;
   selectedJobIDs: any[];
   setSelectedJobIDs: React.Dispatch<React.SetStateAction<any[]>>;
+  printJobUID: number | undefined;
+  setPrintJobUID: React.Dispatch<React.SetStateAction<number | undefined>>;
 
   // Print Queue
   jobQueueModalOpen: boolean;
@@ -106,6 +108,8 @@ export const JobContextProvider: React.FC<Props> = ({ children }) => {
   const [printFile, setPrintFile] = useState<any | undefined>();
   const [selectedJobIDs, setSelectedJobIDs] = useState<string[]>([]);
   const [jobQueueModalOpen, setIsJobQueueModalOpen] = useState(false);
+  const [printJobUID, setPrintJobUID] = useState<number | undefined>();
+  
 
   // Print Queue
   const [queue, setQueue] = useState<QueueRepresentation[]>([]);
@@ -160,6 +164,8 @@ export const JobContextProvider: React.FC<Props> = ({ children }) => {
     setPrintFile,
     selectedJobIDs,
     setSelectedJobIDs,
+    printJobUID,
+    setPrintJobUID,
 
     // Print Queue
     queue,

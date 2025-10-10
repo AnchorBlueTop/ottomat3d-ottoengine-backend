@@ -16,13 +16,25 @@ import {
 import readFile from '../../representations/readFileRepresentation';
 import { UploadIcon } from '@patternfly/react-icons';
 import { uploadFile } from '../../ottoengine_API';
+import newPrintJob from './newPrintJob';
 
 export default function uploadPrintFile() {
-    const { setIsPrintTaskModalOpen, setIsFileUploadModalOpen, setCurrentFiles, currentFiles, fileUploadModalOpen, printer } = useContext(JobContext);
+    const { setIsPrintTaskModalOpen, setIsFileUploadModalOpen, setCurrentFiles, setPrintFile, printJobUID, setPrintJobUID, currentFiles, fileUploadModalOpen, printer } = useContext(JobContext);
     const [readFileData, setReadFileData] = useState<readFile[]>([]);
     const [showStatus, setShowStatus] = useState(false);
     const [statusIcon, setStatusIcon] = useState('inProgress');
-    const [tempPrinter, setTempPrinter] = useState(0);
+    // const [tempPrinter, setTempPrinter] = useState(0);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    var uniqueId: number | string = '';
+
+    const [nextItemId, setNextItemId] = useState<number>(1);
+
+    const generateJobId = () => {
+        // uniqueId = (Math.random().toString(36).substring(2));
+        uniqueId = Date.now() + Math.floor(Math.random() * 100);
+        setPrintJobUID(uniqueId);
+        return uniqueId;
+    };
 
     useEffect(() => {
         if (readFileData.length < currentFiles?.length) {
@@ -32,6 +44,8 @@ export default function uploadPrintFile() {
         } else {
             setStatusIcon('danger');
         }
+
+        generateJobId();
     }, [readFileData]);
 
     if (!showStatus && currentFiles?.length > 0) {
@@ -86,17 +100,46 @@ export default function uploadPrintFile() {
             );
         }
     };
+    
+    // const generateFileId = () => {
+    //     return `file_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    // };
 
     const uploadPrintFile = async () => {
-        setIsFileUploadModalOpen(false);
-        setIsPrintTaskModalOpen(true);
-        await uploadFile(currentFiles[0], tempPrinter);
-        const readCurrentFile = currentFiles.map((item: any) => String(item)).join('\n');
+        // setIsFileUploadModalOpen(false);
+        // setIsPrintTaskModalOpen(true);
+        // await uploadFile(currentFiles[0], tempPrinter);
+        // const readCurrentFile = currentFiles.map((item: any) => String(item)).join('\n');
+        if (currentFiles.length === 0) {
+            setErrorMessage("Please upload at least one file.");
+            return;
+        }
+    
+        try {
+            for (const file of currentFiles) {
+                if (!['.gcode', '.3mf'].some((ext) => file.name.endsWith(ext))) {
+                    console.error("Unsupported file type:", file.name);
+                    setErrorMessage("Unsupported file type. Please upload a .gcode or .3mf file.");
+                    return;
+                }
+    
+                const uploadedFile = await uploadFile(file, Number(printJobUID));
+                setPrintFile(uploadedFile); // Set the uploaded file data
+                console.log("Uploaded file response:", uploadedFile);
+                setPrintJobUID(uploadedFile.print_item_id);
+            }
+    
+            setErrorMessage(null); 
+            setIsFileUploadModalOpen(false);
+            setIsPrintTaskModalOpen(true);
+        } catch (error) {
+            setErrorMessage("Failed to upload file. Please try again.");
+        }
     }
 
-    const handlePrinterChange = (printerId: any) => {
-        setTempPrinter(printerId);
-    };
+    // const handlePrinterChange = (printerId: any) => {
+    //     setTempPrinter(printerId);
+    // };
 
     return (
         <Modal
@@ -149,8 +192,8 @@ export default function uploadPrintFile() {
                 )}</>
             }
             <ModalFooter className='pf-custom-upload-button-footer'>
-                <FormSelect
-                    // value={value}
+                {/* <FormSelect
+                    value={tempPrinter || ""}
                     onChange={(_event, value) => handlePrinterChange(value)}
                     aria-label={`Select printer for Uploading`}
                 >
@@ -162,7 +205,7 @@ export default function uploadPrintFile() {
                             label={printerItem.model as string}
                         />
                     ))}
-                </FormSelect>
+                </FormSelect> */}
                 
                 <Button
                     className="pf-m-danger"
@@ -171,13 +214,15 @@ export default function uploadPrintFile() {
                     {'Close'}
                 </Button>
                 <Button
-                    isDisabled={currentFiles?.length == 0}
+                    // isDisabled={currentFiles?.length === 0 || !tempPrinter}
+                    isDisabled={currentFiles?.length === 0}
                     className="pf-custom-button"
                     onClick={() => uploadPrintFile()}
                 >
                     {'Continue'}
                 </Button>
             </ModalFooter>
+            {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>}
         </Modal>
     );
 };

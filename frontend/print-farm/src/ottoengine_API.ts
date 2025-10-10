@@ -239,3 +239,74 @@ export const deletePrintJob = async (id: number): Promise<void> => {
     throw new Error(`Error deleting print job with ID ${id}: ${response.statusText}`);
   }
 };
+
+/////// OTTO RACK APIs ///////
+
+// Create a new Ottorack
+export const createOttorack = async (ottorackData: any): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/ottoracks`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(ottorackData),
+  });
+  if (!response.ok) {
+    throw new Error(`Error creating Ottorack: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+// Get all Ottoracks
+export const getAllOttoracks = async (): Promise<any[]> => {
+  const response = await fetch(`${BASE_URL}/api/ottoracks`);
+  if (!response.ok) {
+    throw new Error(`Error fetching Ottoracks: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+// Get Ottorack details by ID
+export const getOttorackById = async (id: number): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/ottoracks/${id}`);
+  if (!response.ok) {
+    throw new Error(`Error fetching Ottorack with ID ${id}: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+// Update a specific shelf in an Ottorack
+export const updateOttorackShelf = async (rackId: number, shelfId: number, shelfData: any): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/ottoracks/${rackId}/shelves/${shelfId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(shelfData),
+  });
+  if (!response.ok) {
+    throw new Error(`Error updating shelf ${shelfId} in Ottorack ${rackId}: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+// Reset a specific shelf in an Ottorack
+export const resetOttorackShelf = async (rackId: number, shelfId: number): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/ottoracks/${rackId}/shelves/${shelfId}/reset`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw new Error(`Error resetting shelf ${shelfId} in Ottorack ${rackId}: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+// Delete an Ottorack
+export const deleteOttorack = async (id: number): Promise<void> => {
+  const response = await fetch(`${BASE_URL}/api/ottoracks/${id}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(`Error deleting Ottorack with ID ${id}: ${response.statusText}`);
+  }
+};

@@ -27,25 +27,51 @@ export default function newPrinter() {
     const [tempPrinter, setTempPrinter] = useState<PrinterRegistrationRepresentation>();
 
     const updatePrinterList = (tempPrinter: any) => {
-        if (!printer && tempPrinter) {
-            const registeredResponse = registerPrinter(tempPrinter).then(() => { console.log('in printer registration') });
-            setPrinter([tempPrinter]);
-            setTempPrinter({});
-        } else {
-            if (!printer[0]) {
-                delete printer[0];
-                printer.push(tempPrinter);
+        // if (!printer && tempPrinter) {
+        //     console.log(tempPrinter);
+        //     const registeredResponse = registerPrinter(tempPrinter).then(() => { console.log('in printer registration') });
+        //     setPrinter([tempPrinter]);
+        //     setTempPrinter({});
+        // } else {
+        //     if (!printer[0]) {
+        //         delete printer[0];
+        //         printer.push(tempPrinter);
 
-                setPrinter(printer);
-                setTempPrinter({});
-            } else {
-                const registeredResponse = registerPrinter(tempPrinter).then(() => { console.log('in printer registration') });
-                printer.push(tempPrinter);
-                setPrinter(printer);
-                setIsPrinterAddModalOpen(false);
-                setTempPrinter({});
-            }
+        //         setPrinter(printer);
+        //         setTempPrinter({});
+        //     } else {
+        //         const registeredResponse = registerPrinter(tempPrinter).then(() => { console.log('in printer registration') });
+        //         printer.push(tempPrinter);
+        //         setPrinter(printer);
+        //         setIsPrinterAddModalOpen(false);
+        //         setTempPrinter({});
+        //     }
+        // }
+
+        if (!tempPrinter) {
+            console.error("No printer data provided.");
+            return;
         }
+        // Register the printer using the API
+        registerPrinter(tempPrinter).then(() => {
+            console.log("Printer registered successfully:", tempPrinter);
+
+            // Update the printer list
+            if (!printer || printer.length === 0) {
+                // If no printers exist, initialize the printer list
+                setPrinter([tempPrinter]);
+            } else {
+                // Add the new printer to the existing list
+                setPrinter([...printer, tempPrinter]);
+            }
+
+            // Reset the temporary printer and close the modal
+            setTempPrinter({});
+            setIsPrinterAddModalOpen(false);
+        })
+        .catch((error) => {
+            console.error("Error registering printer:", error);
+        });
         setIsPrinterAddModalOpen(false);
     };
 
@@ -168,7 +194,11 @@ export default function newPrinter() {
                         <Button
                             className="pf-custom-button"
                             onClick={() => {
-                                updatePrinterList(tempPrinter);
+                                if (tempPrinter) {
+                                    updatePrinterList(tempPrinter);
+                                } else {
+                                    console.error("No printer data to add.");
+                                }
                             }}
                         >
                             {'ADD'}

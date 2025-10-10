@@ -531,8 +531,18 @@
 }
 
 .pf-v6-c-label.pf-custom-label--ready {
-  background-color: #24A148 !important;
+  background-color: #24A148 !important; 
   color: white !important;
 }
 
 .pf-c-dashboard-jobs {}
+
+.pf-custom-dropdown {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 1rem;
+  background-color: #fff;
+  color: #333;
+}

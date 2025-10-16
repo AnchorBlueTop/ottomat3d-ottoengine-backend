@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS printers (
     name TEXT NOT NULL UNIQUE,
     brand TEXT NULL,
     model TEXT NULL,
-    type TEXT NOT NULL,              -- e.g., "bambu", "klipper", "prusa", "flashforge"
+    type TEXT NULL,              -- e.g., "bambu", "klipper", "prusa", "flashforge"
     ip_address TEXT NOT NULL UNIQUE,
     access_code TEXT NULL,
     serial_number TEXT NULL UNIQUE,

@@ -23,10 +23,10 @@ const printerController = {
             const printerData = req.body;
             logger.info(`[PrinterController] Registering printer:`, printerData);
             // Basic validation of top-level fields expected by API doc for POST /printers
-            if (!printerData.name || !printerData.type || !printerData.ip_address) {
-                return res.status(400).json({ error: 'Bad Request', message: 'name, type, and ip_address are required for printer registration.' });
+            if (!printerData.name || !printerData.ip_address) {
+                return res.status(400).json({ error: 'Bad Request', message: 'name and ip_address are required for printer registration.' });
             }
-            // Service will validate Bambu-specific fields if type is 'bambu'
+            // Service will validate Bambu-specific fields based on brand (access_code and serial_number)
             
             const newPrinter = await printerService.createPrinter(printerData);
             // createPrinter now informs PrinterStateManager to connect if it's a Bambu printer

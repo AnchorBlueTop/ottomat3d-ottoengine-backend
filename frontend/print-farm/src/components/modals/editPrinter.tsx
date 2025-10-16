@@ -5,6 +5,8 @@ import {
     ContentVariants,
     Form,
     FormGroup,
+    FormSelect,
+    FormSelectOption,
     Grid,
     GridItem,
     Modal,
@@ -21,6 +23,8 @@ import PrinterIcon from '../../public/printer-Icon.svg'
 import thumbnail from '../../public/thumbnail.png';
 import { PrinterRepresentation } from "../../representations/printerRepresentation.ts";
 import { deletePrinter, getPrinterStatusById, sendGCodeToPrinter, updatePrinterDetails } from "../../ottoengine_API.ts";
+import { PRINTER_BRANDS } from "../../constants/printerBrands";
+import { PRINTER_MODELS } from "../../constants/printerModels";
 
 export default function editPrinter() {
     const { printer, setPrinter, setIsPrinterEditModalOpen, printerEditModalOpen, printerIndex } = useContext(JobContext);
@@ -89,37 +93,57 @@ export default function editPrinter() {
                         <Form isHorizontal className="pf-custom-text-align-left">
                             <Grid>
                                 <GridItem span={3}>
+                                    <Content>{'PRINTER BRAND:'}</Content>
+                                </GridItem>
+                                <GridItem span={8}>
+                                    <FormSelect
+                                        id="printer-brand"
+                                        value={tempPrinter?.brand ?? ''}
+                                        onChange={(_event, value: string) => {
+                                            // when brand changes, clear model to force re-select
+                                            setTempPrinter({ ...tempPrinter, brand: value, model: '' as any });
+                                        }}
+                                        aria-label="Select printer brand"
+                                    >
+                                        <FormSelectOption key="placeholder" label="Select a brand" value="" />
+                                        {PRINTER_BRANDS.map(b => (
+                                            <FormSelectOption key={b.value} label={b.label} value={b.value} />
+                                        ))}
+                                    </FormSelect>
+                                </GridItem>
+                            </Grid>
+
+                            <Grid>
+                                <GridItem span={3}>
+                                    <Content>{'PRINTER MODEL:'}</Content>
+                                </GridItem>
+                                <GridItem span={8}>
+                                    <FormSelect
+                                        id="printer-model"
+                                        isDisabled={!tempPrinter?.brand}
+                                        value={tempPrinter?.model ?? ''}
+                                        onChange={(_event, value: string) => setTempPrinter({ ...tempPrinter, model: value })}
+                                        aria-label="Select printer model"
+                                    >
+                                        <FormSelectOption key="placeholder" label={tempPrinter?.brand ? 'Select a model' : 'Select a brand first'} value="" />
+                                        {(PRINTER_MODELS[tempPrinter?.brand || ''] || []).map(m => (
+                                            <FormSelectOption key={m.value} label={m.label} value={m.value} />
+                                        ))}
+                                    </FormSelect>
+                                </GridItem>
+                            </Grid>
+
+                            <Grid>
+                                <GridItem span={3}>
                                     <Content>{'NAME:'}</Content>
                                 </GridItem>
                                 <GridItem span={8}>
                                     <TextInput
                                         id='printer-name'
+                                        placeholder=""
                                         value={tempPrinter?.name}
-                                        onChange={(_event, value: any) => setTempPrinter({ ...tempPrinter, name: value })}
-                                        frameBorder={'none'}
+                                        onChange={(_event, value: string) => setTempPrinter({ ...tempPrinter, name: value })}
                                     />
-                                </GridItem>
-                            </Grid>
-
-                            <Grid>
-                                <GridItem span={3}>
-                                    <Content>{'BRAND:'}</Content>
-                                </GridItem>
-                                <GridItem span={8}>
-                                    <TextInputGroup>
-                                        <TextInputGroupMain id='printer-printer' value={tempPrinter?.brand} onChange={(_event, value: any) => setTempPrinter({ ...tempPrinter, brand: value })} />
-                                    </TextInputGroup>
-                                </GridItem>
-                            </Grid>
-
-                            <Grid>
-                                <GridItem span={3}>
-                                    <Content>{'MODEL:'}</Content>
-                                </GridItem>
-                                <GridItem span={8}>
-                                    <TextInputGroup>
-                                        <TextInputGroupMain id='printer-ottoeject' value={tempPrinter?.model} onChange={(_event, value: any) => setTempPrinter({ ...tempPrinter, model: value })} />
-                                    </TextInputGroup>
                                 </GridItem>
                             </Grid>
 
@@ -146,6 +170,16 @@ export default function editPrinter() {
                                             </TextInputGroup>
                                         </GridItem>
                                     </Grid>
+                                    <Grid>
+                                        <GridItem span={3}>
+                                            <Content>{'ACCESS CODE:'}</Content>
+                                        </GridItem>
+                                        <GridItem span={8}>
+                                            <TextInputGroup>
+                                                <TextInputGroupMain id='printer-connection-accesscode' value={tempPrinter?.access_code} onChange={(_event, value: any) => setTempPrinter({ ...tempPrinter, access_code: value })} />
+                                            </TextInputGroup>
+                                        </GridItem>
+                                    </Grid>
                                 </Grid>
                             </div>
                         </Form>
@@ -154,7 +188,6 @@ export default function editPrinter() {
                     <GridItem span={4}>
                         <FormGroup>
                             <Brand src={thumbnail} alt={"printer thumbnail"} className="pf-custom-thumbnail" />
-                            {<Content className="pf-custom-align-center"><strong>{tempPrinter?.status}</strong></Content>}
                         </FormGroup>
                     </GridItem>
 

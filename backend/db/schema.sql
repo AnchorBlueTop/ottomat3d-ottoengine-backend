@@ -166,3 +166,4 @@ WHERE has_plate IS NULL OR (has_plate = 1 AND plate_state IS NULL);
 -- Uncomment these lines if you want some slots to have plates ready for printing:
 -- UPDATE rack_slots SET has_plate = 1, plate_state = 'empty' 
 -- WHERE storage_rack_id = 1 AND slot_number IN (1, 2);
+-- BEGIN UPDATE rack_slots SET updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc') WHERE id = OLD.id; END;

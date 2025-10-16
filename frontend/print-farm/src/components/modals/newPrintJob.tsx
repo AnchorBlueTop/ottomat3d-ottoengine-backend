@@ -5,17 +5,28 @@ import PrintJobIcon from '../../public/PrintJob-Icon.svg'
 import thumbnail from '../../public/thumbnail.png';
 import PrintJobRepresentation from "../../representations/printJobRepresentation";
 import JSZip from 'jszip';
+import { PrinterRepresentation } from "../../representations/printerRepresentation";
+import { getAllOttoejectDevices, getAllPrinters, getPrintJobById, uploadFile } from "../../ottoengine_API";
+import { createPrintJob, getAllPrintJobs } from "../../ottoengine_API";
+import { get } from "http";
 
 export default function newPrintJob() {
-    const { currentFiles, printTaskModalOpen, setIsPrintTaskModalOpen, setCurrentFiles, setPrintJob, setPrintFile, printFile } = useContext(JobContext);
+    const { currentFiles, printTaskModalOpen, setIsPrintTaskModalOpen, setCurrentFiles, setPrintJobUID, printJobUID, setOttoeject, ottoeject, setPrintFile, printFile } = useContext(JobContext);
     const [fileRead, setFileRead] = useState();
+    const [printers, setPrinters] = useState<PrinterRepresentation[]>([]);
+    const [selectedPrinter, setSelectedPrinter] = useState<number | null>(null);
+    const [selectedOttoeject, setSelectedOttoeject] = useState<number | null>(null);
+    
+    const [nextItemId, setNextItemId] = useState<number>(1);
+    
     var uniqueId: number | string = '';
     var fileDetails: PrintJobRepresentation = {};
 
-    const generateJobId = () => {
-        uniqueId = (Math.random().toString(36).substring(2));
-        return uniqueId;
-    };
+    // const generateJobId = () => {
+    //     uniqueId = (Math.random().toString(36).substring(2));
+    //     setPrintJobUID(uniqueId);
+    //     return uniqueId;
+    // };
 
     const readUploadedFile = (file: any[]): Promise<string | any> => {
         const fileRead = new Promise(async () => {
@@ -28,7 +39,7 @@ export default function newPrintJob() {
                     setCurrentFiles([processedResult]);
 
                     //PRINTER MODEL EXTRACT
-                    const printerRegex = /printer_model = (.*)/;
+                    const printerRegex = /printer_model = (.*)/; 
                     const matchPrinter = processedResult.match(printerRegex);
                     const matchedPrinter = () => {
                         if (matchPrinter && matchPrinter[1]) {
@@ -94,7 +105,8 @@ export default function newPrintJob() {
                     }
 
                     fileDetails = {
-                        id: uniqueId.toString(),
+                        // id: uniqueId.toString(),
+                        id: printJobUID?.toString(),
                         name: file?.[0]?.name,
                         printer: matchedPrinter(),
                         duration: matchedPrintDuration(),
@@ -127,7 +139,7 @@ export default function newPrintJob() {
                     if (typeof mainFile === 'string') {
                         const processedResult = fileContent.split('\n').map((item: any) => String(item)).join('\n');
                         setCurrentFiles([processedResult]);
-                        console.log(processedResult);
+                        // console.log(processedResult);
                         //PRINTER MODEL EXTRACT
                         const printerRegex = /printer_model = (.*)/;
                         const matchPrinter = processedResult.match(printerRegex);
@@ -195,7 +207,8 @@ export default function newPrintJob() {
                         }
 
                         fileDetails = {
-                            id: uniqueId.toString(),
+                            // id: uniqueId.toString(),
+                            id: printJobUID?.toString(),
                             name: file?.[0]?.name,
                             printer: matchedPrinter(),
                             duration: matchedPrintDuration(),
@@ -206,7 +219,7 @@ export default function newPrintJob() {
                             ams: matchedAMS()
                         }
                         setPrintFile(fileDetails);
-                        console.log(fileDetails);
+                        // console.log(fileDetails);
                         return processedResult;
                     }
                 } catch (error) {
@@ -217,10 +230,137 @@ export default function newPrintJob() {
         return fileRead;
     };
 
+    // // Use `nextItemId` when creating a new print job
+    // const handleCreatePrintJob = async () => {
+    //     const printJobData = {
+    //         print_item_id: nextItemId,
+    //         printer_id: printers.find((printer) => printer.name === selectedPrinter)?.id,
+    //         priority: 1,
+    //         auto_start: true,
+    //     };
+
+    //     try {
+    //         const newPrintJob = await createPrintJob(printJobData);
+    //         console.log("Print job created successfully:", newPrintJob);
+    //         setNextItemId(nextItemId + 1); // Increment for the next job
+    //     } catch (error) {
+    //         console.error("Error creating print job:", error);
+    //     }
+    // };
+
+
+    // const readUploadedFile = async (file: any[]) => {
+    //     try {
+    //         if(printTaskModalOpen){
+    //             console.log('printFile: ', printFile.parsed_data);
+    //             // const uploadedFile = await getPrintJobById(printFile);
+    //             const uploadedFile = printFile.parsed_data;
+            
+    
+    //             // Set the `printFile` state with the data returned from the API
+    //             // setPrintFile({
+    //             //     id: uploadedFile.id,
+    //             //     name: uploadedFile.name,
+    //             //     printer: uploadedFile.printer,
+    //             //     duration: uploadedFile.duration,
+    //             //     filament: uploadedFile.filament,
+    //             //     filament_weight: uploadedFile.filament_weight,
+    //             //     filament_length: uploadedFile.filament_length,
+    //             //     status: 'NEW',
+    //             //     ams: uploadedFile.ams,
+    //             // });
+
+    //             setPrintFile({
+    //                 // id: uploadedFile.id,
+    //                 name: uploadedFile.file_name,
+    //                 printer: uploadedFile.printer,
+    //                 duration: uploadedFile.duration,
+    //                 // filament: uploadedFile.filament,
+    //                 filament_weight: uploadedFile.filament_used,
+    //                 // filament_length: uploadedFile.filament_length,
+    //                 status: 'NEW',
+    //                 ams: uploadedFile.ams,
+    //             });
+        
+    //             console.log("Uploaded file data:", uploadedFile);
+    //         }
+    //     } catch (error) {
+    //         console.error("Error reading uploaded file:", error);
+    //     }
+    // };
+
+    const handleCreatePrintJob = async () => {
+        if (!selectedPrinter ||  !selectedOttoeject) {
+            console.error("No printer selected.");
+            // setErrorMessage("Please select a printer before creating a print job.");
+            return;
+        }
+    
+        const printJobData = {
+            // print_item_id: nextItemId,
+            // printer_id: selectedPrinter,
+            // ottoeject_id: selectedOttoeject,
+            print_item_id: printJobUID,
+            printer_id: 4,
+            ottoeject_id: 1,
+            priority: 1,
+            // auto_start: false,
+        };
+    
+        try {
+            console.log("Creating print job with data:", printJobData);
+            const newPrintJob = await createPrintJob(printJobData);
+            console.log("Print job created successfully:", newPrintJob);
+            setNextItemId(nextItemId + 1); // Increment for the next job
+        } catch (error) {
+            console.error("Error creating print job:", error);
+            // setErrorMessage("Failed to create print job. Please try again.");
+        }
+    };
+
     useEffect(() => {
-        generateJobId();
+        const fetchPrintJobs = async () => {
+            try {
+                const printJobs = await getAllPrintJobs();
+                if (printJobs.length > 0) {
+                    const highestId = Math.max(...printJobs.map((job) => job.print_item_id || 0));
+                    setNextItemId(highestId + 1);
+                } else {
+                    setNextItemId(1); // Start with 1 if no print jobs exist
+                }
+            } catch (error) {
+                console.error("Error fetching print jobs:", error);
+            }
+        };
+        const fetchPrinters = async () => {
+            try {
+                const printerList = await getAllPrinters();
+                setPrinters(printerList);
+            } catch (error) {
+                console.error("Error fetching printers:", error);
+            }
+        };
+        const fetchOttoejectDevices = async () => {
+            try {
+                const devices = await getAllOttoejectDevices();
+                setOttoeject(devices);
+            } catch (error) {
+                console.error("Error fetching Ottoeject devices:", error);
+            }
+        };
+
+        fetchOttoejectDevices();
+        fetchPrinters();
+        fetchPrintJobs();
+        // generateJobId();
         readUploadedFile(currentFiles);
-    }, [printTaskModalOpen]);
+        
+        
+
+        // if (printFile?.printer) {
+        //     setSelectedPrinter(printFile.printer);
+        // }
+    }, [printTaskModalOpen, printFile]);
 
     return (
         <Modal
@@ -243,8 +383,50 @@ export default function newPrintJob() {
                                 {printFile?.id}
                             </FormGroup>
 
-                            <FormGroup className="pf-custom-formGroup" label={'PRINTER: '}>
+                            {/* <FormGroup className="pf-custom-formGroup" label={'PRINTER: '}>
                                 {printFile?.printer}
+                            </FormGroup> */}
+                            {/* <FormGroup className="pf-custom-formGroup" label={'PRINTER: '}>
+                                <select
+                                    className="pf-custom-dropdown"
+                                    value={selectedPrinter || ''}
+                                    onChange={(e) => setSelectedPrinter(e.target.value)}
+                                >
+                                    {printers.map((printer) => (
+                                        <option key={printer.id} value={printer.name}>
+                                            {printer.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </FormGroup> */}
+                            <FormGroup className="pf-custom-formGroup" label={'PRINTER: '}>
+                                <select
+                                    className="pf-custom-dropdown"
+                                    value={selectedPrinter || ''}
+                                    onChange={(e) => setSelectedPrinter(Number(e.target.value))}
+                                >
+                                    <option value="" disabled>Select a printer</option>
+                                    {printers.map((printer) => (
+                                        <option key={printer.id} value={printer.id}>
+                                            {printer.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </FormGroup>
+
+                            <FormGroup className="pf-custom-formGroup" label="OTTOEJECT">
+                                <select
+                                    className="pf-custom-dropdown"
+                                    value={selectedOttoeject || ''}
+                                    onChange={(e) => setSelectedOttoeject(Number(e.target.value))}
+                                >
+                                    <option value="" disabled>Select an Ottoeject device</option>
+                                    {ottoeject.map((device) => (
+                                        <option key={device.id} value={device.id}>
+                                            {device.device_name}
+                                        </option>
+                                    ))}
+                                </select>
                             </FormGroup>
 
                             <FormGroup className="pf-custom-formGroup" label={'MATERIAL: '}>
@@ -285,12 +467,9 @@ export default function newPrintJob() {
                         {'Cancel'}
                     </Button>
                     <Button
-                        isDisabled={currentFiles?.length === 0}
+                        isDisabled={currentFiles?.length === 0 || !selectedPrinter}
                         className="pf-custom-button"
-                        onClick={() => {
-                            setPrintJob((prevJob) => [...prevJob, printFile]),
-                                setIsPrintTaskModalOpen(false)
-                        }}
+                        onClick={handleCreatePrintJob}
                     >
                         {'CREATE'}
                     </Button>

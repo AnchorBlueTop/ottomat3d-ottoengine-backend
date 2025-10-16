@@ -103,7 +103,8 @@
 .pf-v6-c-page__main-section {
   margin: 0;
   border-radius: 10px;
-  height: calc(100vh - 4.5rem);
+  height: calc(100vh - 0.5rem);
+  overflow-y: auto;
 }
 
 .pf-custom-main {
@@ -114,6 +115,9 @@
 
 .pf-v6-c-page__main-body {
   /* display: flex; */
+  /* height: calc(100vh - 1.5rem);
+  border-radius: 10px;
+  overflow-y: auto; */
 }
 
 .pf-c-table {
@@ -204,8 +208,8 @@
 .pf-custom-dashboard {
   background-color: var(--box-color-light) !important;
   border-radius: 10px;
-  /* height: calc(100vh - 4.5rem); */
-  height: 100%;
+  height: calc(100vh - 4.5rem);
+  /* height: 100%; */
   display: flex;
   margin-right: 0.75rem;
   margin-left: 0.75rem;
@@ -301,10 +305,17 @@
 }
 
 .pf-custom-new-print-job {
-  height: auto;
+  /* height: auto;
+  padding: 2rem;
+  border-radius: 10px;
+  justify-self: center; */
+  height: calc(100vh - 2rem); /* Set the height to the full viewport height */
   padding: 2rem;
   border-radius: 10px;
   justify-self: center;
+  overflow-y: auto; /* Prevent content overflow */
+  display: flex;
+  flex-direction: column; /* Ensure content stacks vertically */
 }
 
 .pf-custom-new-print-queue {
@@ -531,8 +542,65 @@
 }
 
 .pf-v6-c-label.pf-custom-label--ready {
-  background-color: #24A148 !important;
+  background-color: #24A148 !important; 
   color: white !important;
 }
 
-.pf-c-dashboard-jobs {}
+.shelf-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px dashed #ccc;
+  padding: 10px 0;
+}
+
+.shelf-number {
+  font-size: 14px;
+  font-weight: bold;
+  color: #666;
+  margin-right: 10px;
+}
+
+.shelf-content {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.build-plate {
+  display: flex;
+  align-items: center;
+  background-color: #e0f7fa;
+  padding: 5px 10px;
+  border-radius: 5px;
+  color: #333;
+}
+
+.add-button {
+  background-color: #a5d6a7;
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.delete-button {
+  background-color: #ef5350;
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  margin-left: 10px;
+  cursor: pointer;
+}
+
+.pf-custom-dropdown {
+  width: 100%;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: #FFFF;
+}

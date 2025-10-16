@@ -15,14 +15,15 @@ import AddNewOttorackButton from "./buttons/addNewOttorackButton";
 import newOttorack from "./modals/newOttorackModal";
 import { OttoRack } from "../representations/ottorackRepresentation";
 import editOttorack from "./modals/editOttorack";
+import { getAllOttoracks, getOttorackById } from "../ottoengine_API";
 
 export function Ottorack() {
     const { ottorack, setOttorack, ottorackIndex, setOttorackIndex, setIsOttorackEditModalOpen } = useContext(JobContext);
 
     const ottoRackFecth = async () => {
-        var tempOttorackList: OttoRack[] = [];
+        // var tempOttorackList: OttoRack[] = [];
 
-        //  TODO: IMPLEMENT ONCE API EXITS
+        // //  TODO: IMPLEMENT ONCE API EXITS
         // getAllOttoracks().then((allOttoracks) => {
         //     allOttoracks.map((value, index) => {
         //         if (value.id && !ottorack.find((e) => e.id === value.id)?.id) {
@@ -34,6 +35,24 @@ export function Ottorack() {
 
         //     })
         // });
+
+        try {
+            const allOttoracks = await getAllOttoracks(); // Fetch all Ottoracks
+            const tempOttorackList: OttoRack[] = [];
+    
+            // Fetch details for each Ottorack
+            for (const rack of allOttoracks) {
+                if (rack.id && !ottorack.find((e) => e.id === rack.id)) {
+                    const ottorackData = await getOttorackById(rack.id);
+                    tempOttorackList.push(ottorackData);
+                }
+            }
+    
+            // Update the state with the fetched Ottoracks
+            setOttorack(tempOttorackList);
+        } catch (error) {
+            console.error("Error fetching Ottoracks:", error);
+        }
     }
 
     const OttorackList = () => {

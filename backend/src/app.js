@@ -13,12 +13,15 @@ const { db, initializeDatabase } = require('./db');
 
 // --- Service Initialization ---
 const PrinterStateManager = require('./services/printerStateManager');
+const orchestratorService = require('./services/orchestratorService');
 
 // --- Import Routers ---
 const printerApiRoutes = require('./routes/printerApiRoutes');
 const ottoejectApiRoutes = require('./routes/ottoejectApiRoutes');
 const printJobApiRoutes = require('./routes/printjobApiRoutes');
-const ottorackApiRoutes = require('./routes/ottorackApiRoutes'); 
+const ottorackApiRoutes = require('./routes/ottorackApiRoutes');
+const orchestrationApiRoutes = require('./routes/orchestrationApiRoutes');
+const orchestratorApiRoutes = require('./routes/orchestratorApiRoutes'); 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -61,7 +64,9 @@ logger.info('Mounting API routes...');
 app.use('/api/printers', printerApiRoutes);
 app.use('/api/ottoeject', ottoejectApiRoutes);
 app.use('/api/print-jobs', printJobApiRoutes);
-app.use('/api/ottoracks', ottorackApiRoutes); 
+app.use('/api/ottoracks', ottorackApiRoutes);
+app.use('/api/orchestrator', orchestratorApiRoutes);
+app.use('/api/orchestration', orchestrationApiRoutes); 
 
 // --- Basic Root Route for the API ---
 app.get('/api', (req, res) => {
@@ -100,8 +105,13 @@ async function initializeAndStartServer() {
         logger.info('Backend: Database connection and schema initialized.');
         logger.info(`Database persistence mode: ${process.env.DB_PERSIST_DATA === 'true' ? 'ENABLED' : 'DISABLED'}`);
 
+        // Initialize orchestrator service for conflict resolution
+        logger.info('Initializing orchestrator service...');
+        await orchestratorService.initialize();
+        logger.info('Orchestrator service initialized successfully.');
+
         const printersFromDb = await new Promise((resolve, reject) => {
-            db.all("SELECT * FROM printers WHERE lower(brand) = 'bambu lab'", [], (err, rows) => {
+            db.all("SELECT * FROM printers WHERE lower(brand) = 'bambu_lab'", [], (err, rows) => {
                 if (err) {
                     logger.error("[App Startup] Failed to fetch printers from DB for StateManager init:", err);
                     return reject(err);
@@ -139,6 +149,12 @@ async function initializeAndStartServer() {
 // Graceful shutdown
 async function gracefulShutdownHandler(signal) {
     logger.info(`[App] Received ${signal}. Starting graceful shutdown...`);
+    
+    // Shutdown orchestrator service first
+    if (orchestratorService && typeof orchestratorService.shutdown === 'function') {
+        await orchestratorService.shutdown();
+    }
+    
     if (PrinterStateManager && typeof PrinterStateManager.gracefulShutdown === 'function') {
         await PrinterStateManager.gracefulShutdown();
     }
@@ -159,4 +175,4 @@ process.on('SIGTERM', () => gracefulShutdownHandler('SIGTERM'));
 
 initializeAndStartServer();
 
-module.exports = app; // For potential testing
+module.exports = app;

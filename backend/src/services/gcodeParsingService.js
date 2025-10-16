@@ -1,6 +1,6 @@
 // backend/src/services/gcodeParsingService.js
 
-const fs = require('fs'); // Use the synchronous version for stream reading
+const fs = require('fs');
 const path = require('path');
 const AdmZip = require('adm-zip');
 const logger = require('../utils/logger');
@@ -18,19 +18,19 @@ const gcodeParsingService = {
             zip.extractAllTo(tempExtractionPath, true);
             logger.debug(`[GcodeParsingService] Extracted .3mf to ${tempExtractionPath}`);
 
-            const gcodeFilePath = path.join(tempExtractionPath, 'Metadata', 'plate_1.gcode');
-            const jsonFilePath = path.join(tempExtractionPath, 'Metadata', 'plate_1.json');
+            // === ENHANCED: Dynamic plate file detection ===
+            const { gcodeFilePath, jsonFilePath } = await this._findPlateFiles(tempExtractionPath);
 
-            // --- OPTIMIZATION: Read only the first part of the G-code file ---
-            const gcodeHeaderContent = await this._readGcodeHeader(gcodeFilePath, 500); // Read first 500 lines
+            // Read G-code header for metadata extraction
+            const gcodeHeaderContent = await this._readGcodeHeader(gcodeFilePath, 500);
             
             const jsonContent = await fs.promises.readFile(jsonFilePath, 'utf-8');
             const plateJson = JSON.parse(jsonContent);
 
-            // --- Extract data ---
+            // Extract metadata including max_z_height
             const filament_used_g = this._extractMetadata(gcodeHeaderContent, /total filament weight \[g\]\s*:\s*([\d.]+)/);
             const duration_string = this._extractMetadata(gcodeHeaderContent, /total estimated time:\s*(.*)/, 'string');
-            const z_mm = this._extractMetadata(gcodeHeaderContent, /max_z_height:\s*([\d.]+)/);
+            const max_z_height_mm = this._extractMetadata(gcodeHeaderContent, /max_z_height:\s*([\d.]+)/);
             const filament_type = this._extractMetadata(gcodeHeaderContent, /filament_type\s*=\s*(.*)/, 'string');
             
             let x_mm = null;
@@ -40,7 +40,7 @@ const gcodeParsingService = {
                 x_mm = parseFloat((max_x - min_x).toFixed(2));
                 y_mm = parseFloat((max_y - min_y).toFixed(2));
             } else {
-                 logger.warn('[GcodeParsingService] bbox_all not found in plate_1.json. Cannot calculate x/y dimensions.');
+                logger.warn('[GcodeParsingService] bbox_all not found in plate JSON. Cannot calculate x/y dimensions.');
             }
             
             const metadata = {
@@ -49,9 +49,9 @@ const gcodeParsingService = {
                 dimensions: {
                     x: x_mm,
                     y: y_mm,
-                    z: z_mm
+                    z: max_z_height_mm  // Height is available here in the z field
                 },
-                filament_type: filament_type || "Unknown" // Use extracted type or Unknown as fallback
+                filament_type: filament_type || "Unknown"
             };
             
             logger.info(`[GcodeParsingService] Successfully parsed metadata:`, metadata);
@@ -67,6 +67,67 @@ const gcodeParsingService = {
             } catch (cleanupError) {
                 logger.error(`[GcodeParsingService] Failed to clean up temp directory ${tempExtractionPath}: ${cleanupError.message}`);
             }
+        }
+    },
+
+    /**
+     * === NEW: Dynamic plate file detection ===
+     * Finds any plate_*.gcode and corresponding plate_*.json files in the extraction
+     * @param {string} tempExtractionPath - Path to extracted .3mf contents
+     * @returns {Promise<{gcodeFilePath: string, jsonFilePath: string}>}
+     * @private
+     */
+    async _findPlateFiles(tempExtractionPath) {
+        const metadataDir = path.join(tempExtractionPath, 'Metadata');
+        
+        try {
+            const files = await fs.promises.readdir(metadataDir);
+            
+            // Find any plate_*.gcode file (excluding .md5 files)
+            const gcodeFiles = files.filter(file => 
+                file.match(/^plate_\d+\.gcode$/) && !file.endsWith('.md5')
+            );
+            
+            if (gcodeFiles.length === 0) {
+                throw new Error('No plate_*.gcode file found in .3mf archive');
+            }
+            
+            // Use the first plate file found
+            const gcodeFileName = gcodeFiles[0];
+            const plateNumber = gcodeFileName.match(/^plate_(\d+)\.gcode$/)[1];
+            
+            const gcodeFilePath = path.join(metadataDir, gcodeFileName);
+            const jsonFilePath = path.join(metadataDir, `plate_${plateNumber}.json`);
+            
+            // Verify both files exist
+            if (!await this._fileExists(gcodeFilePath)) {
+                throw new Error(`G-code file not found: ${gcodeFileName}`);
+            }
+            if (!await this._fileExists(jsonFilePath)) {
+                throw new Error(`JSON file not found: plate_${plateNumber}.json`);
+            }
+            
+            logger.debug(`[GcodeParsingService] Found plate files: ${gcodeFileName} and plate_${plateNumber}.json`);
+            
+            return { gcodeFilePath, jsonFilePath };
+            
+        } catch (error) {
+            throw new Error(`Failed to find plate files in .3mf archive: ${error.message}`);
+        }
+    },
+
+    /**
+     * Check if a file exists
+     * @param {string} filePath - Path to check
+     * @returns {Promise<boolean>}
+     * @private
+     */
+    async _fileExists(filePath) {
+        try {
+            await fs.promises.access(filePath);
+            return true;
+        } catch {
+            return false;
         }
     },
 
@@ -93,7 +154,7 @@ const gcodeParsingService = {
                 content += line + '\n';
                 if (lineCount >= maxLines) {
                     rl.close();
-                    fileStream.destroy(); // Important: close the underlying stream
+                    fileStream.destroy();
                 }
             });
 

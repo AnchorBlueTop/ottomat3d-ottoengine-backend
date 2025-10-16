@@ -111,7 +111,7 @@ async function initializeAndStartServer() {
         logger.info('Orchestrator service initialized successfully.');
 
         const printersFromDb = await new Promise((resolve, reject) => {
-            db.all("SELECT * FROM printers WHERE lower(brand) = 'bambu lab'", [], (err, rows) => {
+            db.all("SELECT * FROM printers WHERE lower(brand) = 'bambu_lab'", [], (err, rows) => {
                 if (err) {
                     logger.error("[App Startup] Failed to fetch printers from DB for StateManager init:", err);
                     return reject(err);
@@ -176,5 +176,3 @@ process.on('SIGTERM', () => gracefulShutdownHandler('SIGTERM'));
 initializeAndStartServer();
 
 module.exports = app;
-
-// FIXED: Removed duplicate Phase 3 initialization - orchestratorService already provides all functionality

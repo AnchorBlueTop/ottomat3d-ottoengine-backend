@@ -1,4 +1,5 @@
 -- Ottomat3D Backend: Database Schema (print-jobs-apis)
+-- UPDATED: Default rack slots are completely empty (no plates) when created
 
 PRAGMA foreign_keys = ON;
 
@@ -11,7 +12,7 @@ CREATE TABLE IF NOT EXISTS printers (
     name TEXT NOT NULL UNIQUE,
     brand TEXT NULL,
     model TEXT NULL,
-    type TEXT NOT NULL,              -- e.g., "bambu", "klipper", "prusa", "flashforge"
+    type TEXT NULL,              -- e.g., "bambu", "klipper", "prusa", "flashforge"
     ip_address TEXT NOT NULL UNIQUE,
     access_code TEXT NULL,
     serial_number TEXT NULL UNIQUE,
@@ -76,6 +77,14 @@ CREATE TABLE IF NOT EXISTS print_jobs (
     printer_id INTEGER NULL,
     ottoeject_id INTEGER NULL,
 
+    -- === NEW: Orchestration fields for slot assignment ===
+    assigned_rack_id INTEGER NULL,
+    assigned_store_slot INTEGER NULL,
+    assigned_grab_slot INTEGER NULL,
+    slot_assignment_reason TEXT NULL,
+    effective_clearance_mm DECIMAL(10,2) NULL,
+    orchestration_status TEXT DEFAULT 'waiting', -- 'waiting', 'printing', 'ejecting', 'storing', 'completed', 'paused'
+
     -- Timestamps for tracking the job's lifecycle
     submitted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
     started_at TEXT NULL,
@@ -88,7 +97,8 @@ CREATE TABLE IF NOT EXISTS print_jobs (
 
     FOREIGN KEY (print_item_id) REFERENCES print_items(id) ON DELETE RESTRICT,
     FOREIGN KEY (printer_id) REFERENCES printers(id) ON DELETE SET NULL,
-    FOREIGN KEY (ottoeject_id) REFERENCES ottoejects(id) ON DELETE SET NULL
+    FOREIGN KEY (ottoeject_id) REFERENCES ottoejects(id) ON DELETE SET NULL,
+    FOREIGN KEY (assigned_rack_id) REFERENCES storage_racks(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS rack_slots (
@@ -96,12 +106,16 @@ CREATE TABLE IF NOT EXISTS rack_slots (
     storage_rack_id INTEGER NOT NULL,
     slot_number INTEGER NOT NULL,
     type TEXT NOT NULL DEFAULT 'print_bed', -- e.g., 'print_bed', 'item_shelf'
-    occupied INTEGER NOT NULL DEFAULT 0, -- Boolean (0/1)
+    
+    -- Enhanced plate tracking columns
+    -- DEFAULT: All new slots are completely empty (no plates)
+    has_plate INTEGER NOT NULL DEFAULT 0, -- Boolean (0/1) - whether slot contains a plate
+    plate_state TEXT DEFAULT NULL CHECK (plate_state IN ('empty', 'with_print') OR plate_state IS NULL),
     
     -- Link to the print job currently occupying this slot
     print_job_id INTEGER NULL,
     
-    created_at TEXT NOT NULL DEFAULT (strftime('%Y-m-%d %H:%M:%f', 'now', 'utc')),
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
     
     -- If a rack is deleted, its slots are deleted too.
@@ -135,3 +149,21 @@ CREATE TRIGGER IF NOT EXISTS trigger_print_jobs_updated_at AFTER UPDATE ON print
 
 CREATE TRIGGER IF NOT EXISTS trigger_rack_slots_updated_at AFTER UPDATE ON rack_slots FOR EACH ROW
     BEGIN UPDATE rack_slots SET updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc') WHERE id = OLD.id; END;
+
+-- =============================================================================
+-- SECTION 4: Data Initialization and Fixes
+-- =============================================================================
+
+-- Fix existing rack slots to have proper default state (completely empty)
+-- This ensures slot assignment works correctly for new print jobs
+UPDATE rack_slots SET 
+    has_plate = 0, 
+    plate_state = NULL,
+    print_job_id = NULL
+WHERE has_plate IS NULL OR (has_plate = 1 AND plate_state IS NULL);
+
+-- For testing: Initialize a few slots with empty plates if needed
+-- Uncomment these lines if you want some slots to have plates ready for printing:
+-- UPDATE rack_slots SET has_plate = 1, plate_state = 'empty' 
+-- WHERE storage_rack_id = 1 AND slot_number IN (1, 2);
+-- BEGIN UPDATE rack_slots SET updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc') WHERE id = OLD.id; END;

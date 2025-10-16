@@ -1,33 +1,31 @@
 export interface PrintJob {
-    id?: string;
-    name?: string;
-    description?: string;
+    id?: string | number;
+    fileName?: string;
+    status?: string;
     lastModified?: Date;
 }
 
 export interface Shelf {
-    id?: string;
-    printJob?: PrintJob[]; // start with just PrintJob ID
+    id?: string | number;
+    printJob?: PrintJob;
     occupied?: boolean;
-    shelfType?: string; // PrintJob - EmptyPlate - Unoccupied
+    type?: string;
     lastModified?: Date;
 }
 
 export interface OttoRack {
-    id?: string;
+    id?: string | number;
     name: string;
     shelves?: Shelf[];
+    shelfCount?: number;
+    shelfSpacingMm?: any;
+    bedSize?: string;
     lastModified?: Date;
 }
 
-// export interface OttoRacks {
-//     racks?: Rack[];
-// }
-
 export interface OttoRackRegistration {
-    id?: string;
-    name?: string; 
-    shelves?: Shelf[];
-    shelf_spacing?: number;
-    bed_size?: string;
+    name: string;
+    number_of_shelves?: number;
+    shelfSpacingMm?: any;
+    bedSize?: string;
 }

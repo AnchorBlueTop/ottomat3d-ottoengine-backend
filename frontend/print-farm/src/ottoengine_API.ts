@@ -9,7 +9,8 @@ import {
 
 // const BASE_URL = import.meta.env.BASE_URL || 'http://localhost:3000'; 
 // const BASE_URL = 'http://localhost:3000';
-const BASE_URL = 'http://100.79.73.105:3000';
+const BASE_URL = 'http://127.0.0.1:3000';
+// const BASE_URL = 'http://100.79.73.105:3000';
 
 /////// OTTO PRINTER APIs ///////
 export const registerPrinter = async (printerData: PrinterRegistrationRepresentation): Promise<PrinterRepresentation> => {
@@ -104,19 +105,23 @@ export const deletePrinter = async (id: number): Promise<void> => {
   }
 };
 
-export const uploadFile = async (file: File, id: number) => {
+export const uploadFile = async (file: File, fileId: number) => {
   const formdata = new FormData();
   formdata.append("file", file, file.name);
+  formdata.append("id", fileId.toString());
+  
+  console.log("Uploading file with FormData:", [...formdata.entries()]);
 
-  const response = await fetch(`${BASE_URL}/api/printers/${id}/upload`, {
-    method: "POST",
+  const response = await fetch(`${BASE_URL}/api/print-jobs/upload`, {
+    method: "POST", 
     body: formdata,
   });
+  console.log(response);
   if (!response.ok) {
     throw new Error(`Error uploading file: ${response.statusText}`);
   }
   return response.json();
-}
+};
 
 /////// OTTO EJECT APIs ///////
 
@@ -179,4 +184,130 @@ export const sendOttoejectMacro = async (id: number, macroPayload: OttoejectMacr
     throw new Error(`Error sending macro to Ottoeject device ID ${id}: ${response.statusText}`);
   }
   return response.json();
+};
+
+/////// PRINT JOB APIs ///////
+
+export const createPrintJob = async (printJobData: any): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/print-jobs`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(printJobData),
+  });
+  if (!response.ok) {
+    throw new Error(`Error creating print job: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+export const getAllPrintJobs = async (): Promise<any[]> => {
+  const response = await fetch(`${BASE_URL}/api/print-jobs`);
+  if (!response.ok) {
+    throw new Error(`Error fetching print jobs: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+export const getPrintJobById = async (id: string): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/print-jobs/${id}`);
+  if (!response.ok) {
+    throw new Error(`Error fetching print job with ID ${id}: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+export const updatePrintJob = async (id: number, updateData: any): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/print-jobs/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updateData),
+  });
+  if (!response.ok) {
+    throw new Error(`Error updating print job with ID ${id}: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+export const deletePrintJob = async (id: number): Promise<void> => {
+  const response = await fetch(`${BASE_URL}/api/print-jobs/${id}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(`Error deleting print job with ID ${id}: ${response.statusText}`);
+  }
+};
+
+/////// OTTO RACK APIs ///////
+
+// Create a new Ottorack
+export const createOttorack = async (ottorackData: any): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/ottoracks`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(ottorackData),
+  });
+  if (!response.ok) {
+    throw new Error(`Error creating Ottorack: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+// Get all Ottoracks
+export const getAllOttoracks = async (): Promise<any[]> => {
+  const response = await fetch(`${BASE_URL}/api/ottoracks`);
+  if (!response.ok) {
+    throw new Error(`Error fetching Ottoracks: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+// Get Ottorack details by ID
+export const getOttorackById = async (id: number): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/ottoracks/${id}`);
+  if (!response.ok) {
+    throw new Error(`Error fetching Ottorack with ID ${id}: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+// Update a specific shelf in an Ottorack
+export const updateOttorackShelf = async (rackId: number, shelfId: number, shelfData: any): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/ottoracks/${rackId}/shelves/${shelfId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(shelfData),
+  });
+  if (!response.ok) {
+    throw new Error(`Error updating shelf ${shelfId} in Ottorack ${rackId}: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+// Reset a specific shelf in an Ottorack
+export const resetOttorackShelf = async (rackId: number, shelfId: number): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/ottoracks/${rackId}/shelves/${shelfId}/reset`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw new Error(`Error resetting shelf ${shelfId} in Ottorack ${rackId}: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+// Delete an Ottorack
+export const deleteOttorack = async (id: number): Promise<void> => {
+  const response = await fetch(`${BASE_URL}/api/ottoracks/${id}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(`Error deleting Ottorack with ID ${id}: ${response.statusText}`);
+  }
 };

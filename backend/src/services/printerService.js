@@ -22,19 +22,23 @@ const printerService = {
     
     async createPrinter(printerData) {
         const {
-            name, brand = null, model = null, type,
-            ip_address, access_code = null, serial_number = null,
+            name,
+            brand = null,
+            model = null,
+            type=null,
+            ip_address,
+            access_code = null,
+            serial_number = null,
             build_volume = null
         } = printerData;
-
-        if (!name || !type || !ip_address) {
-            throw new Error('Missing required fields: name, type, ip_address.');
+        
+        if (!name || !ip_address) {
+            throw new Error('Missing required fields: Name, IP Address.');
         }
         
-        // Validate required fields for supported printers
+        // Validate required fields for supported printers (brand-based)
         const brandLower = String(brand || '').toLowerCase();
-        if (String(type).toLowerCase() === 'fdm' && 
-            (brandLower === 'bambu lab' || brandLower === 'bambu' || brandLower === 'bambulab') && 
+        if ((brandLower === 'bambu_lab') && 
             (!access_code || !serial_number)) {
             throw new Error('For Bambu Lab printers, access_code and serial_number are required.');
         }
@@ -58,7 +62,7 @@ const printerService = {
                     // Try adapter first, fallback to original system
                     const adapter = await adapterStateManager.addAndConnectAdapter(newPrinterRecord);
                     
-                    if (!adapter && brandLower === 'bambu lab') {
+                    if (!adapter && brandLower === 'bambu_lab') {
                         // Fallback to original PrinterStateManager
                         logger.info(`[PrinterService] Adapter failed, falling back to PrinterStateManager for printer ${newPrinterRecord.id}`);
                         PrinterStateManager.addAndConnectPrinter(newPrinterRecord)
@@ -165,7 +169,7 @@ const printerService = {
                 
                 // Also update original system if needed
                 const brandLower = String(updatedPrinterRecord.brand || '').toLowerCase();
-                if (brandLower === 'bambu lab') {
+                if (brandLower === 'bambu_lab') {
                     await PrinterStateManager.removePrinterInstance(id);
                     await PrinterStateManager.addAndConnectPrinter(updatedPrinterRecord);
                 }

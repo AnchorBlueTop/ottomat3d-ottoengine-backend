@@ -23,7 +23,7 @@ class AdapterRegistry {
         this.register('bambu', 'lan', BambuLanAdapter);
         
         // Aliases for common variations
-        this.register('bambu lab', 'lan', BambuLanAdapter);
+        this.register('bambu_lab', 'lan', BambuLanAdapter);
         this.register('bambulab', 'lan', BambuLanAdapter);
         
         // Future adapters would be registered here:

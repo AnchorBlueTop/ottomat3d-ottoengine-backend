@@ -32,7 +32,7 @@ class PrinterStateManager extends EventEmitter {
             // Ensure printerId is treated as a number for map keys
             const printerId = parseInt(String(printerDbRecord.id));
 
-            if (String(printerDbRecord.brand).toLowerCase() === 'bambu lab') {
+            if (String(printerDbRecord.brand).toLowerCase() === 'bambu_lab') {
                 if (this.activePrinters.has(printerId)) {
                     logger.warn(`[PrinterStateManager] Instance for printer ID ${printerId} already exists. Skipping re-initialization.`);
                     continue;
@@ -142,7 +142,7 @@ class PrinterStateManager extends EventEmitter {
         const printerId = parseInt(String(printerDbRecord.id));
 
         // Check if it's a Bambu printer based on brand
-        if (!printerDbRecord.brand || String(printerDbRecord.brand).toLowerCase() !== 'bambu lab') {
+        if (!printerDbRecord.brand || String(printerDbRecord.brand).toLowerCase() !== 'bambu_lab') {
             logger.info(`[PSM-AddConnect ID:${printerId}] Printer is not 'Bambu Lab' brand (brand: ${printerDbRecord.brand}). Not managing.`);
             return null;
         }

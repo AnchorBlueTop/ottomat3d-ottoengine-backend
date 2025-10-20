@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/app.js",
     "start:dev": "node src/app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test-setup": "node test-setup.js"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +23,7 @@
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "fast-xml-parser": "^5.2.2",
+    "form-data": "^4.0.4",
     "gauge": "^5.0.2",
     "gcode-parser": "^2.2.0",
     "glob": "^9.3.5",

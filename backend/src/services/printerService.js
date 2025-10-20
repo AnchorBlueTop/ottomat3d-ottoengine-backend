@@ -11,6 +11,9 @@ const { AdapterError, JobSpec } = require('../../packages/integration-adapter');
 // Fallback to original PrinterStateManager for non-adapter printers
 const PrinterStateManager = require('./printerStateManager');
 
+// Import Bambu Labs API for direct connection tests (used in connect())
+const bl_api = require('../bambulabs-api');
+
 // Helper to check attribute existence safely
 function hasattr(obj, attr) {
     if (!obj) return false;
@@ -18,8 +21,73 @@ function hasattr(obj, attr) {
 }
 
 const printerService = {
+    /**
+     * Attempt to connect to a printer without persisting it (on-demand test).
+     * For Bambu Lab, uses a temporary MQTT connection and disconnects immediately.
+     * Other brands return Not Implemented for now.
+     * @param {{brand:string, ip_address:string, access_code?:string, serial_number?:string}} payload
+     * @returns {Promise<{success:boolean, status?:string, message:string}>}
+     */
+    async connect(payload) {
+        try {
+            const { brand, ip_address, access_code, serial_number } = payload || {};
+            if (!brand || !ip_address) {
+                return { success: false, message: 'brand and ip_address are required.' };
+            }
+            const brandKey = String(brand).toLowerCase();
+            if (brandKey === 'bambu lab' || brandKey === 'bambu_lab' || brandKey === 'bambu') {
+                if (!access_code || !serial_number) {
+                    return { success: false, message: 'For Bambu Lab, access_code and serial_number are required.' };
+                }
+                let instance;
+                try {
+                    instance = new bl_api.Printer({
+                        ip: ip_address,
+                        accessCode: access_code,
+                        serial: serial_number,
+                        // Enable verbose logging via env: LOG_LEVEL=DEBUG or BAMBU_API_DEBUG=true
+                        debug: (process.env.LOG_LEVEL === 'DEBUG' || String(process.env.BAMBU_API_DEBUG).toLowerCase() === 'true')
+                    });
+                } catch (e) {
+                    logger.error(`[PrinterService] connect: Failed to create Bambu printer instance: ${e.message}`);
+                    return { success: false, message: `Failed to initialize printer instance: ${e.message}` };
+                }
+
+                try {
+                    const TIMEOUT_MS = Number.parseInt(process.env.PRINTER_CONNECT_TIMEOUT_MS || '20000', 10);
+                    const withTimeout = (promise, ms, label) => Promise.race([
+                        promise,
+                        new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms))
+                    ]);
+
+                    if (typeof instance.connect === 'function') {
+                        await withTimeout(instance.connect(), TIMEOUT_MS, 'Connect');
+                    }
+                    const connected = typeof instance.is_connected === 'function' ? instance.is_connected() : false;
+                    if (connected) {
+                        const pushMs = Number.parseInt(process.env.PRINTER_PUSHALL_TIMEOUT_MS || String(TIMEOUT_MS), 10);
+                        try { if (typeof instance.pushall === 'function') await withTimeout(instance.pushall(), pushMs, 'Pushall'); } catch (_) {}
+                        return { success: true, status: 'ONLINE', message: 'Connection successful.' };
+                    } else {
+                        return { success: false, status: 'OFFLINE', message: 'Could not establish connection.' };
+                    }
+                } catch (e) {
+                    logger.error(`[PrinterService] connect: Error connecting to Bambu at ${ip_address}: ${e.message}`);
+                    return { success: false, message: `Connection failed: ${e.message}` };
+                } finally {
+                    try { if (instance && typeof instance.disconnect === 'function') await instance.disconnect(); } catch (_) {}
+                }
+            }
+
+            return { success: false, message: `Connect not implemented for brand '${brand}'.` };
+        } catch (e) {
+            logger.error(`[PrinterService] connect unexpected error: ${e.message}`);
+            return { success: false, message: 'Unexpected server error during connect.' };
+        }
+    },
+
     // --- Enhanced CRUD with Adapter Support ---
-    
+
     async createPrinter(printerData) {
         const {
             name,

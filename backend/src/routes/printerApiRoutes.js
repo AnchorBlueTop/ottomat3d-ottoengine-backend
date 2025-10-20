@@ -42,7 +42,10 @@ router.use((req, res, next) => {
 // POST /api/printers/ - Register a Printer
 router.post('/', printerController.registerPrinter);
 
-// GET /api/printers - Get all Printers 
+// POST /api/printers/connect - Test connection without persisting
+router.post('/connect', express.json(), printerController.connect);
+
+// GET /api/printers - Get all Printers
 router.get('/', printerController.getAllPrinters);
 
 // GET /api/printers/{id} - Get Single Printer Details

@@ -83,7 +83,7 @@ class AdapterStateManager {
             
             // Map brand to supported adapters
             let adapterBrand, adapterMode;
-            if (brand === 'bambu_lab') {
+            if (brand === 'bambu lab' || brand === 'bambu' || brand === 'bambulab') {
                 adapterBrand = 'bambu';
                 adapterMode = 'lan';
             } else {
@@ -111,26 +111,41 @@ class AdapterStateManager {
             logger.info(`[AdapterStateManager] Creating ${adapterBrand}/${adapterMode} adapter for printer: ${printerRecord.name} (ID: ${printerId})`);
 
             // Create adapter instance
+            logger.debug(`[AdapterStateManager] Calling makeAdapter('${adapterBrand}', '${adapterMode}', config)`);
             const adapter = makeAdapter(adapterBrand, adapterMode, config);
-            
-            // Set up event listeners before authentication
-            this._setupAdapterListeners(adapter, printerId, printerRecord.name);
-            
+
+            if (!adapter) {
+                logger.error(`[AdapterStateManager] makeAdapter returned null/undefined for ${adapterBrand}/${adapterMode}`);
+                return null;
+            }
+
+            logger.debug(`[AdapterStateManager] Adapter instance created`);
+
+            // Set up event listeners if adapter supports them (optional)
+            if (typeof adapter.on === 'function') {
+                logger.debug(`[AdapterStateManager] Setting up event listeners...`);
+                this._setupAdapterListeners(adapter, printerId, printerRecord.name);
+            } else {
+                logger.debug(`[AdapterStateManager] Adapter does not support event listeners (no .on() method)`);
+            }
+
             // Authenticate and connect
+            logger.debug(`[AdapterStateManager] Authenticating adapter for printer ${printerId}...`);
             await adapter.authenticate(config);
-            
+
             if (adapter.isAuthenticated()) {
                 this.activeAdapters.set(printerId, adapter);
-                logger.info(`[AdapterStateManager] Successfully connected adapter for printer ${printerId}`);
+                logger.info(`[AdapterStateManager] ✓ Successfully connected and authenticated adapter for printer ${printerId}`);
                 return adapter;
             } else {
-                logger.warn(`[AdapterStateManager] Adapter authentication failed for printer ${printerId}`);
+                logger.warn(`[AdapterStateManager] ✗ Adapter authentication failed for printer ${printerId} - adapter.isAuthenticated() returned false`);
                 await adapter.close();
                 return null;
             }
             
         } catch (error) {
             logger.error(`[AdapterStateManager] Error connecting adapter for printer ${printerId}: ${error.message}`);
+            logger.debug(`[AdapterStateManager] Error stack trace: ${error.stack}`);
             return null;
         }
     }

@@ -13,6 +13,7 @@ const { db, initializeDatabase } = require('./db');
 
 // --- Service Initialization ---
 const PrinterStateManager = require('./services/printerStateManager');
+const adapterStateManager = require('./services/adapterStateManager');
 const orchestratorService = require('./services/orchestratorService');
 
 // --- Import Routers ---
@@ -105,13 +106,18 @@ async function initializeAndStartServer() {
         logger.info('Backend: Database connection and schema initialized.');
         logger.info(`Database persistence mode: ${process.env.DB_PERSIST_DATA === 'true' ? 'ENABLED' : 'DISABLED'}`);
 
+        // Initialize adapter state manager for modern printer integration
+        logger.info('Initializing adapter state manager...');
+        await adapterStateManager.initializeFromDatabase();
+        logger.info('Adapter state manager initialized successfully.');
+
         // Initialize orchestrator service for conflict resolution
         logger.info('Initializing orchestrator service...');
         await orchestratorService.initialize();
         logger.info('Orchestrator service initialized successfully.');
 
         const printersFromDb = await new Promise((resolve, reject) => {
-            db.all("SELECT * FROM printers WHERE lower(brand) = 'bambu_lab'", [], (err, rows) => {
+            db.all("SELECT * FROM printers WHERE lower(brand) = 'bambu lab'", [], (err, rows) => {
                 if (err) {
                     logger.error("[App Startup] Failed to fetch printers from DB for StateManager init:", err);
                     return reject(err);
@@ -149,15 +155,22 @@ async function initializeAndStartServer() {
 // Graceful shutdown
 async function gracefulShutdownHandler(signal) {
     logger.info(`[App] Received ${signal}. Starting graceful shutdown...`);
-    
+
     // Shutdown orchestrator service first
     if (orchestratorService && typeof orchestratorService.shutdown === 'function') {
         await orchestratorService.shutdown();
     }
-    
+
+    // Shutdown adapter state manager
+    if (adapterStateManager && typeof adapterStateManager.shutdown === 'function') {
+        await adapterStateManager.shutdown();
+    }
+
+    // Shutdown legacy PrinterStateManager (fallback)
     if (PrinterStateManager && typeof PrinterStateManager.gracefulShutdown === 'function') {
         await PrinterStateManager.gracefulShutdown();
     }
+
     if (db && typeof db.close === 'function') {
         db.close((err) => {
             if (err) logger.error('[App] Error closing SQLite database:', err.message);
@@ -176,3 +189,5 @@ process.on('SIGTERM', () => gracefulShutdownHandler('SIGTERM'));
 initializeAndStartServer();
 
 module.exports = app;
+
+// FIXED: Removed duplicate Phase 3 initialization - orchestratorService already provides all functionality

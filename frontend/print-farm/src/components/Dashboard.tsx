@@ -1,5 +1,5 @@
 import { Grid, GridItem, PageSection } from "@patternfly/react-core";
-import uploadPrintFile from "./modals/UploadPrintFIle";
+import uploadPrintFile from "./modals/UploadPrintFile";
 import newPrintJob from "./modals/newPrintJob";
 import { Printers } from "./Printers";
 import { Ottoeject } from "./OttoEject";

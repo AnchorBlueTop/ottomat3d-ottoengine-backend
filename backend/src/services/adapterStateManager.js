@@ -83,7 +83,7 @@ class AdapterStateManager {
             
             // Map brand to supported adapters
             let adapterBrand, adapterMode;
-            if (brand === 'bambu lab' || brand === 'bambu' || brand === 'bambulab') {
+            if (brand === 'bambu_lab' || brand === 'bambu' || brand === 'bambulab') {
                 adapterBrand = 'bambu';
                 adapterMode = 'lan';
             } else {

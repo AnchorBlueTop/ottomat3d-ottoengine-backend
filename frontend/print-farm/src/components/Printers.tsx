@@ -16,6 +16,7 @@ import editPrinter from "./modals/editPrinter";
 import AddNewPrinterButton from "./buttons/addNewPrinterButton";
 import { getAllPrinters, getPrinterById } from "../ottoengine_API";
 import { PrinterRepresentation } from "../representations/printerRepresentation";
+import { PRINTER_BRANDS } from "../constants/printerBrands";
 
 export function Printers() {
     const { printer, setPrinter, setIsPrinterEditModalOpen, setPrinterIndex } = useContext(JobContext);
@@ -33,6 +34,18 @@ export function Printers() {
         }
     }
 
+    const getBrandLabel = (brandValue?: string) => {
+        if (!brandValue) return '';
+        return PRINTER_BRANDS.find(b => b.value === brandValue)?.label || brandValue;
+    };
+
+    const isConnected = (status?: string) => {
+        if (!status) return false;
+        const s = String(status).toUpperCase();
+        // Treat anything not explicitly OFFLINE/UNKNOWN as connected
+        return s !== 'OFFLINE' && s !== 'UNKNOWN';
+    };
+
     const printerList = () => {
         if (printer) {
             return (
@@ -40,9 +53,9 @@ export function Printers() {
                     <Table>
                         <Thead>
                             <Tr>
+                                <Th />
                                 <Th>{'Name'}</Th>
-                                <Th>{'Brand'}</Th>
-                                <Th>{'Model'}</Th>
+                                <Th>{'Make and Model'}</Th>
                                 <Th>{'Bed Temperature'}</Th>
                             </Tr>
                         </Thead>
@@ -55,9 +68,25 @@ export function Printers() {
                                         setIsPrinterEditModalOpen(true)
                                     }}
                                 >
+                                    <Td width={10}>
+                                        <span
+                                            style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                color: isConnected(value.status)
+                                                    ? 'var(--pf-global--success-color--100, var(--pf-v5-global--success-color--100, #3E8635))'
+                                                    : 'var(--pf-global--danger-color--100, var(--pf-v5-global--danger-color--100, #C9190B))'
+                                            }}
+                                            aria-label={isConnected(value.status) ? 'Connected' : 'Not connected'}
+                                            title={isConnected(value.status) ? 'Connected' : 'Not connected'}
+                                        >
+                                            <svg width="12" height="12" viewBox="0 0 8 8" role="img" aria-hidden="true">
+                                                <circle cx="4" cy="4" r="4" fill="currentColor" />
+                                            </svg>
+                                        </span>
+                                    </Td>
                                     <Td>{value.name}</Td>
-                                    <Td>{value.brand}</Td>
-                                    <Td>{value.model}</Td>
+                                    <Td>{getBrandLabel(value.brand)} {value.model}</Td>
                                     <Td>{value.bed_temperature}</Td>
                                 </Tr>
                             ))}

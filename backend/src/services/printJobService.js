@@ -137,8 +137,10 @@ const printJobService = {
         const {
             print_item_id, printer_id, ottoeject_id, auto_start, priority = 1
         } = jobData;
-        const initialStatus = 'QUEUED';
-        const initialStatusMessage = 'Job has been queued and is awaiting an available printer.';
+        const initialStatus = auto_start ? 'QUEUED' : 'NEW';
+        const initialStatusMessage = auto_start
+            ? 'Job has been queued and is awaiting an available printer.'
+            : 'Job created and awaiting manual start.';
         const sql = `
             INSERT INTO print_jobs (print_item_id, printer_id, ottoeject_id, auto_start, priority, status, status_message)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -149,6 +151,29 @@ const printJobService = {
             return await this.getPrintJobById(result.lastID);
         } catch (error) {
             logger.error(`[PrintJobService] Error creating print_job: ${error.message}`);
+            throw error;
+        }
+    },
+
+    /**
+     * Transition a job from NEW to QUEUED
+     */
+    async startPrintJob(id) {
+        try {
+            const job = await this.getPrintJobById(id);
+            if (!job) {
+                throw new Error(`Job ${id} not found`);
+            }
+            if (job.status !== 'NEW') {
+                throw new Error(`Only NEW jobs can be started. Current status: ${job.status}`);
+            }
+            await dbRun(
+                `UPDATE print_jobs SET status = 'QUEUED', status_message = 'Job queued for processing by orchestrator.', queued_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                [id]
+            );
+            return await this.getPrintJobById(id);
+        } catch (error) {
+            logger.error(`[PrintJobService] Error starting job ${id}: ${error.message}`);
             throw error;
         }
     },

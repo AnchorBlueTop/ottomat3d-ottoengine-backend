@@ -20,6 +20,17 @@ function hasattr(obj, attr) {
     return typeof obj[attr] === 'function' || obj[attr] !== undefined;
 }
 
+// Normalize brand string to canonical DB value matching frontend constants
+function printerBrand(brand) {
+    const raw = String(brand || '').toLowerCase().trim();
+    if (!raw) return null;
+    // unify separators to underscore and collapse spaces/hyphens
+    const compact = raw.replace(/\s+/g, '_').replace(/-/g, '_');
+    if (compact === 'bambu_lab' || compact === 'bambu' || compact === 'bambulab') return 'bambu_lab';
+    if (compact === 'klipper' || compact === 'moonraker' || compact === 'klipper_moonraker') return 'klipper';
+    return compact;
+}
+
 const printerService = {
     /**
      * Attempt to connect to a printer without persisting it (on-demand test).
@@ -34,8 +45,8 @@ const printerService = {
             if (!brand || !ip_address) {
                 return { success: false, message: 'brand and ip_address are required.' };
             }
-            const brandKey = String(brand).toLowerCase();
-            if (brandKey === 'bambu lab' || brandKey === 'bambu_lab' || brandKey === 'bambu') {
+            const brandKey = printerBrand(brand);
+            if (brandKey === 'bambu_lab') {
                 if (!access_code || !serial_number) {
                     return { success: false, message: 'For Bambu Lab, access_code and serial_number are required.' };
                 }
@@ -104,10 +115,9 @@ const printerService = {
             throw new Error('Missing required fields: Name, IP Address.');
         }
         
-        // Validate required fields for supported printers (brand-based)
-        const brandLower = String(brand || '').toLowerCase();
-        if ((brandLower === 'bambu_lab') && 
-            (!access_code || !serial_number)) {
+        // Normalize brand and validate required fields for supported printers (brand-based)
+        const brandCanonical = printerBrand(brand);
+        if ((brandCanonical === 'bambu_lab') && (!access_code || !serial_number)) {
             throw new Error('For Bambu Lab printers, access_code and serial_number are required.');
         }
 
@@ -117,7 +127,7 @@ const printerService = {
             INSERT INTO printers (name, brand, model, type, ip_address, access_code, serial_number, build_volume_json, current_filament_json) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL) 
         `;
-        const params = [name, brand, model, type, ip_address, access_code, serial_number, buildVolumeJsonString];
+    const params = [name, brandCanonical, model, type, ip_address, access_code, serial_number, buildVolumeJsonString];
         
         try {
             logger.debug(`[PrinterService] Creating printer: ${name}`);
@@ -130,7 +140,7 @@ const printerService = {
                     // Try adapter first, fallback to original system
                     const adapter = await adapterStateManager.addAndConnectAdapter(newPrinterRecord);
                     
-                    if (!adapter && brandLower === 'bambu_lab') {
+                    if (!adapter && String(newPrinterRecord.brand || '').toLowerCase() === 'bambu_lab') {
                         // Fallback to original PrinterStateManager
                         logger.info(`[PrinterService] Adapter failed, falling back to PrinterStateManager for printer ${newPrinterRecord.id}`);
                         PrinterStateManager.addAndConnectPrinter(newPrinterRecord)
@@ -191,6 +201,11 @@ const printerService = {
         
         for (const key in allowedDirectUpdates) {
             if (!validDirectFields.includes(key)) delete allowedDirectUpdates[key];
+        }
+
+        // Normalize brand if present
+        if (Object.prototype.hasOwnProperty.call(allowedDirectUpdates, 'brand')) {
+            allowedDirectUpdates.brand = printerBrand(allowedDirectUpdates.brand);
         }
 
         const updateFieldsSqlParts = [];
@@ -288,7 +303,7 @@ const printerService = {
                 const responseData = {
                     id: parseInt(printerFromDb.id),
                     name: info.name,
-                    brand: info.brand,
+                    brand: printerFromDb.brand,
                     model: info.model,
                     type: info.type,
                     status: status.status,
@@ -300,6 +315,7 @@ const printerService = {
                     build_volume: printerFromDb.build_volume_json ? JSON.parse(printerFromDb.build_volume_json) : null,
                     ip_address: printerFromDb.ip_address,
                     serial_number: printerFromDb.serial_number,
+                    access_code: printerFromDb.access_code,
                     bed_temperature: status.temperatures.bed,
                     nozzle_temperature: status.temperatures.nozzle,
                     // Additional adapter info
@@ -364,6 +380,7 @@ const printerService = {
                     build_volume: printerFromDb.build_volume_json ? JSON.parse(printerFromDb.build_volume_json) : null,
                     ip_address: printerFromDb.ip_address,
                     serial_number: printerFromDb.serial_number,
+                    access_code: printerFromDb.access_code,
                     bed_temperature: statusResult.bed_temperature,
                     nozzle_temperature: statusResult.nozzle_temperature,
                     // Fallback source

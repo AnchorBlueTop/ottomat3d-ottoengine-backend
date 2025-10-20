@@ -25,7 +25,7 @@ const printerService = {
             name,
             brand = null,
             model = null,
-            type=null,
+            type = null,
             ip_address,
             access_code = null,
             serial_number = null,

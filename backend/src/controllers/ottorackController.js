@@ -108,16 +108,44 @@ const ottorackController = {
                 });
             }
             
-            const { occupied, print_job_id } = req.body;
-            
-            if (typeof occupied !== 'boolean') {
-                return res.status(400).json({ 
-                    error: 'Bad Request', 
-                    message: 'occupied must be a boolean value.' 
+            const { has_plate, plate_state, print_job_id } = req.body;
+
+            // Validate has_plate
+            if (typeof has_plate !== 'boolean') {
+            return res.status(400).json({
+            error: 'Bad Request',
+                message: 'has_plate must be a boolean value.'
                 });
-            }
+    }
+
+    // Validate plate_state
+    if (has_plate) {
+        if (!plate_state || !['empty', 'with_print'].includes(plate_state)) {
+            return res.status(400).json({
+                error: 'Bad Request',
+                message: 'plate_state must be either "empty" or "with_print" when has_plate is true.'
+            });
+        }
+    } else {
+        if (plate_state !== null) {
+            return res.status(400).json({
+                error: 'Bad Request',
+                message: 'plate_state must be null when has_plate is false.'
+            });
+        }
+    }
+
+    // Calculate occupied for backwards compatibility
+    const occupied = has_plate && plate_state === 'with_print';
             
-            // Get current state before update for event emission
+            // DEBUG: Log what we're passing to service
+            logger.info(`[OttorackController] Passing to service:`);
+            logger.info(`  has_plate: ${has_plate}`);
+            logger.info(`  plate_state: ${plate_state}`);
+            logger.info(`  occupied: ${occupied}`);
+            logger.info(`  print_job_id: ${print_job_id}`);
+            
+            // Get current state BEFORE update for event emission
             let currentShelf = null;
             let previousState = 'unknown';
             
@@ -128,11 +156,19 @@ const ottorackController = {
                 logger.warn(`[OttorackController] Could not get current shelf state for event: ${shelfError.message}`);
             }
             
-            // Perform the update
-            const updatedShelf = await ottorackService.updateShelf(rackId, shelfNumber, {
+            // Call service with ALL fields
+            const result = await ottorackService.updateShelf(
+                parseInt(req.params.id || req.params.ottorack_id),
+                parseInt(req.params.shelf_id),
+                {
+                has_plate,
+                plate_state,
                 occupied,
-                print_job_id: occupied ? print_job_id : null
+                print_job_id
             });
+            
+            // Use the result from the first update
+            const updatedShelf = result;
             
             // Emit event for orchestrator
             const newState = occupied ? 'occupied' : 'empty';

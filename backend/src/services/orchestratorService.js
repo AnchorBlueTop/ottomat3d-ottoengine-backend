@@ -1029,7 +1029,7 @@ class OrchestratorService extends EventEmitter {
                 skip_objects: null // Don't skip any objects
             };
 
-            const printResult = await printerService.commandStartPrint(workflow.printerId, filename, prinstartOptionstOptions);
+            const printResult = await printerService.commandStartPrint(workflow.printerId, filename, printOptions);
 
             
             if (!printResult.success) {

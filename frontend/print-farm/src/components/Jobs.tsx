@@ -8,12 +8,13 @@ import { Tr, Td, Table, Tbody, Th, Thead } from '@patternfly/react-table';
 import PrintJobRepresentation from '../representations/printJobRepresentation';
 import StartPrintJobsButton from './buttons/startPrintJobButton';
 import newJobQueue from './modals/newJobQueue';
+import { getAllPrintJobs } from '../ottoengine_API';
 
 export const Job: React.FunctionComponent = () => {
-  const { printJob, setPrintJobIndex, setSelectedJobIDs, selectedJobIDs, queue } = useContext(JobContext);
+  const { printJob, setPrintJob, setPrintJobIndex, setSelectedJobIDs, selectedJobIDs, queue } = useContext(JobContext);
+  const [loading, setLoading] = useState(true); // Default to true while fetching
 
-
-  const isJobSelectable = (printjob: PrintJobRepresentation) => printjob.name !== ''; // Arbitrary logic for this example
+  const isJobSelectable = (printjob: PrintJobRepresentation) => printjob.id !== undefined; // Arbitrary logic for this example
   const selectableJobs = printJob.filter(isJobSelectable);
   const setJobSelected = (printjob: PrintJobRepresentation, isSelecting = true) =>
     setSelectedJobIDs((prevSelected: any) => {
@@ -43,6 +44,17 @@ export const Job: React.FunctionComponent = () => {
     }
     setRecentSelectedRowIndex(rowIndex);
   };
+  const fetchPrintJobs = async () => {
+    try {
+      setLoading(true); // Start loading
+      const allPrintJobs = await getAllPrintJobs(); // Fetch all print jobs
+      setPrintJob(allPrintJobs); // Update the state with the fetched jobs
+    } catch (error) {
+      console.error("Failed to fetch print jobs:", error);
+    } finally {
+      setLoading(false); // Stop loading
+    }
+  };
 
   const printJobList = () => {
     if (printJob) {
@@ -68,7 +80,11 @@ export const Job: React.FunctionComponent = () => {
               </Tr>
             </Thead>
             <Tbody>
-              {printJob.map((value, rowIndex) => (
+              {printJob.map((value, rowIndex) => {
+                const fileDetails = JSON.parse(value.file_details_json || '{}');
+                const measurementDetails = JSON.parse(value.measurement_details_json || '{}');
+                const filamentDetails = JSON.parse(value.filament_details_json || '{}');
+                return (
                 <Tr
                   className='pf-c-printJob-table-row'
                   key={rowIndex}
@@ -86,15 +102,22 @@ export const Job: React.FunctionComponent = () => {
                       isDisabled: !isJobSelectable(value)
                     }}
                   />
-                  <Td>{value.status}</Td>
                   {/* <Td>{<ReadyLabel/>}</Td> */}
-                  <Td>{value.id}</Td>
-                  <Td>{value.name}</Td>
-                  <Td>{value.printer}</Td>
-                  <Td>{value.duration}</Td>
-                  <Td>{value.reamaining_time}</Td>
+                  {/* <Td>{value.status || 'N/A'}</Td>
+                  <Td>{value.id || 'N/A'}</Td>
+                  <Td>{value.name || 'Unnamed Job'}</Td>
+                  <Td>{value.printer || 'No Printer Assigned'}</Td>
+                  <Td>{value.duration || 'Unknown Duration'}</Td>
+                  <Td>{value.remaining_time || 'Unknown Time Remaining'}</Td> */}
+                  <Td>{value.status || 'N/A'}</Td>
+                  <Td>{value.id || 'N/A'}</Td>
+                  <Td>{fileDetails.name || 'Unnamed File'}</Td>
+                  <Td>{value.printer_id || 'No Printer Assigned'}</Td>
+                  <Td>{value.duration || 'Unknown Duration'}</Td>
+                  {/* <Td>{value.status_message || 'No Status Message'}</Td> */}
                 </Tr>
-              ))}
+                )
+    })}
             </Tbody>
           </Table>
         </PageSection>
@@ -105,8 +128,8 @@ export const Job: React.FunctionComponent = () => {
 
 
   useEffect(() => {
-
-  }, [queue])
+    fetchPrintJobs();
+  }, [queue]);
 
   return (
     <>
@@ -119,8 +142,14 @@ export const Job: React.FunctionComponent = () => {
         </GridItem>
 
         <GridItem>
-          <PageSection id='dashboard' className="pf-custom-dashboard">
-            {printJob.length > 0 ? printJobList() : ''}
+          <PageSection id="dashboard" className="pf-custom-dashboard">
+            {loading ? (
+              <p>Loading print jobs...</p> // Render a loading message or spinner
+            ) : printJob.length > 0 ? (
+              printJobList() // Render the table if jobs are available
+            ) : (
+              <p>No print jobs available.</p> // Render a message if no jobs are found
+            )}
           </PageSection>
         </GridItem>
       </Grid>

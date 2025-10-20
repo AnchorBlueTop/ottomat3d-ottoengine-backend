@@ -309,7 +309,8 @@
   padding: 2rem;
   border-radius: 10px;
   justify-self: center; */
-  height: calc(100vh - 2rem); /* Set the height to the full viewport height */
+  /* height: calc(100vh - 2rem);  */
+  height: auto;
   padding: 2rem;
   border-radius: 10px;
   justify-self: center;
@@ -443,7 +444,42 @@
 }
 
 
+.shelf-dropdown {
+  min-width: 150px;
+  padding: 5px;
+  font-size: 14px;
+  border: none;
+  background-color: transparent;
+  text-align: center;
+  color: inherit;
+  cursor: pointer;
+  outline: none;
+}
 
+.shelf-dropdown::after {
+  font-size: 12px;
+  color: inherit; /* Match the text color */
+  position: absolute;
+  right: 10px; /* Adjust position */
+  pointer-events: none; /* Prevent interaction with the arrow */
+}
+
+.empty-plate-bg {
+  background-color: #93c4fb;
+  transition: background-color 0.3s ease;
+  border-radius: 5px;
+}
+
+.empty-shelf-bg {
+  background-color: none;
+  border-radius: 5px;
+}
+.shelf-number {
+  font-size: 14px;
+  font-weight: bold;
+  color: #666; /* Gray color for the text */
+  margin-right: 10px; /* Add spacing between the number and the dropdown */
+}
 
 /* From Uiverse.io by taieb1919 */
 .customCheckBoxHolder {

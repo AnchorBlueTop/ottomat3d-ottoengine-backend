@@ -22,13 +22,16 @@ import { JobContext } from "../../App.tsx";
 import printerIcon from '../../public/printer-Icon.svg';
 import thumbnail from '../../public/thumbnail.png';
 import { PrinterRegistrationRepresentation } from "../../representations/printerRepresentation.ts";
-import { registerPrinter } from "../../ottoengine_API.ts";
+import { registerPrinter, testPrinterConnection } from "../../ottoengine_API.ts";
 import { PRINTER_BRANDS } from "../../constants/printerBrands";
 import { PRINTER_MODELS } from "../../constants/printerModels";
 
 export default function newPrinter() {
     const { printer, setPrinter, printerAddModalOpen, setIsPrinterAddModalOpen } = useContext(JobContext);
     const [tempPrinter, setTempPrinter] = useState<PrinterRegistrationRepresentation>();
+    const [testing, setTesting] = useState(false);
+    const [testMessage, setTestMessage] = useState<string | undefined>();
+    const [testSuccess, setTestSuccess] = useState<boolean | undefined>();
 
     const updatePrinterList = (tempPrinter: any) => {
         // if (!printer && tempPrinter) {
@@ -104,6 +107,7 @@ export default function newPrinter() {
                 isOpen={printerAddModalOpen}
                 className="pf-custom-new-printer-modal"
                 aria-label="newPrinter"
+                onClose={() => setIsPrinterAddModalOpen(false)}
             >
                 <PageSection className="pf-custom-new-printer">
                     <ModalHeader className="pf-custom-upload-header">
@@ -203,6 +207,96 @@ export default function newPrinter() {
                                                 <TextInputGroup>
                                                     <TextInputGroupMain id='printer-connection-accesscode' value={tempPrinter?.access_code} onChange={(_event, value: any) => setTempPrinter({ ...tempPrinter, access_code: value })} />
                                                 </TextInputGroup>
+                                            </GridItem>
+                                        </Grid>
+                                        <Grid>
+                                            <GridItem span={3}>
+                                                <Content>{''}</Content>
+                                            </GridItem>
+                                            <GridItem span={8}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                                    <Button
+                                                        variant="secondary"
+                                                        isDisabled={testing || !tempPrinter?.brand || !tempPrinter?.ip_address}
+                                                        onClick={async () => {
+                                                            if (!tempPrinter) return;
+                                                            setTesting(true);
+                                                            setTestMessage(undefined);
+                                                            setTestSuccess(undefined);
+                                                            try {
+                                                                const res = await testPrinterConnection({
+                                                                    brand: tempPrinter.brand,
+                                                                    ip_address: tempPrinter.ip_address,
+                                                                    access_code: tempPrinter.access_code,
+                                                                    serial_number: tempPrinter.serial_number,
+                                                                });
+                                                                setTestSuccess(true);
+                                                                setTestMessage(res?.message || 'Connection successful.');
+                                                            } catch (e: any) {
+                                                                setTestSuccess(false);
+                                                                setTestMessage(e?.message || 'Connection failed.');
+                                                            } finally {
+                                                                setTesting(false);
+                                                            }
+                                                        }}
+                                                    >
+                                                        {testing ? 'Testing…' : 'Test Connection'}
+                                                    </Button>
+                                                    {testMessage && (
+                                                        <span
+                                                            style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: 8,
+                                                                // Try PF v6/v5 tokens with hex fallbacks
+                                                                color: testSuccess
+                                                                    ? 'var(--pf-global--success-color--100, var(--pf-v5-global--success-color--100, #3E8635))'
+                                                                    : 'var(--pf-global--danger-color--100, var(--pf-v5-global--danger-color--100, #C9190B))'
+                                                            }}
+                                                        >
+                                                            {testSuccess ? (
+                                                                // Green circle with white tick
+                                                                <svg
+                                                                    width="18"
+                                                                    height="18"
+                                                                    viewBox="0 0 24 24"
+                                                                    role="img"
+                                                                    aria-label="Connection successful"
+                                                                >
+                                                                    <circle cx="12" cy="12" r="10" fill="currentColor" />
+                                                                    <path
+                                                                        d="M9.5 12.5l2 2 4-5"
+                                                                        fill="none"
+                                                                        stroke="#ffffff"
+                                                                        strokeWidth="2.2"
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                    />
+                                                                </svg>
+                                                            ) : (
+                                                                // Red circle with white cross
+                                                                <svg
+                                                                    width="18"
+                                                                    height="18"
+                                                                    viewBox="0 0 24 24"
+                                                                    role="img"
+                                                                    aria-label="Connection failed"
+                                                                >
+                                                                    <circle cx="12" cy="12" r="10" fill="currentColor" />
+                                                                    <path
+                                                                        d="M8.5 8.5l7 7m0-7l-7 7"
+                                                                        fill="none"
+                                                                        stroke="#ffffff"
+                                                                        strokeWidth="2.2"
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                    />
+                                                                </svg>
+                                                            )}
+                                                            <span>{testMessage}</span>
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </GridItem>
                                         </Grid>
                                     </Grid>

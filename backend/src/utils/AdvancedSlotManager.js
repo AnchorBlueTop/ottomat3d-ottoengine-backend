@@ -31,10 +31,11 @@ class AdvancedSlotManager {
         
         // Optimization weights
         this.WEIGHTS = {
-            HEIGHT_EFFICIENCY: 0.4,
-            SLOT_POSITION: 0.3,
-            CLEARANCE_WASTE: 0.2,
-            FUTURE_FLEXIBILITY: 0.1
+            AVAILABILITY: 0.3,          // NEW: Strongly prefer immediate availability
+            HEIGHT_EFFICIENCY: 0.3,     // Reduced from 0.4
+            SLOT_POSITION: 0.2,         // Reduced from 0.3
+            CLEARANCE_WASTE: 0.15,      // Reduced from 0.2
+            FUTURE_FLEXIBILITY: 0.05    // Reduced from 0.1
         };
         
         logger.info(`[SlotManager] Initialized rack ${this.rackName}: ${this.totalSlots} slots @ ${this.slotSpacing}mm`);
@@ -42,8 +43,15 @@ class AdvancedSlotManager {
 
     /**
      * Determine slot state from database fields
+     * CRITICAL: Check occupied flag first - reserved/occupied slots cannot be used
      */
     determineSlotState(slotData) {
+        // If slot is occupied/reserved for a job, treat as plate_with_print
+        // This prevents multiple jobs from being assigned to the same slot
+        if (slotData.occupied || slotData.print_job_id) {
+            return this.SLOT_STATES.PLATE_WITH_PRINT;
+        }
+
         if (!slotData.has_plate) {
             return this.SLOT_STATES.NO_PLATE;
         }
@@ -60,15 +68,16 @@ class AdvancedSlotManager {
     /**
      * Main entry point for finding optimal storage slot
      * Implements intelligent bottom-up with height awareness
+     * ENHANCED: Now includes lookahead for slots that will become available from active workflows
      */
-    findOptimalStorageSlot(printHeight, currentRackState, queuedJobs = []) {
+    findOptimalStorageSlot(printHeight, currentRackState, queuedJobs = [], activeWorkflows = []) {
         const safetyMargin = 10;
         const requiredClearance = printHeight + safetyMargin;
-        
+
         logger.info(`[SlotManager] Finding storage for ${printHeight}mm print (needs ${requiredClearance}mm clearance)`);
-        
-        // Get all possible storage options
-        const storageOptions = this._getAllStorageOptions(currentRackState, requiredClearance);
+
+        // Get all possible storage options (including lookahead for future availability)
+        const storageOptions = this._getAllStorageOptions(currentRackState, requiredClearance, activeWorkflows);
         
         if (storageOptions.length === 0) {
             return {
@@ -207,32 +216,15 @@ class AdvancedSlotManager {
     }
 
     /**
-     * Get all possible storage options including in-place and no-plate slots
+     * Get all possible storage options
+     * CRITICAL: empty_plate slots are NEVER used for storage - they're reserved for grabbing!
+     * ENHANCED: Now includes lookahead for slots that will become available from active workflows
      */
-    _getAllStorageOptions(rackState, requiredClearance) {
+    _getAllStorageOptions(rackState, requiredClearance, activeWorkflows = []) {
         const options = [];
-        
-        // Strategy 1: In-place storage on EMPTY_PLATE slots
-        // CRITICAL: In-place storage only has BASE clearance, not additional from above!
-        for (let slot = 1; slot <= this.totalSlots; slot++) {
-            const state = rackState[slot] || 'unknown';
-            if ((state === 'empty_plate' || state === this.SLOT_STATES.EMPTY_PLATE) && 
-                !this._isSlotBlockedByPrintsBelow(slot, rackState)) {
-                // In-place storage ONLY has base clearance (can't go through the plate!)
-                const clearance = this.slotSpacing; // Always just 80mm for in-place
-                if (clearance >= requiredClearance) {
-                    options.push({
-                        slot,
-                        clearance,
-                        strategy: 'in_place',
-                        requiresPlate: false,
-                        originalState: 'empty_plate'
-                    });
-                }
-            }
-        }
-        
-        // Strategy 2: Storage in NO_PLATE/empty slots
+
+        // Strategy 1: Storage in immediately available NO_PLATE/empty slots
+        // Empty plate slots are preserved for grabbing to load onto printers
         for (let slot = 1; slot <= this.totalSlots; slot++) {
             const state = rackState[slot] || 'unknown';
             if ((state === 'empty' || state === 'no_plate' || state === this.SLOT_STATES.NO_PLATE) &&
@@ -242,14 +234,73 @@ class AdvancedSlotManager {
                     options.push({
                         slot,
                         clearance,
-                        strategy: 'place_and_store',
-                        requiresPlate: true,
-                        originalState: 'no_plate'
+                        strategy: 'store_immediate',
+                        requiresPlate: false,  // Printer already has plate from startup/previous job
+                        originalState: 'no_plate',
+                        availableNow: true
                     });
                 }
             }
         }
-        
+
+        // Strategy 2: LOOKAHEAD - Slots that will become available after active workflows grab from them
+        // This solves the problem where Job 2 can't find storage because it doesn't account for
+        // slots that Job 1 will free up after grabbing empty plates
+        if (activeWorkflows && activeWorkflows.length > 0) {
+            logger.debug(`[SlotManager] Checking ${activeWorkflows.length} active workflow(s) for future slot availability`);
+
+            for (const workflow of activeWorkflows) {
+                // Check if this workflow is in a phase where it will grab a plate
+                // Phases: assigned -> pre_print -> printing -> print_completed -> post_print -> completed
+                const willGrabPlate = ['print_completed', 'post_print'].includes(workflow.phase);
+
+                if (willGrabPlate) {
+                    // This workflow will grab from an empty_plate slot, making it NO_PLATE after
+                    // Check which slots have empty plates and could be grabbed
+                    for (let slot = 1; slot <= this.totalSlots; slot++) {
+                        const state = rackState[slot] || 'unknown';
+
+                        // Skip if this slot is already in our immediate options
+                        if (options.some(opt => opt.slot === slot)) {
+                            continue;
+                        }
+
+                        // Empty plate slots will become no_plate after workflow grabs from them
+                        if (state === 'empty_plate' || state === this.SLOT_STATES.EMPTY_PLATE) {
+                            // Simulate the state after this slot is grabbed
+                            const futureRackState = { ...rackState };
+                            futureRackState[slot] = this.SLOT_STATES.NO_PLATE;
+
+                            // Check if slot would be usable after grab (not blocked by prints below)
+                            if (!this._isSlotBlockedByPrintsBelow(slot, futureRackState)) {
+                                const clearance = this._calculateEffectiveClearance(slot, futureRackState);
+
+                                if (clearance >= requiredClearance) {
+                                    options.push({
+                                        slot,
+                                        clearance,
+                                        strategy: 'store_after_grab',
+                                        requiresPlate: false,
+                                        originalState: 'empty_plate',
+                                        availableNow: false,
+                                        availableAfterJobId: workflow.jobId,
+                                        availableAfterPhase: workflow.phase
+                                    });
+
+                                    logger.info(`[SlotManager] 🔮 Lookahead: Slot ${slot} will be available after Job ${workflow.jobId} grabs from it`);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        const immediateCount = options.filter(opt => opt.availableNow).length;
+        const futureCount = options.filter(opt => !opt.availableNow).length;
+
+        logger.debug(`[SlotManager] Found ${options.length} storage options: ${immediateCount} immediate, ${futureCount} future (empty_plate slots excluded)`);
+
         return options;
     }
 
@@ -306,40 +357,40 @@ class AdvancedSlotManager {
 
     /**
      * Score storage options based on multiple optimization factors
+     * ENHANCED: Now includes availability scoring to prefer immediate slots over future slots
      */
     _scoreStorageOptions(options, printHeight, currentRackState, queuedJobs) {
         const heightCategory = this._categorizeHeight(printHeight);
-        
+
         return options.map(option => {
             let score = 0;
             let breakdown = {};
-            
+
+            // 0. Availability Score (0-1) - NEW: Strongly prefer immediate availability
+            breakdown.availability = option.availableNow ? 1.0 : 0.3;
+            score += breakdown.availability * this.WEIGHTS.AVAILABILITY;
+
             // 1. Height Efficiency Score (0-1)
             const utilizationRatio = printHeight / option.clearance;
             breakdown.heightEfficiency = this._calculateHeightEfficiencyScore(utilizationRatio);
             score += breakdown.heightEfficiency * this.WEIGHTS.HEIGHT_EFFICIENCY;
-            
+
             // 2. Slot Position Score (0-1)
             breakdown.slotPosition = this._calculatePositionScore(option.slot, heightCategory);
             score += breakdown.slotPosition * this.WEIGHTS.SLOT_POSITION;
-            
+
             // 3. Clearance Waste Penalty (0-1) - Updated to consider limited options
             breakdown.clearanceWaste = this._calculateWastePenalty(option, printHeight, options.length);
             score += breakdown.clearanceWaste * this.WEIGHTS.CLEARANCE_WASTE;
-            
+
             // 4. Future Flexibility Score (0-1)
             breakdown.futureFlexibility = this._calculateFutureFlexibility(
-                option, 
-                currentRackState, 
+                option,
+                currentRackState,
                 queuedJobs
             );
             score += breakdown.futureFlexibility * this.WEIGHTS.FUTURE_FLEXIBILITY;
-            
-            // Bonus for in-place storage
-            if (option.strategy === 'in_place') {
-                score += 0.05;
-            }
-            
+
             return {
                 ...option,
                 score,
@@ -474,23 +525,27 @@ class AdvancedSlotManager {
 
     /**
      * Generate human-readable reason
+     * ENHANCED: Now includes lookahead information
      */
     _generateReason(option, breakdown, heightCategory) {
         const parts = [];
         parts.push(`${heightCategory.name}_print`);
         parts.push(`slot_${option.slot}`);
         parts.push(`${option.clearance}mm_clearance`);
-        
+
+        // Indicate if this is a lookahead slot
+        if (!option.availableNow && option.availableAfterJobId) {
+            parts.push(`available_after_job_${option.availableAfterJobId}`);
+        } else if (option.availableNow) {
+            parts.push('immediate');
+        }
+
         if (breakdown.heightEfficiency > 0.8) {
             parts.push('excellent_fit');
         } else if (breakdown.clearanceWaste < 0.3) {
             parts.push('high_waste');
         }
-        
-        if (option.strategy === 'in_place') {
-            parts.push('in_place_storage');
-        }
-        
+
         return parts.join('_');
     }
 
@@ -499,10 +554,15 @@ class AdvancedSlotManager {
      * Prefer grabbing from slots adjacent to storage location
      */
     findOptimalGrabSlot(rackState, options = {}) {
-        const { preferredNearSlot } = options;
+        const { preferredNearSlot, excludeSlot } = options;
         const emptyPlateSlots = [];
-        
+
         for (let slot = 1; slot <= this.totalSlots; slot++) {
+            // Skip excluded slot (e.g., the storage slot)
+            if (excludeSlot && slot === excludeSlot) {
+                continue;
+            }
+
             const state = rackState[slot] || 'unknown';
             if (state === 'empty_plate' || state === this.SLOT_STATES.EMPTY_PLATE) {
                 emptyPlateSlots.push(slot);

@@ -148,84 +148,45 @@ const ottorackService = {
      * Update a specific shelf in an Ottorack
      * Enhanced to support plate tracking fields
      */
-    async updateShelf(rackId, shelfNumber, updateData) {
-        const { occupied, print_job_id, has_plate, plate_state } = updateData;
+    async updateShelf(rack_id, shelf_number, updateData) {
+        const { has_plate, plate_state, occupied, print_job_id } = updateData;
         
-        // Build dynamic SQL based on provided fields
-        const updateFields = [];
-        const updateValues = [];
-        
-        if (occupied !== undefined) {
-            updateFields.push('occupied = ?');
-            updateValues.push(occupied ? 1 : 0);
-        }
-        
-        if (print_job_id !== undefined) {
-            updateFields.push('print_job_id = ?');
-            updateValues.push(print_job_id);
-        }
-        
-        if (has_plate !== undefined) {
-            updateFields.push('has_plate = ?');
-            updateValues.push(has_plate ? 1 : 0);
-        }
-        
-        if (plate_state !== undefined) {
-            updateFields.push('plate_state = ?');
-            updateValues.push(plate_state);
-        }
-        
-        if (updateFields.length === 0) {
-            throw new Error('No valid fields provided for update');
-        }
-        
-        // Debug logging to see what's being updated
-        logger.debug(`[OttorackService] Updating shelf ${shelfNumber} in rack ${rackId} with:`, updateData);
-        logger.debug(`[OttorackService] SQL fields: ${updateFields.join(', ')}`);
-        logger.debug(`[OttorackService] SQL values before WHERE:`, updateValues);
-        
-        // Add WHERE clause parameters
-        updateValues.push(rackId, shelfNumber);
-        
-        logger.debug(`[OttorackService] Final SQL values:`, updateValues);
+        // DEBUG: Log what we received
+        logger.info(`[OttorackService] updateShelf called with:`);
+        logger.info(`  rack_id: ${rack_id}`);
+        logger.info(`  shelf_number: ${shelf_number}`);
+        logger.info(`  has_plate: ${has_plate}`);
+        logger.info(`  plate_state: ${plate_state}`);
+        logger.info(`  occupied: ${occupied}`);
+        logger.info(`  print_job_id: ${print_job_id}`);
         
         const sql = `
-            UPDATE rack_slots 
-            SET ${updateFields.join(', ')}
+            UPDATE rack_slots
+            SET occupied = ?,
+                has_plate = ?,
+                plate_state = ?,
+                print_job_id = ?
             WHERE storage_rack_id = ? AND slot_number = ?
         `;
         
-        logger.debug(`[OttorackService] Final SQL:`, sql);
-        
         try {
-            const result = await dbRun(sql, updateValues);
+            const params = [
+                occupied || 0,
+                has_plate ? 1 : 0,
+                plate_state,
+                print_job_id || null,
+                rack_id,
+                shelf_number
+            ];
             
-            logger.debug(`[OttorackService] Update result:`, { changes: result.changes, lastID: result.lastID });
+            logger.info(`[OttorackService] SQL params: ${JSON.stringify(params)}`);
             
-            if (result.changes === 0) {
-                throw new Error(`Shelf ${shelfNumber} not found in rack ${rackId}`);
-            }
+            await dbRun(sql, params);
             
-            // Return updated shelf info with all fields
-            const shelfSql = `
-                SELECT id, slot_number, type, occupied, has_plate, plate_state, print_job_id 
-                FROM rack_slots 
-                WHERE storage_rack_id = ? AND slot_number = ?
-            `;
+            return await this.getShelfById(rack_id, shelf_number);
             
-            const shelf = await dbGet(shelfSql, [rackId, shelfNumber]);
-            
-            return {
-                id: shelf.id,
-                shelf_number: shelf.slot_number,
-                type: shelf.type,
-                occupied: Boolean(shelf.occupied),
-                has_plate: Boolean(shelf.has_plate),
-                plate_state: shelf.plate_state,
-                print_job_id: shelf.print_job_id
-            };
         } catch (error) {
-            logger.error(`[OttorackService] Error updating shelf ${shelfNumber} in rack ${rackId}: ${error.message}`);
+            logger.error(`[OttorackService] Error updating shelf ${shelf_number} in rack ${rack_id}: ${error.message}`);
             throw error;
         }
     },
@@ -235,8 +196,8 @@ const ottorackService = {
      */
     async getShelfById(rackId, shelfNumber) {
         const sql = `
-            SELECT id, slot_number, type, occupied, print_job_id 
-            FROM rack_slots 
+            SELECT id, slot_number, type, occupied, has_plate, plate_state, print_job_id
+            FROM rack_slots
             WHERE storage_rack_id = ? AND slot_number = ?
         `;
         
@@ -252,6 +213,8 @@ const ottorackService = {
                 shelf_number: shelf.slot_number,
                 type: shelf.type,
                 occupied: Boolean(shelf.occupied),
+                has_plate: Boolean(shelf.has_plate),
+                plate_state: shelf.plate_state,
                 print_job_id: shelf.print_job_id
             };
         } catch (error) {

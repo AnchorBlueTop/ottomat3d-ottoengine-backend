@@ -14,38 +14,163 @@ const orchestratorService = require('../services/orchestratorService');
 
 /**
  * GET /api/orchestration/status
- * Get overall orchestration system status
+ * Comprehensive debug information for troubleshooting
+ * Shows active workflows, locks, phases, monitoring status, and system state
  */
 router.get('/status', async (req, res) => {
     try {
-        const orchestratorStats = orchestratorService.getStats();
-        const jobProcessingStatus = orchestratorService.getJobProcessingStatus();
-        
-        const status = {
+        // Get active workflows with detailed information
+        const activeWorkflows = Array.from(orchestratorService.activeWorkflows.values()).map(workflow => {
+            const age = Date.now() - workflow.startTime;
+            const lastUpdateAge = Date.now() - workflow.lastUpdate;
+
+            return {
+                jobId: workflow.jobId,
+                printerId: workflow.printerId,
+                ottoejectId: workflow.ottoejectId || null,
+                rackId: workflow.rackId,
+                storeSlot: workflow.storeSlot,
+                postPrintGrabSlot: workflow.postPrintGrabSlot || null,
+                phase: workflow.phase,
+                startTime: workflow.startTime,
+                lastUpdate: workflow.lastUpdate,
+                ageMinutes: Math.floor(age / 60000),
+                lastUpdateSeconds: Math.floor(lastUpdateAge / 1000),
+                monitoringActive: !!workflow.monitorInterval,
+                monitoringStartTime: workflow.monitoringStartTime || null,
+                error: workflow.error || null,
+                // Flag stale workflows
+                isStale: lastUpdateAge > (10 * 60 * 1000)
+            };
+        });
+
+        // Get locked resources
+        const lockedPrinters = Array.from(orchestratorService.activePrinters);
+        const lockedOttoejects = Array.from(orchestratorService.activeOttoejects);
+
+        // Get rack state cache info
+        const cacheInfo = {
+            size: orchestratorService.rackStateCache.size,
+            entries: Array.from(orchestratorService.rackStateCache.entries()).map(([rackId, cached]) => ({
+                rackId,
+                ageSeconds: Math.floor((Date.now() - cached.timestamp) / 1000)
+            }))
+        };
+
+        // Get slot managers info
+        const slotManagersInfo = {
+            count: orchestratorService.slotManagers.size,
+            rackIds: Array.from(orchestratorService.slotManagers.keys())
+        };
+
+        // Check for potential issues
+        const issues = [];
+
+        // Check for stale workflows
+        const staleWorkflows = activeWorkflows.filter(wf => wf.isStale);
+        if (staleWorkflows.length > 0) {
+            issues.push({
+                type: 'stale_workflows',
+                severity: 'critical',
+                message: `${staleWorkflows.length} workflow(s) have not updated in over 10 minutes`,
+                affectedJobs: staleWorkflows.map(wf => wf.jobId)
+            });
+        }
+
+        // Check for workflows without monitoring
+        const workflowsWithoutMonitoring = activeWorkflows.filter(
+            wf => wf.phase === 'printing' && !wf.monitoringActive
+        );
+        if (workflowsWithoutMonitoring.length > 0) {
+            issues.push({
+                type: 'missing_monitoring',
+                severity: 'warning',
+                message: `${workflowsWithoutMonitoring.length} printing job(s) without active monitoring`,
+                affectedJobs: workflowsWithoutMonitoring.map(wf => wf.jobId)
+            });
+        }
+
+        // Check for locked resources without workflows
+        const workflowPrinters = new Set(activeWorkflows.map(wf => wf.printerId));
+        const orphanedPrinterLocks = lockedPrinters.filter(id => !workflowPrinters.has(id));
+        if (orphanedPrinterLocks.length > 0) {
+            issues.push({
+                type: 'orphaned_printer_locks',
+                severity: 'warning',
+                message: `${orphanedPrinterLocks.length} printer(s) locked without active workflow`,
+                affectedPrinters: orphanedPrinterLocks
+            });
+        }
+
+        const workflowOttoejects = new Set(activeWorkflows.map(wf => wf.ottoejectId).filter(id => id));
+        const orphanedOttoejectLocks = lockedOttoejects.filter(id => !workflowOttoejects.has(id));
+        if (orphanedOttoejectLocks.length > 0) {
+            issues.push({
+                type: 'orphaned_ottoeject_locks',
+                severity: 'warning',
+                message: `${orphanedOttoejectLocks.length} ottoeject(s) locked without active workflow`,
+                affectedOttoejects: orphanedOttoejectLocks
+            });
+        }
+
+        // Build comprehensive debug response
+        const debugInfo = {
+            status: issues.length === 0 ? 'healthy' : 'issues_detected',
             timestamp: new Date().toISOString(),
-            phase3: {
-                orchestrator: {
-                    initialized: orchestratorService.isInitialized,
-                    job_processing_enabled: jobProcessingStatus.enabled,
-                    polling_active: jobProcessingStatus.polling_active,
-                    active_workflows: jobProcessingStatus.active_workflows.length,
-                    statistics: orchestratorStats
-                },
-                activeJobs: jobProcessingStatus.active_workflows.length,
-                monitoring: jobProcessingStatus.active_workflows
-            },
+
+            // System state
             system: {
+                isInitialized: orchestratorService.isInitialized,
+                isShuttingDown: orchestratorService.isShuttingDown,
+                jobProcessingEnabled: orchestratorService.jobProcessingEnabled,
+                pollingActive: !!orchestratorService.jobPollingInterval,
                 uptime: process.uptime(),
                 memory: process.memoryUsage(),
                 nodeVersion: process.version
+            },
+
+            // Active workflows
+            workflows: {
+                count: activeWorkflows.length,
+                details: activeWorkflows,
+                byPhase: activeWorkflows.reduce((acc, wf) => {
+                    acc[wf.phase] = (acc[wf.phase] || 0) + 1;
+                    return acc;
+                }, {})
+            },
+
+            // Resource locks
+            locks: {
+                printers: {
+                    count: lockedPrinters.length,
+                    ids: lockedPrinters,
+                    orphaned: orphanedPrinterLocks
+                },
+                ottoejects: {
+                    count: lockedOttoejects.length,
+                    ids: lockedOttoejects,
+                    orphaned: orphanedOttoejectLocks
+                }
+            },
+
+            // Cache state
+            cache: cacheInfo,
+
+            // Slot managers
+            slotManagers: slotManagersInfo,
+
+            // Detected issues
+            issues: {
+                count: issues.length,
+                details: issues
             }
         };
-        
+
         res.json({
             success: true,
-            data: status
+            data: debugInfo
         });
-        
+
     } catch (error) {
         logger.error('Error getting orchestration status:', error);
         res.status(500).json({

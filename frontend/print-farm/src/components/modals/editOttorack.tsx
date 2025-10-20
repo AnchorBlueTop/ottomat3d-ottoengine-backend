@@ -204,6 +204,7 @@ export default function editOttorack() {
             isOpen={ottorackEditModalOpen}
             className="pf-custom-new-ottorack-modal"
             aria-label="newOttorack"
+            onClose={() => setIsOttorackEditModalOpen(false)}
         >
             <PageSection className="pf-custom-new-ottorack">
                 <ModalHeader className="pf-custom-upload-header">

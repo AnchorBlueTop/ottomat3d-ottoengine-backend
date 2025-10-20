@@ -105,6 +105,32 @@ export const deletePrinter = async (id: number): Promise<void> => {
   }
 };
 
+// Test printer connection without persisting (POST /api/printers/connect)
+export const testPrinterConnection = async (
+  payload: Partial<PrinterRegistrationRepresentation & PrinterRepresentation>
+): Promise<{ status?: string; message?: string }> => {
+  const response = await fetch(`${BASE_URL}/api/printers/connect`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      brand: payload.brand,
+      ip_address: payload.ip_address,
+      access_code: payload.access_code,
+      serial_number: payload.serial_number,
+    }),
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    // Back-end returns shape {error, message}
+    const message = (data && (data.message || data.error)) || response.statusText;
+    throw new Error(message);
+  }
+  return data;
+};
+
 export const uploadFile = async (file: File, fileId: number) => {
   const formdata = new FormData();
   formdata.append("file", file, file.name);

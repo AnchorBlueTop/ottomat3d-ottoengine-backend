@@ -42,4 +42,7 @@ router.delete('/:id', printJobController.cancelPrintJob);
 // POST /api/print-jobs/:id/complete - Mark a job as completed
 router.post('/:id/complete', printJobController.completePrintJob);
 
+// POST /api/print-jobs/:id/start - Manually start a NEW job (-> QUEUED)
+router.post('/:id/start', printJobController.startPrintJob);
+
 module.exports = router;

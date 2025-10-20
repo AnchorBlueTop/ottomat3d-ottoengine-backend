@@ -54,6 +54,7 @@ export default function editOttoeject() {
             isOpen={ottoejectEditModalOpen}
             className="pf-custom-new-ottoeject-modal"
             aria-label="newOttoeject"
+            onClose={() => setIsOttoejectEditModalOpen(false)}
         >
 
             <PageSection className="pf-custom-new-ottoeject">

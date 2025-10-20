@@ -553,6 +553,8 @@ Manage print jobs through a two-step process: file upload/parsing and job creati
     | Key | Type | Description | Required |
     | --- | --- | --- | --- |
     | `file` | File | The G-code file to be uploaded and parsed. | Yes |
+- **Environment (optional):**
+    - `AV_SCAN_ENABLED=true` to enable ClamAV scan using `clamscan` before accepting the file
 - **Response (200 OK):**
 
     ```json
@@ -566,7 +568,11 @@ Manage print jobs through a two-step process: file upload/parsing and job creati
         "message": "File uploaded and parsed successfully"
     }
     ```
-
+    
+    Notes:
+    - Server persists the uploaded file path in `print_items.file_details_json.location` and stores `checksum_sha256` for integrity.
+    - File retention and cleanup policy are managed server-side.
+    
 
 ## Create Print Job (Step 2)
 
@@ -593,14 +599,31 @@ Manage print jobs through a two-step process: file upload/parsing and job creati
         "print_item_id": 1,
         "printer_id": 1,
         "ottoeject_id": 1,
-        "status": "QUEUED",
+        "status": "NEW",
         "priority": 1,
-        "auto_start": true,
+        "auto_start": false,
         "created_at": "2025-05-21T10:00:00.000Z",
         "message": "Print job created successfully"
     }
     ```
+    
+    Behavior:
+    - When `auto_start` is `false`, the job starts in `NEW` and must be manually started.
+    - When `auto_start` is `true`, the job starts in `QUEUED` and is picked up by the orchestrator.
 
+### POST `/api/print-jobs/{id}/start`
+
+- **Description:** Transitions a `NEW` job to `QUEUED` for orchestrator processing.
+- **Response (200 OK):**
+    
+    ```json
+    {
+        "id": 1,
+        "status": "QUEUED",
+        "status_message": "Job queued for processing by orchestrator."
+    }
+    ```
+    
 
 ## Get All Print Jobs
 
@@ -939,7 +962,7 @@ Manage OttoRack storage systems for organizing completed prints. OttoRacks are m
 
 **Primary Purpose: Development & Production Debugging**
 
-These endpoints provide deep insight into the Phase 3 orchestration system for debugging automated print job workflows, monitoring real-time job processing, and troubleshooting workflow execution issues. Essential for developers and operators to understand system behavior during lights-out manufacturing operations.
+These endpoints provide deep insight into the Phase 3 orchestration system for debugging automated print job workflows, monitoring real-time job processing, and troubleshooting workflow execution issues. The orchestrator now uploads the print file from server storage to the printer before starting the print when supported; if upload isn’t supported by the adapter, it passes the localPath to the adapter to upload during start.
 
 ## Get Orchestration Status
 

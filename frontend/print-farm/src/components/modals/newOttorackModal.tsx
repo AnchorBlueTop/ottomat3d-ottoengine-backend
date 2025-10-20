@@ -82,8 +82,8 @@ export default function newOttorack() {
             const newOttorack = {
                 name: tempOttorack.name,
                 number_of_shelves: value, // Use the current shelf count
-                shelfSpacingMm: 80, // Example value, adjust as needed
-                bedSize: "256x256", // Example value, adjust as needed
+                // shelfSpacingMm: 80, // Example value, adjust as needed
+                // bedSize: "256x256", // Example value, adjust as needed
             };
     
             // Call the API to create the Ottorack
@@ -184,203 +184,128 @@ export default function newOttorack() {
         rackVisualisation(newValue);
     };
 
-    const rackVisualisation = (value?: any) => {
-        // const newRackVis = [];
-        // for (let i = 0; i < value; i++) {
-        //     newRackVis.push(
-        //         <>
-        //             <input className="customCheckBoxInput" type="checkbox" />
-        //             <label className="customCheckBoxWrapper">
-        //                 <div onClick={() => { console.log(`shelf - ${value - i}`) }} className="customCheckBox">
-        //                     <div className="inner">{'>------------------< ' + (value - i)}</div>
-        //                 </div>
-        //             </label>
-        //         </>
-        //     );
-        // }
-        // setRackVis(newRackVis.reverse());
+    // const rackVisualisation = (value?: any) => {
+    //     // const newRackVis = [];
+    //     // for (let i = 0; i < value; i++) {
+    //     //     newRackVis.push(
+    //     //         <>
+    //     //             <input className="customCheckBoxInput" type="checkbox" />
+    //     //             <label className="customCheckBoxWrapper">
+    //     //                 <div onClick={() => { console.log(`shelf - ${value - i}`) }} className="customCheckBox">
+    //     //                     <div className="inner">{'>------------------< ' + (value - i)}</div>
+    //     //                 </div>
+    //     //             </label>
+    //     //         </>
+    //     //     );
+    //     // }
+    //     // setRackVis(newRackVis.reverse());
 
-        if (!value || value < 1) return; // Ensure value is valid
+    //     if (!value || value < 1) return; // Ensure value is valid
 
+    //     const newRackVis = [];
+    //     for (let i = 0; i < value; i++) {
+    //         const shelf = tempShelf.find((s) => s.id === i + 1); // Find the shelf by ID
+    //         // const shelfContent = shelf?.type === "empty_plate" ? "Empty Plate" : `Shelf ${value - i}`;
+        
+    //         // newRackVis.push(
+    //         //     <>
+    //         //         <input className="customCheckBoxInput" type="checkbox" />
+    //         //         <label className="customCheckBoxWrapper">
+    //         //             <div onClick={() => handleShelfClick(value - i)} className="customCheckBox">
+    //         //                 <div className="inner">{'>------------------< ' + (value - i)}</div>
+    //         //             </div>
+    //         //         </label>
+    //         //     </>
+    //         // );
+
+    //         // Conditionally render content based on the shelf type
+    //         const shelfContent =
+    //             shelf?.type === "empty_plate" ? (
+    //                 <div className="inner">
+    //                     <span>🟢 Empty Plate</span>
+    //                 </div>
+    //             ) : (
+    //                 <div className="inner">{`>------------------< ${i + 1}`}</div> // Default content for an empty shelf
+    //             );
+
+    //         newRackVis.push(
+    //             <div key={i} className="shelf-row">
+    //                 <input className="customCheckBoxInput" type="checkbox" />
+    //                 <label className="customCheckBoxWrapper">
+    //                     <div
+    //                         onClick={() => handleShelfClick(i + 1)} // Pass the correct shelf number
+    //                         className="customCheckBox"
+    //                     >
+    //                         {shelfContent}
+    //                     </div>
+    //                 </label>
+    //             </div>
+    //         );
+    //     }
+
+    //     setRackVis(newRackVis.reverse());
+    // };
+
+    const rackVisualisation = (value?: number | any) => {
+        if (!value || value < 1) return;
+    
         const newRackVis = [];
         for (let i = 0; i < value; i++) {
-            const shelf = tempShelf.find((s) => s.id === i + 1); // Find the shelf by ID
-            // const shelfContent = shelf?.type === "empty_plate" ? "Empty Plate" : `Shelf ${value - i}`;
-        
-            // newRackVis.push(
-            //     <>
-            //         <input className="customCheckBoxInput" type="checkbox" />
-            //         <label className="customCheckBoxWrapper">
-            //             <div onClick={() => handleShelfClick(value - i)} className="customCheckBox">
-            //                 <div className="inner">{'>------------------< ' + (value - i)}</div>
-            //             </div>
-            //         </label>
-            //     </>
-            // );
-
-            // Conditionally render content based on the shelf type
-            const shelfContent =
-                shelf?.type === "empty_plate" ? (
-                    <div className="inner">
-                        <span>🟢 Empty Plate</span>
-                    </div>
-                ) : (
-                    <div className="inner">{`>------------------< ${i + 1}`}</div> // Default content for an empty shelf
-                );
-
+            const shelf = tempShelf?.find((s) => s.id === i + 1);
+    
+            // Determine the class for the wrapper based on the shelf type
+            const wrapperClass = shelf?.type === "empty_plate" ? "empty-plate-bg" : "empty-shelf-bg";
+    
+            // Calculate the shelf number starting from the bottom
+            const shelfNumber = (i + 1); // Reverse the numbering
+    
+            // Dropdown for selecting shelf type
+            const shelfDropdown = (
+                <select
+                    className="shelf-dropdown"
+                    value={shelf?.type || ""}
+                    onChange={(e) => handleShelfTypeChange(shelfNumber, e.target.value)}
+                >
+                    <option value="">Empty Shelf</option>
+                    <option value="empty_plate">Empty Plate</option>
+                </select>
+            );
+    
             newRackVis.push(
                 <div key={i} className="shelf-row">
-                    <input className="customCheckBoxInput" type="checkbox" />
-                    <label className="customCheckBoxWrapper">
-                        <div
-                            onClick={() => handleShelfClick(i + 1)} // Pass the correct shelf number
-                            className="customCheckBox"
-                        >
-                            {shelfContent}
+                    <span className="shelf-number">{shelfNumber}</span> {/* Display shelf number */}
+                    <label className={`customCheckBoxWrapper ${wrapperClass}`}>
+                        <div className="customCheckBox">
+                            {shelfDropdown}
                         </div>
                     </label>
                 </div>
             );
         }
+    
+        setRackVis(newRackVis); // Update the visualization
+    };
 
-        setRackVis(newRackVis.reverse()); // Update the rackVis state
-        // const newRackVis = [];
-        // for (let i = 0; i > value; i++) { // Start from the highest shelf and go down
-        //     newRackVis.push(
-        //         <>
-        //             <input className="customCheckBoxInput" type="checkbox" />
-        //             <label className="customCheckBoxWrapper">
-        //                 <div onClick={() => console.log(`shelf - ${i}`)} className="customCheckBox">
-        //                     <div className="inner">{'>------------------< ' + (value - i)}</div>
-        //                 </div>
-        //             </label>
-        //         </>
-        //     );
-        // }
-        // setRackVis(newRackVis); // No need to reverse since we are iterating in reverse order
+    const handleShelfTypeChange = (shelfNumber: number, newType: string) => {
+        const updatedShelves = [...(tempShelf || [])];
+        const shelfIndex = updatedShelves.findIndex((shelf) => shelf.id === shelfNumber);
 
-        // if (!value || value < 1) return; // Ensure value is valid
+        if (shelfIndex !== -1) {
+            updatedShelves[shelfIndex] = {
+                ...updatedShelves[shelfIndex],
+                type: newType,
+                occupied: newType === "empty_plate",
+            };
+        } else {
+            updatedShelves.push({
+                id: shelfNumber,
+                type: newType,
+                occupied: newType === "empty_plate",
+            });
+        }
 
-        // const newRackVis = [];
-        // for (let i = 1; i <= value; i++) {
-        //     newRackVis.push(
-        //         <div key={i} className="shelf-row">
-        //             <input className="customCheckBoxInput" type="checkbox" />
-        //             <label className="customCheckBoxWrapper">
-        //                 <div onClick={() => console.log(`shelf - ${i}`)} className="customCheckBox">
-        //                     <div className="inner">{`Shelf ${i}`}</div>
-        //                 </div>
-        //             </label>
-        //         </div>
-        //     );
-        // }
-        // setRackVis(newRackVis); // Update rack visualization state
-
-        // const newRackVis = [];
-        // for (let i = 0; i < value; i++) {
-        //     newRackVis.push(
-        //         <button
-        //             key={i}
-        //             className="shelf-button"
-        //             onClick={() => handleShelfClick(i + 1)} // Pass the shelf number
-        //         >
-        //             Shelf {i + 1}
-        //         </button>
-        //     );
-        // }
-        // setRackVis(newRackVis);
-
-        // const newRackVis = [];
-        // for (let i = 0; i < value; i++) {
-        //     newRackVis.push(
-        //         <div key={i} className="shelf-row">
-        //             <button
-        //                 className="shelf-number"
-        //                 onClick={() => handleShelfClick(i + 1)}
-        //             >
-        //                 {i + 1}
-        //             </button>
-        //             <div className="shelf-content">
-        //                 {tempShelf[i]?.type === "print_bed" ? (
-        //                     <div className="print-bed">
-        //                         <span>PRINT BED</span>
-        //                         <button
-        //                             className="delete-button"
-        //                             onClick={() => removeShelf(i)}
-        //                         >
-        //                             X
-        //                         </button>
-        //                     </div>
-        //                 ) : (
-        //                     <button
-        //                         className="add-button"
-        //                         onClick={() => addShelf(i)}
-        //                     >
-        //                         + ADD
-        //                     </button>
-        //                 )}
-        //             </div>
-        //         </div>
-        //     );
-        // }
-        // setRackVis(newRackVis);
-        // const newRackVis = [];
-        // for (let i = 0; i < value; i++) {
-        //     newRackVis.push(
-        //         <div key={i} className="shelf-row">
-        //             <span className="shelf-number">{i + 1}</span>
-        //             <div className="shelf-content">
-        //                 {tempShelf[i]?.type === "build_plate" ? (
-        //                     <div className="build-plate">
-        //                         <span>Build plate</span>
-        //                         <button
-        //                             className="delete-button"
-        //                             onClick={() => removeShelf(i)}
-        //                         >
-        //                             <span className="delete-icon">🗑️</span>
-        //                         </button>
-        //                     </div>
-        //                 ) : (
-        //                     <button
-        //                         className="add-button"
-        //                         onClick={() => addShelf(i)}
-        //                     >
-        //                         + ADD
-        //                     </button>
-        //                 )}
-        //             </div>
-        //         </div>
-        //     );
-        // }
-        // setRackVis(newRackVis);
-        
-        // const newRackVis = tempShelf.map((shelf, index) => (
-        //     <div key={index} className="shelf-row">
-        //         <span className="shelf-number">{index + 1}</span> {/* Offset index by 1 */}
-        //         <div className="shelf-content">
-        //             {shelf.type === "build_plate" ? (
-        //                 <div className="build-plate">
-        //                     <span>Build plate</span>
-        //                     <button
-        //                         className="delete-button"
-        //                         onClick={() => removeShelf(index)}
-        //                     >
-        //                         <span className="delete-icon">🗑️</span>
-        //                     </button>
-        //                 </div>
-        //             ) : (
-        //                 <button
-        //                     className="add-button"
-        //                     onClick={() => addShelf(index, "build_plate")}
-        //                 >
-        //                     + ADD BUILD PLATE
-        //                 </button>
-        //             )}
-        //         </div>
-        //     </div>
-        // ));
-        // setRackVis(newRackVis.reverse());
-        console.log('Rendeirng Rack');
+        setTempShelf(updatedShelves);
+        rackVisualisation(updatedShelves.length);
     };
 
     const addShelf = (index: number, type: "build_plate") => {

@@ -297,14 +297,14 @@ export default function newPrintJob() {
         }
     
         const printJobData = {
-            // print_item_id: nextItemId,
-            // printer_id: selectedPrinter,
-            // ottoeject_id: selectedOttoeject,
-            print_item_id: printJobUID,
-            printer_id: 4,
-            ottoeject_id: 1,
-            priority: 1,
-            // auto_start: false,
+            print_item_id: nextItemId,
+            printer_id: selectedPrinter,
+            ottoeject_id: selectedOttoeject,
+            // print_item_id: printJobUID,
+            // printer_id: 4,
+            // ottoeject_id: 1,
+            // priority: 1,
+            auto_start: false,
         };
     
         try {
@@ -316,6 +316,7 @@ export default function newPrintJob() {
             console.error("Error creating print job:", error);
             // setErrorMessage("Failed to create print job. Please try again.");
         }
+        setIsPrintTaskModalOpen(!printTaskModalOpen)
     };
 
     useEffect(() => {

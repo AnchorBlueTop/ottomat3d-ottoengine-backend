@@ -987,18 +987,40 @@ class OrchestratorService extends EventEmitter {
             
             // Extract filename from job data
             let filename = 'unknown.gcode';
+            let localPath = null;
             if (job.file_details_json) {
                 try {
                     const fileDetails = JSON.parse(job.file_details_json);
                     filename = fileDetails.name;
+                    localPath = fileDetails.location || null;
                 } catch (e) {
                     logger.warn(`[OrchestratorService] Could not parse file details for job ${workflow.jobId}`);
                 }
             }
             
             logger.info(`[OrchestratorService] Starting print for job ${workflow.jobId}: ${filename}`);
+            
+            // Upload the file to the printer first if we have a server-side path
+            let startOptions = {};
+            if (localPath) {
+                try {
+                    const uploadResult = await printerService.commandUploadFile(workflow.printerId, localPath, filename);
+                    if (uploadResult.success) {
+                        logger.info(`[OrchestratorService] Uploaded ${filename} to printer ${workflow.printerId}`);
+                    } else if (uploadResult.statusCode === 501) {
+                        // Upload unsupported by this adapter/printer; try starting with localPath so adapter can upload internally
+                        logger.info(`[OrchestratorService] Upload not supported; will start print using localPath`);
+                        startOptions.localPath = localPath;
+                    } else {
+                        throw new Error(`Upload failed: ${uploadResult.message || 'Unknown error'}`);
+                    }
+                } catch (uploadErr) {
+                    logger.error(`[OrchestratorService] File upload error for job ${workflow.jobId}: ${uploadErr.message}`);
+                    throw uploadErr;
+                }
+            }
 
-            // Start the print with proper options (same as working API endpoint)
+                        // Start the print with proper options (same as working API endpoint)
             // NOTE: For .3mf files, use_ams should match how the file was sliced
             // If file was sliced for external spool, set useAms: false
             const printOptions = {
@@ -1007,8 +1029,9 @@ class OrchestratorService extends EventEmitter {
                 skip_objects: null // Don't skip any objects
             };
 
-            const printResult = await printerService.commandStartPrint(workflow.printerId, filename, printOptions);
+            const printResult = await printerService.commandStartPrint(workflow.printerId, filename, prinstartOptionstOptions);
 
+            
             if (!printResult.success) {
                 throw new Error(`Failed to start print: ${printResult.message}`);
             }

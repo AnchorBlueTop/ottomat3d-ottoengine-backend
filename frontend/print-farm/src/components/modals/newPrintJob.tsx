@@ -368,6 +368,7 @@ export default function newPrintJob() {
             isOpen={printTaskModalOpen}
             className="pf-custom-new-print-job-modal"
             aria-label="newPrintJob"
+            onClose={() => setIsPrintTaskModalOpen(false)}
         >
             <PageSection className="pf-custom-new-print-job">
                 <ModalHeader className="pf-custom-upload-header">

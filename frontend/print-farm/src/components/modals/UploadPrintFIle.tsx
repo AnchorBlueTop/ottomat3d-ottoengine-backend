@@ -7,27 +7,27 @@ import {
     HelperText,
     HelperTextItem,
     DropEvent,
+    Content,
+    ContentVariants,
     Modal,
     Button,
     ModalFooter,
-    FormSelect,
-    FormSelectOption,
+    ModalHeader,
 } from '@patternfly/react-core';
 import readFile from '../../representations/readFileRepresentation';
-import { UploadIcon } from '@patternfly/react-icons';
+import { UploadIcon, TimesIcon } from '@patternfly/react-icons';
 import { uploadFile } from '../../ottoengine_API';
-import newPrintJob from './newPrintJob';
 
 export default function uploadPrintFile() {
-    const { setIsPrintTaskModalOpen, setIsFileUploadModalOpen, setCurrentFiles, setPrintFile, printJobUID, setPrintJobUID, currentFiles, fileUploadModalOpen, printer } = useContext(JobContext);
+    const { setIsPrintTaskModalOpen, setIsFileUploadModalOpen, setCurrentFiles, setPrintFile, printJobUID, setPrintJobUID, currentFiles, fileUploadModalOpen } = useContext(JobContext);
     const [readFileData, setReadFileData] = useState<readFile[]>([]);
     const [showStatus, setShowStatus] = useState(false);
-    const [statusIcon, setStatusIcon] = useState('inProgress');
+    // Removed unused status icon state
     // const [tempPrinter, setTempPrinter] = useState(0);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     var uniqueId: number | string = '';
 
-    const [nextItemId, setNextItemId] = useState<number>(1);
+    // Removed unused next item id state
 
     const generateJobId = () => {
         // uniqueId = (Math.random().toString(36).substring(2));
@@ -37,13 +37,7 @@ export default function uploadPrintFile() {
     };
 
     useEffect(() => {
-        if (readFileData.length < currentFiles?.length) {
-            setStatusIcon('inProgress');
-        } else if (readFileData.every((file) => file.loadResult === 'success')) {
-            setStatusIcon('success');
-        } else {
-            setStatusIcon('danger');
-        }
+        // Status icon calculation removed (was unused)
 
         generateJobId();
     }, [readFileData]);
@@ -146,7 +140,21 @@ export default function uploadPrintFile() {
             isOpen={fileUploadModalOpen}
             className="pf-custom-print-task-modal pf-v6-u-box-shadow-lg"
             aria-label="add-print-task-modal"
+            onClose={() => setIsFileUploadModalOpen(false)}
         >
+            <ModalHeader className="pf-custom-upload-header">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <Content component={ContentVariants.h3}>{'1. Upload file'}</Content>
+                    <Button
+                        variant="plain"
+                        aria-label="Close"
+                        onClick={() => setIsFileUploadModalOpen(false)}
+                        style={{ color: 'var(--pf-global--Color--100, #151515)' }}
+                    >
+                        <TimesIcon style={{ fontSize: 20 }} />
+                    </Button>
+                </div>
+            </ModalHeader>
             {currentFiles.length == 0 ? (<MultipleFileUpload
                 onFileDrop={handleFileDrop}
                 dropzoneProps={{
@@ -159,7 +167,7 @@ export default function uploadPrintFile() {
                     titleIcon={<UploadIcon />}
                     titleText="Drag and drop files here"
                     titleTextSeparator="or"
-                    infoText="Accepted file types: GCODE"
+                    infoText="Accepted file types: .gcode"
                 />
                 {showStatus && (
                     <>

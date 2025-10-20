@@ -12,8 +12,8 @@ const {
     PrinterCapabilities 
 } = require('../../types');
 
-// Import your existing bambulabs-api
-const BambuPrinter = require('../../../../src/bambulabs-api/index');
+// Import your existing bambulabs-api (module exports { Printer, ... })
+const { Printer: BambuPrinter } = require('../../../../src/bambulabs-api');
 
 /**
  * Adapter for Bambu Lab printers using LAN/MQTT communication
@@ -128,7 +128,7 @@ class BambuLanAdapter extends IPrinterAdapter {
             
             const printerStatus = new PrinterStatus({
                 ...normalizedStatus,
-                vendor_data: this._printer.dump() // Include raw data for debugging
+                vendor_data: this._printer.mqtt_dump() // Include raw data for debugging
             });
             
             this._lastStatus = printerStatus;
@@ -233,7 +233,7 @@ class BambuLanAdapter extends IPrinterAdapter {
                 throw AdapterError.PRINTER_ERROR('Filename is required to start print');
             }
 
-            const success = await this._printer.startPrint(
+            const success = await this._printer.start_print(
                 spec.filename,
                 spec.plate_id,
                 spec.use_ams,
@@ -263,7 +263,7 @@ class BambuLanAdapter extends IPrinterAdapter {
         this._requireAuth();
         
         try {
-            const success = await this._printer.pausePrint();
+            const success = await this._printer.pause_print();
             
             return {
                 success: success,
@@ -279,7 +279,7 @@ class BambuLanAdapter extends IPrinterAdapter {
         this._requireAuth();
         
         try {
-            const success = await this._printer.resumePrint();
+            const success = await this._printer.resume_print();
             
             return {
                 success: success,
@@ -295,7 +295,7 @@ class BambuLanAdapter extends IPrinterAdapter {
         this._requireAuth();
         
         try {
-            const success = await this._printer.stopPrint();
+            const success = await this._printer.stop_print();
             
             return {
                 success: success,
@@ -313,7 +313,7 @@ class BambuLanAdapter extends IPrinterAdapter {
         this._requireAuth();
         
         try {
-            const success = await this._printer.sendGcode(gcode, true); // Enable validation
+            const success = await this._printer.gcode(gcode, true); // Enable validation
             
             return {
                 success: success,
@@ -366,8 +366,8 @@ class BambuLanAdapter extends IPrinterAdapter {
         return {
             status: statusMap[state] || 'UNKNOWN',
             current_stage: stage,
-            progress_percent: this._printer.getPrintPercentage(),
-            remaining_time_minutes: this._printer.getRemainingTime(),
+            progress_percent: this._printer.get_percentage(),
+            remaining_time_minutes: this._printer.get_time(),
             temperatures: {
                 nozzle: this._printer.getNozzleTemperature(),
                 nozzle_target: this._printer.getNozzleTargetTemperature(),
@@ -381,7 +381,7 @@ class BambuLanAdapter extends IPrinterAdapter {
                 source: null
             },
             print_job: {
-                file: this._printer.getFilename(),
+                file: this._printer.get_filename(),
                 project_id: null,
                 task_id: null
             },

@@ -55,6 +55,7 @@ export default function newOttoeject() {
             isOpen={ottoejectAddModalOpen}
             className="pf-custom-new-ottoeject-modal"
             aria-label="newOttoeject"
+            onClose={() => setIsOttoejectAddModalOpen(false)}
         >
             <PageSection className="pf-custom-new-ottoeject">
                 <ModalHeader className="pf-custom-upload-header">

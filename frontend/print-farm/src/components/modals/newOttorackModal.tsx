@@ -16,12 +16,13 @@ import { JobContext } from "../../App.tsx";
 import { OttoRackRegistration, Shelf, PrintJob } from "../../representations/ottorackRepresentation.ts";
 import { createOttorack } from "../../ottoengine_API";
 import ShelfDetailsModal from "./ShelfDetailsModal";
+import RackVisualizer from "../rackVisualisation.tsx";
 
 
 export default function newOttorack() {
     const { ottorack, setOttorack, ottorackAddModalOpen, setIsOttorackAddModalOpen } = useContext(JobContext);
     const [tempOttorack, setTempOttorack] = useState<OttoRackRegistration>({name: ""});
-    const [rackVis, setRackVis] = useState<any[]>([]);
+    // const [rackVis, setRackVis] = useState<any[]>([]);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     
     const [selectedShelf, setSelectedShelf] = useState<number | null>(null);
@@ -33,6 +34,7 @@ export default function newOttorack() {
     const maxValue = 6;
     var uniqueId: number | string = '';
     const [value, setValue] = useState<number>(minValue);
+    const isSaveDisabled = !tempOttorack.name?.trim();
     
     const generateRackId = () => {
         const timestamp = new Date().getTime();
@@ -77,27 +79,67 @@ export default function newOttorack() {
         //     }
         // }
 
+        // try {
+        //     // Prepare the Ottorack data
+        //     const newOttorack = {
+        //         name: tempOttorack.name,
+        //         number_of_shelves: value, // Use the current shelf count
+        //         // shelfSpacingMm: 80, // Example value, adjust as needed
+        //         // bedSize: "256x256", // Example value, adjust as needed
+        //     };
+    
+        //     // Call the API to create the Ottorack
+        //     const createdOttorack = await createOttorack(newOttorack);
+        //     console.log("Ottorack created successfully:", createdOttorack);
+    
+        //     // Update the frontend state
+        //     if (!ottorack) {
+        //         setOttorack([createdOttorack]);
+        //     } else {
+        //         setOttorack([...ottorack, createdOttorack]);
+        //     }
+    
+        //     // Reset temporary state
+        //     setTempOttorack({ name: "", number_of_shelves: 0, shelfSpacingMm: 0, bedSize: "" });
+        //     setTempShelf([]);
+        //     setIsOttorackAddModalOpen(false);
+        // } catch (error) {
+        //     console.error("Error creating Ottorack:", error);
+        //     setErrorMessage("Failed to create Ottorack. Please try again.");
+        // }
+
+        // setIsOttorackAddModalOpen(false);
+
         try {
-            // Prepare the Ottorack data
-            const newOttorack = {
-                name: tempOttorack.name,
-                number_of_shelves: value, // Use the current shelf count
-                // shelfSpacingMm: 80, // Example value, adjust as needed
-                // bedSize: "256x256", // Example value, adjust as needed
+            const number_of_shelves = value;
+
+            // Ensure we send a shelf record for each slot 1..N (1-based ids)
+            const shelves = Array.from({ length: number_of_shelves }, (_, i) => {
+                const id = i + 1;
+                const s = tempShelf.find(sh => sh.id === id);
+                return {
+                    id,                                        // 1-based shelf id
+                    type: (s?.type ?? '') as '' | 'empty_plate' | 'build_plate',
+                    occupied: Boolean(s?.occupied),
+                };
+            });
+
+            const registration: OttoRackRegistration = {
+                name: (tempOttorack.name || '').trim(),
+                number_of_shelves,
+                bedSize: tempOttorack.bedSize || undefined,
+                shelfSpacingMm:
+                    tempOttorack.shelfSpacingMm !== undefined && tempOttorack.shelfSpacingMm !== ''
+                        ? Number(tempOttorack.shelfSpacingMm)
+                        : undefined,
+                shelves,
             };
-    
-            // Call the API to create the Ottorack
-            const createdOttorack = await createOttorack(newOttorack);
-            console.log("Ottorack created successfully:", createdOttorack);
-    
-            // Update the frontend state
-            if (!ottorack) {
-                setOttorack([createdOttorack]);
-            } else {
-                setOttorack([...ottorack, createdOttorack]);
-            }
-    
-            // Reset temporary state
+
+            const createdOttorack = await createOttorack(registration);
+
+            setOttorack(prev => (prev ? [...prev, createdOttorack] : [createdOttorack]));
+
+            // Reset state and close
             setTempOttorack({ name: "", number_of_shelves: 0, shelfSpacingMm: 0, bedSize: "" });
             setTempShelf([]);
             setIsOttorackAddModalOpen(false);
@@ -105,8 +147,6 @@ export default function newOttorack() {
             console.error("Error creating Ottorack:", error);
             setErrorMessage("Failed to create Ottorack. Please try again.");
         }
-
-        // setIsOttorackAddModalOpen(false);
     };
 
     const normalizeBetween = (value: number, min: number, max: number) => {
@@ -119,48 +159,49 @@ export default function newOttorack() {
         }
         return value;
     };
-
-    // const onMinus = () => {
-    //     const newValue = normalizeBetween((value as number) - 1, minValue, maxValue);
-    //     setValue(newValue);
-    //     // tempShelf?.pop();
-    //     // setTempOttorack({...tempOttorack, shelves: newValue});
-    //     rackVisualisation(newValue);
-    // };
-
     const onMinus = () => {
         const newValue = normalizeBetween(value - 1, minValue, maxValue);
         setValue(newValue);
-    
-        // Update tempShelf to match the new number of shelves
-        const updatedShelves = [...tempShelf];
-        updatedShelves.splice(newValue); // Remove extra shelves if the value decreases
-    
-        setTempShelf(updatedShelves);
-    
-        // Trigger visualization update with the new value
-        rackVisualisation(newValue);
+        setTempShelf(prev => {
+          const next = [...prev];
+          next.splice(newValue);
+          return next.map((s, i) => ({ ...s, id: i + 1 }));
+        });
     };
 
-    const onChange = (event: React.FormEvent<HTMLInputElement>) => {
-        const value = (event.target as HTMLInputElement).value;
-        // setValue(value === '' ? value : +value);
-        // setTempOttorack({...tempOttorack, shelves: (value === undefined ? value : +value)});
-        rackVisualisation(value);
-    };
+    // const onMinus = () => {
+    //     const newValue = normalizeBetween(value - 1, minValue, maxValue);
+    //     setValue(newValue);
+    
+    //     // Update tempShelf to match the new number of shelves
+    //     const updatedShelves = [...tempShelf];
+    //     updatedShelves.splice(newValue); // Remove extra shelves if the value decreases
+    
+    //     setTempShelf(updatedShelves);
+    
+    //     // Trigger visualization update with the new value
+    //     rackVisualisation(newValue);
+    // };
 
-    const onBlur = (event: React.FocusEvent<HTMLInputElement>) => {
-        const blurVal = +event.target.value;
+    // const onChange = (event: React.FormEvent<HTMLInputElement>) => {
+    //     const value = (event.target as HTMLInputElement).value;
+    //     // setValue(value === '' ? value : +value);
+    //     // setTempOttorack({...tempOttorack, shelves: (value === undefined ? value : +value)});
+    //     rackVisualisation(value);
+    // };
 
-        if (blurVal < minValue) {
-            setValue(minValue);
-            // setTempOttorack({...tempOttorack, shelves: minValue});
-        } else if (blurVal > maxValue) {
-            setValue(maxValue);
-            // setTempOttorack({...tempOttorack, shelves: maxValue});
-        }
-        rackVisualisation(value);
-    };
+    // const onBlur = (event: React.FocusEvent<HTMLInputElement>) => {
+    //     const blurVal = +event.target.value;
+
+    //     if (blurVal < minValue) {
+    //         setValue(minValue);
+    //         // setTempOttorack({...tempOttorack, shelves: minValue});
+    //     } else if (blurVal > maxValue) {
+    //         setValue(maxValue);
+    //         // setTempOttorack({...tempOttorack, shelves: maxValue});
+    //     }
+    //     rackVisualisation(value);
+    // };
 
     // const onPlus = () => {
     //     const newValue = normalizeBetween((value as number) + 1, minValue, maxValue);
@@ -168,20 +209,31 @@ export default function newOttorack() {
     //     rackVisualisation(newValue);
     // };
 
+    // const onPlus = () => {
+    //     const newValue = normalizeBetween(value + 1, minValue, maxValue);
+    //     setValue(newValue);
+    
+    //     // Update tempShelf to match the new number of shelves
+    //     const updatedShelves = [...tempShelf];
+    //     while (updatedShelves.length < newValue) {
+    //         updatedShelves.push({ id: updatedShelves.length + 1, type: "", occupied: false }); // Use 1-based numbering
+    //     }
+    
+    //     setTempShelf(updatedShelves);
+    
+    //     // Trigger visualization update with the new value
+    //     rackVisualisation(newValue);
+    // };
     const onPlus = () => {
         const newValue = normalizeBetween(value + 1, minValue, maxValue);
         setValue(newValue);
-    
-        // Update tempShelf to match the new number of shelves
-        const updatedShelves = [...tempShelf];
-        while (updatedShelves.length < newValue) {
-            updatedShelves.push({ id: updatedShelves.length + 1, type: "", occupied: false }); // Use 1-based numbering
-        }
-    
-        setTempShelf(updatedShelves);
-    
-        // Trigger visualization update with the new value
-        rackVisualisation(newValue);
+        setTempShelf(prev => {
+          const next = [...prev];
+          while (next.length < newValue) {
+            next.push({ id: next.length + 1, type: "", occupied: false });
+          }
+          return next;
+        });
     };
 
     // const rackVisualisation = (value?: any) => {
@@ -246,123 +298,143 @@ export default function newOttorack() {
     //     setRackVis(newRackVis.reverse());
     // };
 
-    const rackVisualisation = (value?: number | any) => {
-        if (!value || value < 1) return;
+    // const rackVisualisation = (value?: number | any) => {
+    //     if (!value || value < 1) return;
     
-        const newRackVis = [];
-        for (let i = 0; i < value; i++) {
-            const shelf = tempShelf?.find((s) => s.id === i + 1);
+    //     const newRackVis = [];
+    //     for (let i = 0; i < value; i++) {
+    //         const shelf = tempShelf?.find((s) => s.id === i + 1);
     
-            // Determine the class for the wrapper based on the shelf type
-            const wrapperClass = shelf?.type === "empty_plate" ? "empty-plate-bg" : "empty-shelf-bg";
+    //         // Determine the class for the wrapper based on the shelf type
+    //         const wrapperClass = shelf?.type === "empty_plate" ? "empty-plate-bg" : "empty-shelf-bg";
     
-            // Calculate the shelf number starting from the bottom
-            const shelfNumber = (i + 1); // Reverse the numbering
+    //         // Calculate the shelf number starting from the bottom
+    //         const shelfNumber = (i + 1); // Reverse the numbering
     
-            // Dropdown for selecting shelf type
-            const shelfDropdown = (
-                <select
-                    className="shelf-dropdown"
-                    value={shelf?.type || ""}
-                    onChange={(e) => handleShelfTypeChange(shelfNumber, e.target.value)}
-                >
-                    <option value="">Empty Shelf</option>
-                    <option value="empty_plate">Empty Plate</option>
-                </select>
-            );
+    //         // Dropdown for selecting shelf type
+    //         const shelfDropdown = (
+    //             <select
+    //                 className="shelf-dropdown"
+    //                 value={shelf?.type || ""}
+    //                 onChange={(e) => handleShelfTypeChange(shelfNumber, e.target.value)}
+    //             >
+    //                 <option value="">Empty Shelf</option>
+    //                 <option value="empty_plate">Empty Plate</option>
+    //             </select>
+    //         );
     
-            newRackVis.push(
-                <div key={i} className="shelf-row">
-                    <span className="shelf-number">{shelfNumber}</span> {/* Display shelf number */}
-                    <label className={`customCheckBoxWrapper ${wrapperClass}`}>
-                        <div className="customCheckBox">
-                            {shelfDropdown}
-                        </div>
-                    </label>
-                </div>
-            );
-        }
+    //         newRackVis.push(
+    //             <div key={i} className="shelf-row">
+    //                 <span className="shelf-number">{shelfNumber}</span> {/* Display shelf number */}
+    //                 <label className={`customCheckBoxWrapper ${wrapperClass}`}>
+    //                     <div className="customCheckBox">
+    //                         {shelfDropdown}
+    //                     </div>
+    //                 </label>
+    //             </div>
+    //         );
+    //     }
     
-        setRackVis(newRackVis); // Update the visualization
-    };
+    //     setRackVis(newRackVis); // Update the visualization
+    // };
 
-    const handleShelfTypeChange = (shelfNumber: number, newType: string) => {
-        const updatedShelves = [...(tempShelf || [])];
-        const shelfIndex = updatedShelves.findIndex((shelf) => shelf.id === shelfNumber);
+    // const handleShelfTypeChange = (shelfNumber: number, newType: string) => {
+    //     const updatedShelves = [...(tempShelf || [])];
+    //     const shelfIndex = updatedShelves.findIndex((shelf) => shelf.id === shelfNumber);
 
-        if (shelfIndex !== -1) {
-            updatedShelves[shelfIndex] = {
-                ...updatedShelves[shelfIndex],
-                type: newType,
-                occupied: newType === "empty_plate",
-            };
-        } else {
-            updatedShelves.push({
-                id: shelfNumber,
-                type: newType,
-                occupied: newType === "empty_plate",
-            });
-        }
+    //     if (shelfIndex !== -1) {
+    //         updatedShelves[shelfIndex] = {
+    //             ...updatedShelves[shelfIndex],
+    //             type: newType,
+    //             occupied: newType === "empty_plate",
+    //         };
+    //     } else {
+    //         updatedShelves.push({
+    //             id: shelfNumber,
+    //             type: newType,
+    //             occupied: newType === "empty_plate",
+    //         });
+    //     }
 
-        setTempShelf(updatedShelves);
-        rackVisualisation(updatedShelves.length);
-    };
+    //     setTempShelf(updatedShelves);
+    //     rackVisualisation(updatedShelves.length);
+    // };
+    const handleShelfTypeChange = (shelfNumber: number, newType: '' | 'empty_plate') => {
+        setTempShelf(prev => {
+          const next = [...prev];
+          const idx = next.findIndex(s => s.id === shelfNumber);
+          const updated = { id: shelfNumber, type: newType, occupied: newType === 'empty_plate' };
+          if (idx !== -1) next[idx] = updated; else next.push(updated);
+          return next;
+        });
+      };
+      const addShelf = (index: number, type: "build_plate") => {
+        setTempShelf(prev => {
+          const next = [...prev];
+          while (next.length < value) next.push({ id: next.length + 1, type: "", occupied: false });
+          next[index] = { id: index + 1, type, occupied: false };
+          return next;
+        });
+      };
+    
+      const removeShelf = (index: number) => {
+        setTempShelf(prev => {
+          const next = [...prev];
+          if (index >= 0 && index < next.length) {
+            next[index] = { id: index + 1, type: "", occupied: false };
+          }
+          return next;
+        });
+      };
 
-    const addShelf = (index: number, type: "build_plate") => {
-        const updatedShelves = [...tempShelf];
+    // const handleShelfClick = (shelfNumber: number) => {
+    //     const updatedShelves = [...tempShelf];
+    //     const shelfIndex = updatedShelves.findIndex((shelf) => shelf.id === shelfNumber);
     
-        // Ensure the shelf exists in the array before updating
-        while (updatedShelves.length < value) {
-            updatedShelves.push({ id: updatedShelves.length + 1, type: "", occupied: false });
-        }
+    //     if (shelfIndex !== -1) {
+    //         // Toggle or update the shelf's type
+    //         const currentShelf = updatedShelves[shelfIndex];
+    //         if (currentShelf.type === "empty_plate") {
+    //             updatedShelves[shelfIndex] = {
+    //                 ...currentShelf,
+    //                 type: "", // Clear the type
+    //                 occupied: false,
+    //             };
+    //         } else {
+    //             updatedShelves[shelfIndex] = {
+    //                 ...currentShelf,
+    //                 type: "empty_plate", // Assign an empty plate
+    //                 occupied: true,
+    //             };
+    //         }
+    //     } else {
+    //         // If the shelf doesn't exist, create it and assign a default type
+    //         updatedShelves.push({
+    //             id: shelfNumber,
+    //             type: "empty_plate",
+    //             occupied: true,
+    //         });
+    //     }
     
-        // Update the specific shelf
-        updatedShelves[index] = { id: index + 1, type, occupied: false };
-    
-        // Update the state and trigger re-render
-        setTempShelf(updatedShelves);
-        rackVisualisation(); // Trigger visualization update
-    };
-    
-    const removeShelf = (index: number) => {
-        const updatedShelves = [...tempShelf];
-        updatedShelves[index] = { id: index + 1, type: "", occupied: false };
-        setTempShelf(updatedShelves); // Update the state
-        rackVisualisation(value); // Trigger visualization update
-    };
-
+    //     setTempShelf(updatedShelves); // Update the state
+    //     setSelectedShelf(shelfNumber); // Update the selected shelf
+    //     rackVisualisation(value); // Ensure the visualization is updated
+    // };
     const handleShelfClick = (shelfNumber: number) => {
-        const updatedShelves = [...tempShelf];
-        const shelfIndex = updatedShelves.findIndex((shelf) => shelf.id === shelfNumber);
-    
-        if (shelfIndex !== -1) {
-            // Toggle or update the shelf's type
-            const currentShelf = updatedShelves[shelfIndex];
-            if (currentShelf.type === "empty_plate") {
-                updatedShelves[shelfIndex] = {
-                    ...currentShelf,
-                    type: "", // Clear the type
-                    occupied: false,
-                };
-            } else {
-                updatedShelves[shelfIndex] = {
-                    ...currentShelf,
-                    type: "empty_plate", // Assign an empty plate
-                    occupied: true,
-                };
-            }
-        } else {
-            // If the shelf doesn't exist, create it and assign a default type
-            updatedShelves.push({
-                id: shelfNumber,
-                type: "empty_plate",
-                occupied: true,
-            });
-        }
-    
-        setTempShelf(updatedShelves); // Update the state
-        setSelectedShelf(shelfNumber); // Update the selected shelf
-        rackVisualisation(value); // Ensure the visualization is updated
+        setTempShelf(prev => {
+          const next = [...prev];
+          const idx = next.findIndex(shelf => shelf.id === shelfNumber);
+          if (idx !== -1) {
+            const cur = next[idx];
+            next[idx] = cur.type === "empty_plate"
+              ? { ...cur, type: "", occupied: false }
+              : { ...cur, type: "empty_plate", occupied: true };
+          } else {
+            next.push({ id: shelfNumber, type: "empty_plate", occupied: true });
+          }
+          return next;
+        });
+        setSelectedShelf(shelfNumber);
     };
 
     // useEffect(() => {
@@ -380,27 +452,40 @@ export default function newOttorack() {
     //     rackVisualisation(); // Update rack visualization
     // }, [ottorackAddModalOpen]);
 
-    useEffect(() => {
-        if (ottorackAddModalOpen) {
+    // useEffect(() => {
+    //     if (ottorackAddModalOpen) {
             
             
-            if(tempShelf.length === 0){
-                setValue(minValue); // Default to 1 shelf
-                const initializedShelves = Array(minValue) // Default to 1 shelf
-                    .fill(null)
-                    .map((_, index) => ({
-                        id: index + 1,
-                        type: tempShelf[index]?.type || "", // Preserve existing shelf type if available
-                        occupied: tempShelf[index]?.occupied || false, // Preserve existing occupied state
-                    }));
-                setTempShelf(initializedShelves || []); // Ensure initializedShelves is not undefined
-            }
+    //         if(tempShelf.length === 0){
+    //             setValue(minValue); // Default to 1 shelf
+    //             const initializedShelves = Array(minValue) // Default to 1 shelf
+    //                 .fill(null)
+    //                 .map((_, index) => ({
+    //                     id: index + 1,
+    //                     type: tempShelf[index]?.type || "", // Preserve existing shelf type if available
+    //                     occupied: tempShelf[index]?.occupied || false, // Preserve existing occupied state
+    //                 }));
+    //             setTempShelf(initializedShelves || []); // Ensure initializedShelves is not undefined
+    //         }
 
             
-            rackVisualisation(value); // Update rack visualization with default value
-        }
-    }, [ottorackAddModalOpen, tempShelf]);
+    //         rackVisualisation(value); // Update rack visualization with default value
+    //     }
+    // }, [ottorackAddModalOpen, tempShelf]);
 
+     useEffect(() => {
+           setTempShelf(prev => {
+             const next = [...prev];
+             while (next.length < value) {
+               next.push({ id: next.length + 1, type: "", occupied: false });
+             }
+             if (next.length > value) {
+               next.splice(value);
+             }
+             // normalize ids 1..value
+             return next.map((s, i) => ({ ...s, id: i + 1 }));
+           });
+         }, [value]);
 
     // return (
     //     <Modal
@@ -506,10 +591,10 @@ export default function newOttorack() {
 
     return (
         <Modal
-        isOpen={ottorackAddModalOpen}
-        className="pf-custom-new-ottorack-modal"
-        aria-label="newOttorack"
-    >
+            isOpen={ottorackAddModalOpen}
+            className="pf-custom-new-ottorack-modal"
+            aria-label="newOttorack"
+        >
         <PageSection className="pf-custom-new-ottorack">
             <ModalHeader className="pf-custom-upload-header">
                 <Content component={ContentVariants.h3}>
@@ -588,7 +673,13 @@ export default function newOttorack() {
                     </Form>
                 </GridItem>
                 <GridItem span={4} className="pf-custom-rack-render">
-                    {rackVis}
+                    {/* {rackVis} */}
+                        <RackVisualizer
+                            shelves={tempShelf}
+                            count={value}
+                            onTypeChange={handleShelfTypeChange}
+                            onShelfClick={handleShelfClick}
+                        />
                 </GridItem>
             </Grid>
             <ModalFooter>

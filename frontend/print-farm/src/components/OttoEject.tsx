@@ -9,7 +9,7 @@ import {
     Tr,
     Td
 } from "@patternfly/react-table";
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useRef } from "react";
 import { JobContext } from "../App";
 import { getAllOttoejectDevices, getOttoejectById } from "../ottoengine_API";
 import AddNewOttoejectButton from "./buttons/addNewOttoejectButton";
@@ -19,20 +19,36 @@ import { OttoejectDevice } from "../representations/ottoejectRepresentation";
 
 export function Ottoeject() {
     const { ottoeject, setOttoeject, setOttoejectIndex, setIsOttoejectEditModalOpen } = useContext(JobContext);
-
+    const fetchedRef = useRef(false);
+    
     const ottoEjectFecth = async () => {
-        var tempOttoejectList: OttoejectDevice[] = [];
+        // Prevent multiple fetches (StrictMode/double render)
+        if (fetchedRef.current) return;
+        fetchedRef.current = true;
 
-        await getAllOttoejectDevices().then(async (allOttoejects) => {
-            allOttoejects.forEach(async (value) => {
-                if (value.id && !ottoeject.find((e) => e.id === value.id)?.id) {
-                    await getOttoejectById(value.id).then((ottoejectData) => {
-                        tempOttoejectList.push(ottoejectData);
-                        setOttoeject([...tempOttoejectList]);
-                    });
-                }
-            });
-        });
+        try {
+            const all = await getAllOttoejectDevices();
+
+            const ids = Array.from(
+                new Set(
+                    (all ?? [])
+                        .map(d => d.id)
+                        .filter((id): id is number => id !== undefined && id !== null)
+                )
+            );
+
+            if (ids.length === 0) {
+                setOttoeject([]);
+                return;
+            }
+
+            // Batch detail calls and set state once
+            const details = await Promise.all(ids.map(id => getOttoejectById(id)));
+            setOttoeject(details);
+        } catch (e) {
+            console.error('Failed to load ottoeject devices:', e);
+            setOttoeject([]); // optional
+        }
     }
 
     const OttoejectList = () => {

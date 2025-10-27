@@ -9,8 +9,8 @@ import {
 
 // const BASE_URL = import.meta.env.BASE_URL || 'http://localhost:3000'; 
 // const BASE_URL = 'http://localhost:3000';
-const BASE_URL = 'http://127.0.0.1:3000';
-// const BASE_URL = 'http://100.79.73.105:3000';
+// const BASE_URL = 'http://127.0.0.1:3000';
+const BASE_URL = 'http://100.79.73.105:3000';
 
 /////// OTTO PRINTER APIs ///////
 export const registerPrinter = async (printerData: PrinterRegistrationRepresentation): Promise<PrinterRepresentation> => {
@@ -265,6 +265,16 @@ export const deletePrintJob = async (id: number): Promise<void> => {
   if (!response.ok) {
     throw new Error(`Error deleting print job with ID ${id}: ${response.statusText}`);
   }
+};
+
+export const startPrintJob = async (id: number | string): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/print-jobs/${id}/start`, {
+    method: "POST",
+  });
+  if (!response.ok) {
+    throw new Error(`Error starting print job with ID ${id}: ${response.statusText}`);
+  }
+  return response.json();
 };
 
 /////// OTTO RACK APIs ///////

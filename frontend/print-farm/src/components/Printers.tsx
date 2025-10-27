@@ -20,18 +20,43 @@ import { PRINTER_BRANDS } from "../constants/printerBrands";
 
 export function Printers() {
     const { printer, setPrinter, setIsPrinterEditModalOpen, setPrinterIndex } = useContext(JobContext);
-    const printerFecth = async () => {
-        var tempPrinterList: PrinterRepresentation[] = [];
+    // const printerFecth = async () => {
+    //     var tempPrinterList: PrinterRepresentation[] = [];
 
-        // TODO: UPDATE PRINT BED TEMP MORE FREQUENTLY
+    //     // TODO: UPDATE PRINT BED TEMP MORE FREQUENTLY
+    //     const allPrinters = await getAllPrinters();
+    //     for (const value of allPrinters) {
+    //         if (value.id && !printer.find((e) => e.id === value.id)?.id) {
+    //             const printerData = await getPrinterById(value.id);
+    //             tempPrinterList.push(printerData);
+    //             setPrinter([...tempPrinterList]);
+    //         }
+    //     }
+    // }
+
+    const printerFetch = async () => {
         const allPrinters = await getAllPrinters();
+        const details: PrinterRepresentation[] = [];
         for (const value of allPrinters) {
-            if (value.id && !printer.find((e) => e.id === value.id)?.id) {
+            if (value.id) {
                 const printerData = await getPrinterById(value.id);
-                tempPrinterList.push(printerData);
-                setPrinter([...tempPrinterList]);
+                details.push(printerData);
             }
         }
+        setPrinter(prev => {
+            const byId = new Map<string, PrinterRepresentation>();
+            // Keep existing first (preserve any local edits/order)
+            for (const p of prev) {
+                const key = String(p.id ?? `${p.name}-${p.brand}-${p.model}`);
+                byId.set(key, p);
+            }
+            // Merge fetched (overwrites same id)
+            for (const p of details) {
+                const key = String(p.id ?? `${p.name}-${p.brand}-${p.model}`);
+                byId.set(key, p);
+            }
+            return Array.from(byId.values());
+        });
     }
 
     const getBrandLabel = (brandValue?: string) => {
@@ -53,7 +78,7 @@ export function Printers() {
                     <Table>
                         <Thead>
                             <Tr>
-                                <Th />
+                                <Th aria-label="status"/>
                                 <Th>{'Name'}</Th>
                                 <Th>{'Make and Model'}</Th>
                                 <Th>{'Bed Temperature'}</Th>
@@ -62,7 +87,7 @@ export function Printers() {
                         <Tbody>
                             {printer.map((value, index) => (
                                 <Tr
-                                    key={index}
+                                    key={value.id ?? index}
                                     onClick={() => {
                                         setPrinterIndex(index)
                                         setIsPrinterEditModalOpen(true)
@@ -98,14 +123,12 @@ export function Printers() {
     }
 
     useEffect(() => {
-        printerFecth();
-
+        printerFetch();
     }, []);
 
     return (
         <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-
                 <PageSection id='top-toolbar' className="pf-custom-top-toolbar">
                     {AddNewPrinterButton()}
                 </PageSection>

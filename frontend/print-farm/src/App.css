@@ -113,12 +113,7 @@
   /* height: calc(100vh - 2.75rem); */
 }
 
-.pf-v6-c-page__main-body {
-  /* display: flex; */
-  /* height: calc(100vh - 1.5rem);
-  border-radius: 10px;
-  overflow-y: auto; */
-}
+/* Removed empty .pf-v6-c-page__main-body ruleset */
 
 .pf-c-table {
   table-layout: fixed;
@@ -357,6 +352,11 @@
   height: auto;
 }
 
+.pf-custom-align-center-horizontally {
+  align-items: center;
+  /* justify-content: center; */
+}
+
 .pf-custom-new-ottoeject-modal-footer {
   padding-top: 1rem;
 }
@@ -443,6 +443,11 @@
   padding-bottom: 1rem;
 }
 
+.shelf-row.no-divider,
+.shelf-row.no-divider .customCheckBoxWrapper {
+  border: none !important;
+  background-image: none !important; /* in case dashes are via background */
+}
 
 .shelf-dropdown {
   min-width: 150px;
@@ -454,6 +459,30 @@
   color: inherit;
   cursor: pointer;
   outline: none;
+}
+
+.shelf-row.empty-plate-bg {
+  background-color: #71aef3;
+  color: #1B1A4F;
+  border-radius: 8px;
+}
+.shelf-row.empty-shelf-bg {
+  background-color: transparent;
+}
+.shelf-row.empty-plate-bg .customCheckBoxWrapper,
+.shelf-row.empty-plate-bg .customCheckBox,
+.shelf-row.empty-plate-bg .shelf-dropdown {
+  background-color: transparent;
+  color: inherit;
+}
+
+.shelf-row.empty-plate-bg {
+  background-color: #71aef3;
+  color: #1B1A4F;
+  border-radius: 8px;
+}
+.shelf-row.empty-shelf-bg {
+  background-color: transparent;
 }
 
 .shelf-dropdown::after {
@@ -639,4 +668,126 @@
   border-radius: 4px;
   font-size: 14px;
   background-color: #FFFF;
+}
+
+
+/* Container uses a small vertical gap between shelves */
+.rack-visualizer {
+  display: flex;
+  flex-direction: column;
+  gap: 0px; /* adjust to taste (e.g., 2–8px) */
+}
+
+/* Remove dashed/bottom borders and background lines if any */
+.rack-visualizer .shelf-row.no-divider {
+  border: 0 !important;
+  background: none !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+/* If the dashed line comes from inner wrapper */
+.rack-visualizer .shelf-row.no-divider .customCheckBoxWrapper {
+  border: 0 !important;
+  background: none !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+/* Tighten the vertical density inside each row */
+.rack-visualizer .shelf-row {
+  padding-block: 2px;          /* was likely larger */
+}
+
+.rack-visualizer .customCheckBoxWrapper {
+  padding: 2px 4px;            /* reduce internal padding */
+  min-height: unset;           /* in case a min-height is forcing space */
+}
+
+/* Progress meta row under the bar: left percent, right ETA */
+.pf-custom-progress-wrapper .pf-custom-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-top: 4px;
+  font-size: 0.75rem; /* small text */
+  color: #0066cc;     /* PF Gray 600 */
+}
+.pf-custom-progress-wrapper .pf-custom-progress-percent {
+  text-align: left;
+  color: var(--blue-pringting-status);
+  font-weight: 600;
+}
+.pf-custom-progress-wrapper .pf-custom-progress-eta { margin-left: auto; text-align: right; }
+.pf-custom-progress-wrapper .pf-custom-progress-eta-label { color: #6a6e73; }
+.pf-custom-progress-wrapper .pf-custom-progress-eta-value { color: #000; font-weight: 600; }
+
+/* Stack duration above the progress bar */
+.pf-custom-progress-wrapper {
+  display: flex;
+  flex-direction: column;   /* duration above bar */
+  align-items: stretch;     /* children take full width */
+  justify-content: center;
+  flex: 1 1 100%;           /* grow to fill */
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  gap: 2px !important;             /* minimal spacing between duration, bar, and meta */
+}
+
+/* Duration above bar spans full width */
+.pf-custom-progress-duration {
+  width: 100%;
+  text-align: left;
+  align-self: flex-start;
+  margin-bottom: 0 !important;     /* no extra space above the bar */
+  font-size: 0.75rem;
+  color: #6a6e73;
+}
+
+/* Shared duration label+icon styles */
+.pf-custom-duration {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pf-custom-duration-icon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  /* filter: saturate(0) opacity(0.7); */
+}
+
+.pf-custom-progress-duration.pf-custom-duration {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Progress component uses full width */
+.pf-custom-progress-wrapper .pf-v6-c-progress {
+  width: 100%;
+  margin: 0 !important;            /* remove default margins */
+  padding: 0 !important;           /* ensure tight vertical rhythm */
+}
+
+/* Progress track and indicator visible */
+.pf-custom-progress-wrapper .pf-v6-c-progress__bar {
+  background-color: #e6e6e6;
+  border-radius: 6px;
+  outline: 1px solid #d9d9d9;
+}
+.pf-custom-progress-wrapper .pf-v6-c-progress__indicator {
+  background-color: var(--blue-pringting-status) !important;
+  border-radius: 6px;
+}
+
+/* Progress cell grows to fill available space */
+.pf-custom-progress-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0%;
+  min-width: 0;
 }

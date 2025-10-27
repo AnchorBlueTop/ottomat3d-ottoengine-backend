@@ -28,4 +28,5 @@ export interface OttoRackRegistration {
     number_of_shelves?: number;
     shelfSpacingMm?: any;
     bedSize?: string;
+    shelves?: Shelf[];
 }

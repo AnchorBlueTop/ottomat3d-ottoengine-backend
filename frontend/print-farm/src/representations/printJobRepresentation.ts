@@ -28,6 +28,7 @@ export default interface PrintJobRepresentation {
     measurement_details_json?: string;
     filament_details_json?: string;
     duration?: string;
+    fileName?: string;
 }
 
 export interface QueueRepresentation {

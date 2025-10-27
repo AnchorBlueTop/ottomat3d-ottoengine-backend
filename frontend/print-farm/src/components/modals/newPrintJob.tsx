@@ -1,5 +1,5 @@
 import { Brand, Button, Content, ContentVariants, Form, FormGroup, Grid, GridItem, Modal, ModalFooter, ModalHeader, PageSection } from "@patternfly/react-core";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { JobContext } from "../../App";
 import PrintJobIcon from '../../public/PrintJob-Icon.svg'
 import thumbnail from '../../public/thumbnail.png';
@@ -11,16 +11,31 @@ import { createPrintJob, getAllPrintJobs } from "../../ottoengine_API";
 import { get } from "http";
 
 export default function newPrintJob() {
-    const { currentFiles, printTaskModalOpen, setIsPrintTaskModalOpen, setCurrentFiles, setPrintJobUID, printJobUID, setOttoeject, ottoeject, setPrintFile, printFile } = useContext(JobContext);
+    // const { currentFiles, printTaskModalOpen, setIsPrintTaskModalOpen, setCurrentFiles, setPrintJobUID, printJobUID, setOttoeject, ottoeject, setPrintFile, printFile } = useContext(JobContext);
+    const {
+        currentFiles, printTaskModalOpen, setIsPrintTaskModalOpen, setCurrentFiles,
+        setPrintJobUID, printJobUID, setOttoeject, ottoeject, setPrintFile, printFile,
+        setPrintJob
+      } = useContext(JobContext);
     const [fileRead, setFileRead] = useState();
     const [printers, setPrinters] = useState<PrinterRepresentation[]>([]);
     const [selectedPrinter, setSelectedPrinter] = useState<number | null>(null);
     const [selectedOttoeject, setSelectedOttoeject] = useState<number | null>(null);
-    
+    const modalDataFetchedRef = useRef(false);
     const [nextItemId, setNextItemId] = useState<number>(1);
     
     var uniqueId: number | string = '';
-    var fileDetails: PrintJobRepresentation = {};
+    // var fileDetails: PrintJobRepresentation = {};
+    var fileDetails: any = {};
+
+    const refreshJobs = async () => {
+        try {
+          const all = await getAllPrintJobs();
+          setPrintJob(all);
+        } catch (e) {
+          console.error('Failed to refresh print jobs', e);
+        }
+    };
 
     // const generateJobId = () => {
     //     uniqueId = (Math.random().toString(36).substring(2));
@@ -300,11 +315,7 @@ export default function newPrintJob() {
             print_item_id: nextItemId,
             printer_id: selectedPrinter,
             ottoeject_id: selectedOttoeject,
-            // print_item_id: printJobUID,
-            // printer_id: 4,
-            // ottoeject_id: 1,
-            // priority: 1,
-            auto_start: false,
+            auto_start: true,
         };
     
         try {
@@ -312,56 +323,107 @@ export default function newPrintJob() {
             const newPrintJob = await createPrintJob(printJobData);
             console.log("Print job created successfully:", newPrintJob);
             setNextItemId(nextItemId + 1); // Increment for the next job
+            await refreshJobs();
         } catch (error) {
             console.error("Error creating print job:", error);
             // setErrorMessage("Failed to create print job. Please try again.");
         }
         setIsPrintTaskModalOpen(!printTaskModalOpen)
     };
+    // const handleCreatePrintJob = async (payload: any) => {
+    //     try {
+    //       // ...existing code that uploads file/builds payload...
+    //       const created = await createPrintJob(payload);
+    
+    //       // Refresh the shared list so Jobs.tsx re-renders
+    //       await refreshJobs();
+    
+    //       // Close modal and cleanup (optional)
+    //       setIsPrintTaskModalOpen(false);
+    //       setCurrentFiles([]);
+    //       // setPrintFile(undefined);
+    //     } catch (e) {
+    //       console.error('Failed to create print job', e);
+    //     }
+    // };
 
-    useEffect(() => {
-        const fetchPrintJobs = async () => {
-            try {
-                const printJobs = await getAllPrintJobs();
-                if (printJobs.length > 0) {
-                    const highestId = Math.max(...printJobs.map((job) => job.print_item_id || 0));
-                    setNextItemId(highestId + 1);
-                } else {
-                    setNextItemId(1); // Start with 1 if no print jobs exist
-                }
-            } catch (error) {
-                console.error("Error fetching print jobs:", error);
-            }
-        };
-        const fetchPrinters = async () => {
-            try {
-                const printerList = await getAllPrinters();
-                setPrinters(printerList);
-            } catch (error) {
-                console.error("Error fetching printers:", error);
-            }
-        };
-        const fetchOttoejectDevices = async () => {
-            try {
-                const devices = await getAllOttoejectDevices();
-                setOttoeject(devices);
-            } catch (error) {
-                console.error("Error fetching Ottoeject devices:", error);
-            }
-        };
+    // useEffect(() => {
+    //     const fetchPrintJobs = async () => {
+    //         try {
+    //             const printJobs = await getAllPrintJobs();
+    //             if (printJobs.length > 0) {
+    //                 const highestId = Math.max(...printJobs.map((job) => job.print_item_id || 0));
+    //                 setNextItemId(highestId + 1);
+    //             } else {
+    //                 setNextItemId(1); // Start with 1 if no print jobs exist
+    //             }
+    //         } catch (error) {
+    //             console.error("Error fetching print jobs:", error);
+    //         }
+    //     };
+    //     const fetchPrinters = async () => {
+    //         try {
+    //             const printerList = await getAllPrinters();
+    //             setPrinters(printerList);
+    //         } catch (error) {
+    //             console.error("Error fetching printers:", error);
+    //         }
+    //     };
+    //     const fetchOttoejectDevices = async () => {
+    //         try {
+    //             const devices = await getAllOttoejectDevices();
+    //             setOttoeject(devices);
+    //         } catch (error) {
+    //             console.error("Error fetching Ottoeject devices:", error);
+    //         }
+    //     };
 
-        fetchOttoejectDevices();
-        fetchPrinters();
-        fetchPrintJobs();
-        // generateJobId();
-        readUploadedFile(currentFiles);
+    //     fetchOttoejectDevices();
+    //     fetchPrinters();
+    //     fetchPrintJobs();
+    //     // generateJobId();
+    //     readUploadedFile(currentFiles);
         
         
 
-        // if (printFile?.printer) {
-        //     setSelectedPrinter(printFile.printer);
-        // }
-    }, [printTaskModalOpen, printFile]);
+    //     // if (printFile?.printer) {
+    //     //     setSelectedPrinter(printFile.printer);
+    //     // }
+    // }, [printTaskModalOpen, printFile]);
+
+
+  useEffect(() => {
+    if (!printTaskModalOpen) {
+        modalDataFetchedRef.current = false; // reset when closed
+        return;
+      }
+      if (modalDataFetchedRef.current) return;
+      modalDataFetchedRef.current = true;
+  
+      let cancelled = false;
+      (async () => {
+        try {
+          if (printers.length === 0) {
+            const printerList = await getAllPrinters();
+            if (!cancelled) setPrinters(printerList);
+          }
+          if (ottoeject.length === 0) {
+            const devices = await getAllOttoejectDevices();
+            if (!cancelled) setOttoeject(devices);
+          }
+          if (currentFiles?.length) {
+            // This function sets state internally; it doesn't resolve, so don't await.
+            readUploadedFile(currentFiles);
+          }
+        } catch (e) {
+          console.error("Failed to load modal data", e);
+        }
+      })();
+  
+      return () => {
+        cancelled = true;
+      };
+    }, [printTaskModalOpen]);
 
     return (
         <Modal
@@ -469,7 +531,7 @@ export default function newPrintJob() {
                         {'Cancel'}
                     </Button>
                     <Button
-                        isDisabled={currentFiles?.length === 0 || !selectedPrinter}
+                        isDisabled={currentFiles?.length === 0 || !selectedPrinter || !selectedOttoeject}
                         className="pf-custom-button"
                         onClick={handleCreatePrintJob}
                     >

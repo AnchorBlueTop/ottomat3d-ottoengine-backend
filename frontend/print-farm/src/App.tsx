@@ -63,6 +63,8 @@ type ContextType = {
   setSelectedJobIDs: React.Dispatch<React.SetStateAction<any[]>>;
   printJobUID: number | undefined;
   setPrintJobUID: React.Dispatch<React.SetStateAction<number | undefined>>;
+  isEditPrintJobModalOpen: boolean;
+  setIsEditPrintJobModalOpen: (open: boolean) => void;
 
   // Print Queue
   jobQueueModalOpen: boolean;
@@ -109,6 +111,7 @@ export const JobContextProvider: React.FC<Props> = ({ children }) => {
   const [selectedJobIDs, setSelectedJobIDs] = useState<string[]>([]);
   const [jobQueueModalOpen, setIsJobQueueModalOpen] = useState(false);
   const [printJobUID, setPrintJobUID] = useState<number | undefined>();
+  const [isEditPrintJobModalOpen, setIsEditPrintJobModalOpen] = useState(false);
   
 
   // Print Queue
@@ -166,6 +169,8 @@ export const JobContextProvider: React.FC<Props> = ({ children }) => {
     setSelectedJobIDs,
     printJobUID,
     setPrintJobUID,
+    isEditPrintJobModalOpen,
+    setIsEditPrintJobModalOpen,
 
     // Print Queue
     queue,

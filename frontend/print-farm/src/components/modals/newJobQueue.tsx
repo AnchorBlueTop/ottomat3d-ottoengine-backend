@@ -13,7 +13,7 @@ export default function newJobQueue() {
         if (selectedJobIDs.length > 0) {
             if (printJob) {
                 const initialQueue: QueueRepresentation[] = selectedJobIDs.map(idRef => ({
-                    fileName: printJob.find(e => e.id === idRef)?.name,
+                    fileName: printJob.find(e => e.id === idRef)?.fileName,
                     printJobId: idRef,
                     storageLocation: undefined,
                     printer: undefined

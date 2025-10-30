@@ -10,7 +10,7 @@ Ensure you have the following installed:
 
 ## Installation
   ```bash
-  cd ottoengine/frontend/print-farm
+  cd ottoengine/frontend
   ```
 
 2. Install dependencies:
@@ -33,9 +33,8 @@ To create a production build, run:
 ```bash
 npm run build
 ```
-or
 
-The build files will be located in the `build` directory.
+The build files will be located in the `dist` directory.
 
 ## License
 

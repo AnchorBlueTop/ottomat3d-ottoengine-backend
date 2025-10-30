@@ -3,17 +3,25 @@ import {
   PageSection,
   Spinner
 } from "@patternfly/react-core";
-import React, { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import React, { createContext, ReactNode, useContext, useState, Suspense, lazy } from "react";
 import { PrinterRepresentation } from "./representations/printerRepresentation";
 import { Layout } from "./Layout";
 import './App.css';
 import { OttoejectDevice } from "./representations/ottoejectRepresentation";
 import PrintJobRepresentation, { QueueRepresentation } from "./representations/printJobRepresentation";
 import { OttoRack } from "./representations/ottorackRepresentation";
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 interface Props {
   children: ReactNode;
 }
+
+// Lazy-load screens for code-splitting
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const Jobs = lazy(() => import('./components/Jobs').then(m => ({ default: m.Job })));
+const Printers = lazy(() => import('./components/Printers').then(m => ({ default: m.Printers })));
+const Ottoeject = lazy(() => import('./components/OttoEject').then(m => ({ default: m.Ottoeject })));
+const Ottorack = lazy(() => import('./components/OttoRack').then(m => ({ default: m.Ottorack })));
 
 type ContextType = {
   // Printer context
@@ -198,22 +206,21 @@ export const useQueue = () => {
 };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<any>('dashboard');
-  const [selectedJob, setSelectedJob] = useState<any>(null);
-  const [selectedPrinter, setSelectedPrinter] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    setLoading(false);
-  }, [])
-
   return (
     <JobContextProvider>
-      <PageSection className="App">
-        <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
-          {loading ? <Spinner /> : ''}
-        </Layout>
-      </PageSection>
+      <Suspense fallback={<PageSection className="App"><Spinner /></PageSection>}>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/jobs" element={<Jobs />} />
+            <Route path="/printers" element={<Printers />} />
+            <Route path="/eject" element={<Ottoeject />} />
+            <Route path="/rack" element={<Ottorack />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Route>
+        </Routes>
+      </Suspense>
     </JobContextProvider>
   );
 }

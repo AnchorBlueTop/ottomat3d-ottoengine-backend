@@ -31,18 +31,23 @@
 
 .App-header {
   background-color: transparent !important;
-
   color: black;
   color-scheme: light dark;
   /* font-size: calc(10px + 2vmin); */
   height: 3.5rem;
-  justify-content: center;
-  display: flex;
+  justify-content: flex-end;
+  align-items: end;
+  display: flex !important;
   padding-bottom: 0.05rem;
   padding-top: 0.05rem;
-  margin: 0.05rem;
+  margin: 0;
   align-items: center;
-  justify-content: flex-end;
+  width: 100%;
+}
+
+/* Ensure the timestamp in the header stays white like before */
+.App-header .pf-v6-c-timestamp {
+  color: #fff !important;
 }
 
 .Main-header {
@@ -50,6 +55,8 @@
   justify-content: start;
   text-wrap: nowrap;
 }
+
+.Main-header .pf-v6-c-content { font-size: 1.5rem; }
 
 .pf-v6-c-timestamp {
   color: white;
@@ -63,14 +70,19 @@
   color: #888;
 }
 
-.pf-c-grid {
+.pf-v6-c-grid {
   height: 100% !important;
+}
+
+.font-weight-normal {
+  font-weight: normal !important;
 }
 
 .pf-custom-navbar {
   /* width: 15rem; */
   width: 100%;
-  min-width: min-content;
+  max-width: 15rem; /* cap the navbar width at 10rem */
+  min-width: 10rem; /* keep consistent with max width */
   color: white !important;
   /* border-radius: var(--border-radius-m); */
   background-color: var(--background-color-dark--blue);
@@ -79,6 +91,19 @@
   /* height: calc(100vh - 3.6rem); */
   height: 100%;
   border-radius: 5rem;
+  text-align: left; /* override #root center alignment */
+  display: flex;
+  flex-direction: column;
+  align-items: center;      /* center all navbar content horizontally */
+  container-type: inline-size;  /* Enable container queries */
+  container-name: navbar;       /* Name the container for queries */
+}
+
+/* Center the logo/brand specifically */
+.pf-custom-navbar .pf-v6-c-brand {
+  align-self: center;       /* ensure logo is centered */
+  margin: 0 auto;           /* additional centering */
+  display: block;           /* make it a block element for centering */
 }
 
 .pf-c-padding-right {
@@ -147,7 +172,7 @@
 
 .pf-c-navbar-button-active {
   padding-inline: 0 !important;
-  font-size: large !important;
+  font-size: 1.5rem !important;
   color: var(--neon-lime) !important;
   border-radius: 0.5rem !important;
   background-color: transparent !important;
@@ -155,10 +180,67 @@
 
 .pf-c-navbar-button {
   padding-inline: 0 !important;
-  font-size: large !important;
+  font-size: 1.5rem !important;
   border-radius: 0.5rem !important;
   color: var(--background-color-light) !important;
   background-color: transparent !important;
+}
+
+/* Ensure NavLink inherits the previous navbar colors (works for nested Content) */
+.pf-c-navbar-button,
+.pf-c-navbar-button:link,
+.pf-c-navbar-button:visited,
+.pf-c-navbar-button-active,
+.pf-c-navbar-button-active:link,
+.pf-c-navbar-button-active:visited {
+  padding-inline: 0 !important;
+  font-size: clamp(0.75rem, 4cqw, 1.5rem); /* Dynamic font size based on container width */
+  padding: clamp(0.1rem, 1cqw, 0.2rem) clamp(0.2rem, 1.5cqw, 0.4rem); /* Further reduced outer padding */
+  border-radius: 0.5rem !important;
+  color: var(--background-color-light) !important;
+  background-color: transparent !important;
+  text-decoration: none !important;
+  display: flex;           /* block-level flex to avoid centering by text-align */
+  width: 100%;             /* span full sidebar width */
+  justify-content: flex-start;
+  align-items: center;
+}
+.pf-c-navbar-button *,
+.pf-c-navbar-button:link *,
+.pf-c-navbar-button:visited * {
+  color: var(--background-color-light) !important;
+}
+.pf-c-navbar-button:hover,
+.pf-c-navbar-button:hover * { color: var(--neon-lime) !important; }
+
+.pf-c-navbar-button-active *,
+.pf-c-navbar-button-active:link *,
+.pf-c-navbar-button-active:visited * {
+  color: var(--neon-lime) !important;
+}
+
+/* Space between icon and text */
+.pf-custom-nav-icon {
+  height: clamp(20px, 1.2em, 40px);  /* Scale based on font size - 1.2em matches text height */
+  width: auto;                      /* Maintain aspect ratio */
+  display: inline-block;   /* simpler inline behavior */
+  flex-direction: column;
+  margin-right: 1rem;               /* Keep consistent 1rem gap */
+  filter: brightness(0) saturate(100%) invert(82%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(96%) contrast(94%);
+  /* Default filter makes icons match --background-color-light (#D1D1D1) */
+  flex-shrink: 0;                   /* Prevent icon from shrinking in flex */
+}
+
+/* Icon color for active nav items - match neon lime */
+.pf-c-navbar-button-active .pf-custom-nav-icon {
+  filter: brightness(0) saturate(100%) invert(85%) sepia(46%) saturate(506%) hue-rotate(32deg) brightness(104%) contrast(93%);
+  /* Filter to match --neon-lime (#C2E45E) */
+}
+
+/* Icon color on hover - match neon lime */
+.pf-c-navbar-button:hover .pf-custom-nav-icon {
+  filter: brightness(0) saturate(100%) invert(85%) sepia(46%) saturate(506%) hue-rotate(32deg) brightness(104%) contrast(93%);
+  /* Filter to match --neon-lime (#C2E45E) */
 }
 
 .pf-v6-c-button {
@@ -168,13 +250,18 @@
 }
 
 .pf-v6-c-nav__list {
-  row-gap: 0;
+  row-gap: 1rem;    /* increased from 0 to add vertical spacing between menu items */
+}
+
+.pf-v6-c-nav__list > li {
+  margin-bottom: 0.75rem;   /* add extra spacing between navigation items */
 }
 
 .pf-custom-nav-icon {
   height: 30px;
-  display: inline-flex;
+  display: inline-block;   /* simpler inline behavior */
   flex-direction: column;
+  margin-right: 1rem;    /* increased gap from 0.5rem to 1rem */
 }
 
 .pf-m-primary.pf-custom-button {
@@ -790,4 +877,88 @@
   justify-content: center;
   flex: 1 1 0%;
   min-width: 0;
+}
+
+/* Right-align and force single-line for date/time in the masthead */
+.pf-header-timestamp {
+  margin-left: auto;            /* push to far right */
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;          /* keep date and time on one line */
+  color: #fff;                  /* inherit previous white color */
+}
+.pf-header-timestamp .pf-v6-c-timestamp { color: inherit !important; }
+
+/* Custom app layout: sidebar + main content */
+.pf-custom-layout {
+  --sidebar-width: max(20%, 230px);   /* navbar takes 20% of width but minimum 230px */
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-rows: 100vh;
+  height: 100vh;
+  width: 100%;
+}
+
+/* Responsive breakpoints using container queries */
+@container navbar (max-width: 200px) {
+  .pf-c-navbar-button,
+  .pf-c-navbar-button:link,
+  .pf-c-navbar-button:visited,
+  .pf-c-navbar-button-active,
+  .pf-c-navbar-button-active:link,
+  .pf-c-navbar-button-active:visited {
+    font-size: 0.75rem;
+    padding: 0.1rem 0.2rem;       /* Minimized outer padding for small screens */
+    flex-direction: row;       /* Keep horizontal layout */
+    text-align: left;          /* Left align text */
+  }
+  
+  .pf-custom-nav-icon {
+    height: 1.2em;             /* Match font height at small sizes */
+    margin-right: 1rem;        /* Keep 1rem gap even at small sizes */
+    margin-bottom: 0;          /* Remove vertical margin */
+  }
+}
+
+@container navbar (min-width: 201px) and (max-width: 260px) {
+  .pf-c-navbar-button,
+  .pf-c-navbar-button:link,
+  .pf-c-navbar-button:visited,
+  .pf-c-navbar-button-active,
+  .pf-c-navbar-button-active:link,
+  .pf-c-navbar-button-active:visited {
+    font-size: 1rem;
+    padding: 0.15rem 0.3rem;        /* Minimized outer padding for medium screens */
+  }
+  
+  .pf-custom-nav-icon {
+    height: 1.2em;             /* Match font height at medium sizes */
+    margin-right: 1rem;        /* Keep 1rem gap */
+  }
+}
+
+@container navbar (min-width: 261px) {
+  .pf-c-navbar-button,
+  .pf-c-navbar-button:link,
+  .pf-c-navbar-button:visited,
+  .pf-c-navbar-button-active,
+  .pf-c-navbar-button-active:link,
+  .pf-c-navbar-button-active:visited {
+    font-size: 1.5rem;
+    padding: 0.2rem 0.4rem;        /* Minimized outer padding for large screens */
+  }
+  
+  .pf-custom-nav-icon {
+    height: 1.2em;             /* Match font height at large sizes */
+    margin-right: 1rem;        /* Keep 1rem gap */
+  }
+}
+
+/* Ensure text doesn't wrap and uses ellipsis if needed */
+.pf-c-navbar-button span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
 }

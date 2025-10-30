@@ -34,6 +34,26 @@ class PrinterMQTTClient extends EventEmitter {
 
     log = (...args) => { if (this._debug) { console.log(`[MQTT DEBUG ${this._serialNumber}]`, ...args); } };
     info = (...args) => { console.log(`[MQTT INFO  ${this._serialNumber}]`, ...args); };
+
+    /**
+     * Safe emit wrapper - prevents cascading errors if EventEmitter context is lost
+     */
+    _safeEmit = (eventName, ...args) => {
+        if (typeof this.emit !== 'function') {
+            if (this._debug) {
+                console.warn(`[MQTT WARN  ${this._serialNumber}] Cannot emit '${eventName}' - not an EventEmitter`);
+            }
+            return false;
+        }
+        try {
+            this.emit(eventName, ...args);
+            return true;
+        } catch (emitError) {
+            console.error(`[MQTT ERROR ${this._serialNumber}] Failed to emit '${eventName}':`, emitError.message);
+            return false;
+        }
+    };
+
     error = (...args) => {
         const errorMsgParts = args.map(arg => {
             if (arg instanceof Error) return arg.message;
@@ -42,7 +62,7 @@ class PrinterMQTTClient extends EventEmitter {
         });
         const fullErrorMsg = errorMsgParts.join(' ');
         console.error(`[MQTT ERROR ${this._serialNumber}]`, fullErrorMsg);
-        this.emit('error', fullErrorMsg);
+        this._safeEmit('error', fullErrorMsg);
     };
 
     connect = async () => {
@@ -177,36 +197,36 @@ class PrinterMQTTClient extends EventEmitter {
         
         if (this._isConnected) {
             this._isConnected = false;
-            this.emit('mqtt_close'); 
+            this._safeEmit('mqtt_close');
         } else {
             // If it wasn't connected, ensure state is consistent
             this._isConnected = false;
         }
     };
 
-    _onMQTTConnect = (connack) => { 
+    _onMQTTConnect = (connack) => {
         this.log('Persistent _onMQTTConnect handler triggered. Connack:', connack ? `Code: ${connack.returnCode}` : 'No connack object');
-        
+
         // For Bambu, connack is expected and returnCode 0 means success.
         // If connack is missing, or code is non-zero, it's a failed (re)connect.
         if (!connack || connack.returnCode !== 0) {
             const rc = connack ? connack.returnCode : 'N/A';
             this.error(`MQTT (re)connection failed in persistent handler. Code: ${rc}.`);
             if (this._isConnected) { // If we thought we were connected
-                this._isConnected = false; 
-                this.emit('mqtt_close');   
+                this._isConnected = false;
+                this._safeEmit('mqtt_close');
             }
             return;
         }
 
         this.info('MQTT connected/reconnected successfully via persistent handler.');
         this._isConnected = true;
-        
+
         this._subscribeReport();
         if (this._pushallOnConnect) {
             this.pushall();
         }
-        this.emit('mqtt_connect');
+        this._safeEmit('mqtt_connect');
     };
 
     _setupListeners = () => {
@@ -254,21 +274,7 @@ class PrinterMQTTClient extends EventEmitter {
             const merge=(t,s)=>{for(const k in s){ if(s[k]&&typeof s[k]==='object'&&!Array.isArray(s[k])){t[k]=t[k]||{}; merge(t[k],s[k]);} else {t[k]=s[k];}}};
             merge(this._data, messageJson);
 
-            if (messageJson.print) {
-                 const newState = this._data?.print?.gcode_state; 
-                 const newErrorCode = this._data?.print?.print_error || "0";
-
-                 if (newState !== undefined && newState !== oldState) {
-                     this.emit('state_change', newState, printerStatus); 
-                 }
-                 if (newErrorCode !== "0" && newErrorCode !== oldErrorCode) {
-                      this.error(`Printer reported NEW error code: ${newErrorCode}`);
-                      this.emit('print_error', newErrorCode, printerStatus);
-                 } else if (newErrorCode === "0" && oldErrorCode !== "0") {
-                      this.info(`Printer error code cleared (was ${oldErrorCode}, now ${newErrorCode})`);
-                 }
-            }
-            // Create structured status if we have print data
+            // Create structured status FIRST (before emitting events)
             if (messageJson.print || this._data.print) {
                 try {
                     printerStatus = new PrinterStatus(this._data.print || {});
@@ -277,8 +283,23 @@ class PrinterMQTTClient extends EventEmitter {
                     this.error('Failed to create structured PrinterStatus:', err.message);
                 }
             }
-            
-            this.emit('update', this._data, printerStatus);
+
+            if (messageJson.print) {
+                 const newState = this._data?.print?.gcode_state;
+                 const newErrorCode = this._data?.print?.print_error || "0";
+
+                 if (newState !== undefined && newState !== oldState) {
+                     this._safeEmit('state_change', newState, printerStatus);
+                 }
+                 if (newErrorCode !== "0" && newErrorCode !== oldErrorCode) {
+                      this.error(`Printer reported NEW error code: ${newErrorCode}`);
+                      this._safeEmit('print_error', newErrorCode, printerStatus);
+                 } else if (newErrorCode === "0" && oldErrorCode !== "0") {
+                      this.info(`Printer error code cleared (was ${oldErrorCode}, now ${newErrorCode})`);
+                 }
+            }
+
+            this._safeEmit('update', this._data, printerStatus);
 
         } catch (err) {
             this.error('Failed to parse incoming message:', err.message);
@@ -301,41 +322,41 @@ class PrinterMQTTClient extends EventEmitter {
     };
 
 
-    _onError = (err) => { 
+    _onError = (err) => {
         this.error('MQTT runtime error event:', err.message);
         if (this._isConnected) {
             this._isConnected = false;
-            this.emit('mqtt_close'); 
+            this._safeEmit('mqtt_close');
         }
     };
 
-    _onClose = () => { 
+    _onClose = () => {
         this.info(`MQTT connection closed event. Was connected: ${this._isConnected}`);
         const wasConnected = this._isConnected;
         this._isConnected = false;
-        
+
         // If an explicit connect() call was in progress and its promise not settled,
         // its timeout or specific 'error' handler for that attempt should manage rejecting its promise.
         // We ensure _connectionAttemptPromise is cleared so a new explicit connect() can be made.
         if (this._connectionAttemptPromise) {
             this.log('Clearing active connection attempt promise due to "close" event.');
-            this._connectionAttemptPromise = null; 
+            this._connectionAttemptPromise = null;
         }
-        if (this._connectTimeoutHandle) { 
+        if (this._connectTimeoutHandle) {
             clearTimeout(this._connectTimeoutHandle);
             this._connectTimeoutHandle = null;
         }
-        
+
         if (wasConnected) { // Only emit our mqtt_close if we thought we were connected
-            this.emit('mqtt_close');
+            this._safeEmit('mqtt_close');
         }
     };
 
     _onOffline = () => {
         this.info('MQTT client went "offline". Library might attempt to reconnect.');
-        if (this._isConnected) { 
+        if (this._isConnected) {
              this._isConnected = false;
-             this.emit('mqtt_close'); // Treat offline as a closed connection from our perspective
+             this._safeEmit('mqtt_close');
         }
     };
     

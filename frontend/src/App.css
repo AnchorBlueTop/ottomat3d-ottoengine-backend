@@ -1,0 +1,964 @@
+@import url('@patternfly/patternfly/patternfly.css');
+
+#root {
+  margin: 0 auto;
+  padding: 0.1rem;
+  text-align: center;
+
+  --soft-aloy: #D1D1D1;
+  --deep-indigo: #1B1A4F;
+  --electric-orchid: #805EE5;
+  --orange-burst: #DD691B;
+  --neon-lime: #C2E45E;
+  --green-ready-status: #24A148;
+  --organge-queued-status: #FFA800;
+  --blue-pringting-status: #2979FF;
+  --purple-ejected-status: #9C27B0;
+
+  --background-color-light: #D1D1D1;
+  --box-color-light: #FFFF;
+  --background-color-dark--blue: #1B1A4F;
+  --background-color-light--green: #24A14810;
+
+  --border-radius-m: 10px;
+
+}
+
+.App {
+  text-align: center;
+  height: 100vh;
+}
+
+.App-header {
+  background-color: transparent !important;
+  color: black;
+  color-scheme: light dark;
+  /* font-size: calc(10px + 2vmin); */
+  height: 3.5rem;
+  justify-content: flex-end;
+  align-items: end;
+  display: flex !important;
+  padding-bottom: 0.05rem;
+  padding-top: 0.05rem;
+  margin: 0;
+  align-items: center;
+  width: 100%;
+}
+
+/* Ensure the timestamp in the header stays white like before */
+.App-header .pf-v6-c-timestamp {
+  color: #fff !important;
+}
+
+.Main-header {
+  background-color: transparent !important;
+  justify-content: start;
+  text-wrap: nowrap;
+}
+
+.Main-header .pf-v6-c-content { font-size: 1.5rem; }
+
+.pf-v6-c-timestamp {
+  color: white;
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+.pf-v6-c-grid {
+  height: 100% !important;
+}
+
+.font-weight-normal {
+  font-weight: normal !important;
+}
+
+.pf-custom-navbar {
+  /* width: 15rem; */
+  width: 100%;
+  max-width: 15rem; /* cap the navbar width at 10rem */
+  min-width: 10rem; /* keep consistent with max width */
+  color: white !important;
+  /* border-radius: var(--border-radius-m); */
+  background-color: var(--background-color-dark--blue);
+  /* margin: 0.05rem; */
+  justify-self: center;
+  /* height: calc(100vh - 3.6rem); */
+  height: 100%;
+  border-radius: 5rem;
+  text-align: left; /* override #root center alignment */
+  display: flex;
+  flex-direction: column;
+  align-items: center;      /* center all navbar content horizontally */
+  container-type: inline-size;  /* Enable container queries */
+  container-name: navbar;       /* Name the container for queries */
+}
+
+/* Center the logo/brand specifically */
+.pf-custom-navbar .pf-v6-c-brand {
+  align-self: center;       /* ensure logo is centered */
+  margin: 0 auto;           /* additional centering */
+  display: block;           /* make it a block element for centering */
+}
+
+.pf-c-padding-right {
+  padding-right: 1rem;
+}
+
+.pf-custom-top-toolbar {
+  /* width: calc(100% - 15.1rem); */
+  width: 100%;
+  height: 2.5rem !important;
+  background-color: var(--box-color-light);
+  border-radius: var(--border-radius-m);
+  margin-bottom: 0.2rem;
+  display: flex;
+  justify-content: center;
+  padding: 0.2rem;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding-right: 0.5rem !important;
+}
+
+.pf-v6-c-page__main-section {
+  margin: 0;
+  border-radius: 10px;
+  height: calc(100vh - 0.5rem);
+  overflow-y: auto;
+}
+
+.pf-custom-main {
+  padding: 0;
+  display: flex;
+  /* height: calc(100vh - 2.75rem); */
+}
+
+/* Removed empty .pf-v6-c-page__main-body ruleset */
+
+.pf-c-table {
+  table-layout: fixed;
+  width: 100%;
+  /* overflow: auto; */
+}
+
+.pf-custom-add-button {
+  background-color: var(--background-color-dark--blue) !important;
+  border-radius: 10px;
+  color: #FF832B !important;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  height: 2rem;
+  justify-content: center !important;
+  align-items: center !important;
+}
+
+.pf-custom-start-button {
+  background-color: var(--background-color-light--green) !important;
+  border-radius: 10px;
+  border: #24A148 solid 1px;
+  color: #24A148 !important;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  height: 2rem;
+  justify-content: center !important;
+  align-items: center !important;
+  margin-right: 1rem;
+}
+
+.pf-c-navbar-button-active {
+  padding-inline: 0 !important;
+  font-size: 1.5rem !important;
+  color: var(--neon-lime) !important;
+  border-radius: 0.5rem !important;
+  background-color: transparent !important;
+}
+
+.pf-c-navbar-button {
+  padding-inline: 0 !important;
+  font-size: 1.5rem !important;
+  border-radius: 0.5rem !important;
+  color: var(--background-color-light) !important;
+  background-color: transparent !important;
+}
+
+/* Ensure NavLink inherits the previous navbar colors (works for nested Content) */
+.pf-c-navbar-button,
+.pf-c-navbar-button:link,
+.pf-c-navbar-button:visited,
+.pf-c-navbar-button-active,
+.pf-c-navbar-button-active:link,
+.pf-c-navbar-button-active:visited {
+  padding-inline: 0 !important;
+  font-size: clamp(0.75rem, 4cqw, 1.5rem); /* Dynamic font size based on container width */
+  padding: clamp(0.1rem, 1cqw, 0.2rem) clamp(0.2rem, 1.5cqw, 0.4rem); /* Further reduced outer padding */
+  border-radius: 0.5rem !important;
+  color: var(--background-color-light) !important;
+  background-color: transparent !important;
+  text-decoration: none !important;
+  display: flex;           /* block-level flex to avoid centering by text-align */
+  width: 100%;             /* span full sidebar width */
+  justify-content: flex-start;
+  align-items: center;
+}
+.pf-c-navbar-button *,
+.pf-c-navbar-button:link *,
+.pf-c-navbar-button:visited * {
+  color: var(--background-color-light) !important;
+}
+.pf-c-navbar-button:hover,
+.pf-c-navbar-button:hover * { color: var(--neon-lime) !important; }
+
+.pf-c-navbar-button-active *,
+.pf-c-navbar-button-active:link *,
+.pf-c-navbar-button-active:visited * {
+  color: var(--neon-lime) !important;
+}
+
+/* Space between icon and text */
+.pf-custom-nav-icon {
+  height: clamp(20px, 1.2em, 40px);  /* Scale based on font size - 1.2em matches text height */
+  width: auto;                      /* Maintain aspect ratio */
+  display: inline-block;   /* simpler inline behavior */
+  flex-direction: column;
+  margin-right: 1rem;               /* Keep consistent 1rem gap */
+  filter: brightness(0) saturate(100%) invert(82%) sepia(0%) saturate(0%) hue-rotate(180deg) brightness(96%) contrast(94%);
+  /* Default filter makes icons match --background-color-light (#D1D1D1) */
+  flex-shrink: 0;                   /* Prevent icon from shrinking in flex */
+}
+
+/* Icon color for active nav items - match neon lime */
+.pf-c-navbar-button-active .pf-custom-nav-icon {
+  filter: brightness(0) saturate(100%) invert(85%) sepia(46%) saturate(506%) hue-rotate(32deg) brightness(104%) contrast(93%);
+  /* Filter to match --neon-lime (#C2E45E) */
+}
+
+/* Icon color on hover - match neon lime */
+.pf-c-navbar-button:hover .pf-custom-nav-icon {
+  filter: brightness(0) saturate(100%) invert(85%) sepia(46%) saturate(506%) hue-rotate(32deg) brightness(104%) contrast(93%);
+  /* Filter to match --neon-lime (#C2E45E) */
+}
+
+.pf-v6-c-button {
+  justify-content: center !important;
+  align-items: center !important;
+  border-radius: 10px !important;
+}
+
+.pf-v6-c-nav__list {
+  row-gap: 1rem;    /* increased from 0 to add vertical spacing between menu items */
+}
+
+.pf-v6-c-nav__list > li {
+  margin-bottom: 0.75rem;   /* add extra spacing between navigation items */
+}
+
+.pf-custom-nav-icon {
+  height: 30px;
+  display: inline-block;   /* simpler inline behavior */
+  flex-direction: column;
+  margin-right: 1rem;    /* increased gap from 0.5rem to 1rem */
+}
+
+.pf-m-primary.pf-custom-button {
+  background-color: #1B1A4F;
+  border-radius: 10px;
+  color: #FF832B;
+  margin: 0.2rem
+}
+
+.pf-custom-button:disabled {
+  background-color: #888;
+  color: #1B1A4F;
+}
+
+.pf-custom-upload-file-modal {
+  align-items: center;
+  padding-bottom: 1rem;
+  padding-top: 1rem;
+
+}
+
+.pf-c-overflow-auto {
+  overflow: auto;
+}
+
+.pf-custom-dashboard {
+  background-color: var(--box-color-light) !important;
+  border-radius: 10px;
+  height: calc(100vh - 4.5rem);
+  /* height: 100%; */
+  display: flex;
+  margin-right: 0.75rem;
+  margin-left: 0.75rem;
+  /* align-items: center; */
+}
+
+/* @media (min-width: 1200px) {
+  .pf-v6-c-page {
+     display: flow-root;
+     height: calc(100vh - 2.75rem);
+  }
+} */
+
+.pf-v6-c-modal-box.pf-custom-print-task-modal {
+  background-color: #fff;
+  padding: 20px;
+  width: 60%;
+  max-width: 900px;
+  align-self: center;
+  position: static;
+  margin: 20px;
+  border-radius: 10px;
+}
+
+.pf-custom-print-task {
+  background-color: #fff;
+  padding: 20px;
+  width: 60%;
+  align-self: center;
+  position: static;
+  border-radius: 10px;
+  display: flow-root;
+  justify-self: center;
+}
+
+.pf-v6-c-modal-box__footer {
+  padding: 0;
+  justify-content: flex-end;
+}
+
+.pf-v6-c-backdrop {
+  background-color: #00000066;
+
+}
+
+.pf-v6-c-multiple-file-upload__status-item {
+  font-size: small;
+}
+
+.pf-v6-c-progress__bar {
+  height: 0.5rem;
+}
+
+.pf-v6-c-progress__indicator {
+  height: 0.5rem;
+}
+
+.pf-custom-new-print-job-modal {
+  display: flex;
+  width: 60%;
+  max-width: 900px;
+  align-items: center;
+}
+
+
+.pf-custom-new-print-queue-modal {
+  display: flex;
+  width: 60%;
+  max-width: 900px;
+  align-items: center;
+}
+
+.pf-custom-new-printer-modal {
+  display: flex !important;
+  width: 60% !important;
+  max-width: 900px;
+  align-items: center !important;
+  /* padding: 1rem !important; */
+}
+
+.pf-custom-new-ottoeject-modal {
+  display: flex !important;
+  width: 60% !important;
+  max-width: 900px;
+  align-items: center !important;
+}
+
+.pf-custom-new-ottorack-modal {
+  display: flex !important;
+  width: 60% !important;
+  max-width: 900px;
+  align-items: center !important;
+}
+
+.pf-custom-new-print-job {
+  /* height: auto;
+  padding: 2rem;
+  border-radius: 10px;
+  justify-self: center; */
+  /* height: calc(100vh - 2rem);  */
+  height: auto;
+  padding: 2rem;
+  border-radius: 10px;
+  justify-self: center;
+  overflow-y: auto; /* Prevent content overflow */
+  display: flex;
+  flex-direction: column; /* Ensure content stacks vertically */
+}
+
+.pf-custom-new-print-queue {
+  height: auto;
+  padding: 2rem;
+  border-radius: 10px;
+  justify-self: center;
+}
+
+.pf-custom-new-printer {
+  height: auto !important;
+  padding: 2rem !important;
+  border-radius: 10px !important;
+  justify-self: center !important;
+}
+
+.pf-custom-new-ottoeject {
+  height: auto !important;
+  padding: 2rem !important;
+  border-radius: 10px !important;
+  justify-self: center !important;
+}
+
+.pf-custom-new-ottorack {
+  height: auto !important;
+  padding: 2rem !important;
+  border-radius: 10px !important;
+  justify-self: center !important;
+}
+
+.pf-custom-new-print-job-modal-footer {
+  padding-top: 1rem;
+}
+
+.pf-custom-align-center-vertically {
+  display: flex;
+  justify-content: center;
+  height: auto;
+}
+
+.pf-custom-align-center-horizontally {
+  align-items: center;
+  /* justify-content: center; */
+}
+
+.pf-custom-new-ottoeject-modal-footer {
+  padding-top: 1rem;
+}
+
+.pf-custom-new-ottorack-modal-footer {
+  padding-top: 1rem;
+}
+
+.pf-custom-text-align-left {
+  text-align-last: left;
+}
+
+.pf-custom-align-center {
+  display: flex;
+  justify-content: center;
+}
+
+.pf-custom-upload-button-footer {
+  justify-self: end;
+  padding-right: 0;
+  padding-bottom: 0;
+}
+
+.pf-custom-no-padding {
+  padding: 0;
+}
+
+.pf-custom-modal-icon {
+  padding-right: 1rem;
+  height: 30px;
+  vertical-align: sub;
+  color: #805EE5;
+}
+
+.pf-custom-upload-header {
+  padding-top: 0 !important;
+  padding-bottom: 1rem;
+  justify-self: left;
+}
+
+.pf-custom-print-detail-footer {
+  padding: 1rem;
+}
+
+.pf-custom-frame-border {
+  border: solid;
+  border-radius: 10px;
+  padding: 2rem;
+}
+
+.pf-c-form-group {
+  border: 1px solid #805EE5;
+  padding: 2rem;
+  position: relative;
+  border-radius: 10px;
+}
+
+.pf-custom-border-label {
+  position: absolute;
+  top: -0.7rem;
+  left: 1rem;
+  background-color: white;
+  padding: 0 0.5rem;
+  font-size: 0.875rem;
+  color: #805EE5;
+}
+
+.pf-custom-thumbnail {
+  width: 100%;
+  border-radius: 10px;
+}
+
+.pf-custom-formGroup {
+  align-items: center;
+  font-size: large;
+  font-weight: bold;
+}
+
+.pf-custom-rack-render {
+  display: flex;
+  flex-direction: column-reverse;
+  height: auto;
+  align-items: center;
+  padding-bottom: 1rem;
+}
+
+.shelf-row.no-divider,
+.shelf-row.no-divider .customCheckBoxWrapper {
+  border: none !important;
+  background-image: none !important; /* in case dashes are via background */
+}
+
+.shelf-dropdown {
+  min-width: 150px;
+  padding: 5px;
+  font-size: 14px;
+  border: none;
+  background-color: transparent;
+  text-align: center;
+  color: inherit;
+  cursor: pointer;
+  outline: none;
+}
+
+.shelf-row.empty-plate-bg {
+  background-color: #71aef3;
+  color: #1B1A4F;
+  border-radius: 8px;
+}
+.shelf-row.empty-shelf-bg {
+  background-color: transparent;
+}
+.shelf-row.empty-plate-bg .customCheckBoxWrapper,
+.shelf-row.empty-plate-bg .customCheckBox,
+.shelf-row.empty-plate-bg .shelf-dropdown {
+  background-color: transparent;
+  color: inherit;
+}
+
+.shelf-row.empty-plate-bg {
+  background-color: #71aef3;
+  color: #1B1A4F;
+  border-radius: 8px;
+}
+.shelf-row.empty-shelf-bg {
+  background-color: transparent;
+}
+
+.shelf-dropdown::after {
+  font-size: 12px;
+  color: inherit; /* Match the text color */
+  position: absolute;
+  right: 10px; /* Adjust position */
+  pointer-events: none; /* Prevent interaction with the arrow */
+}
+
+.empty-plate-bg {
+  background-color: #93c4fb;
+  transition: background-color 0.3s ease;
+  border-radius: 5px;
+}
+
+.empty-shelf-bg {
+  background-color: none;
+  border-radius: 5px;
+}
+.shelf-number {
+  font-size: 14px;
+  font-weight: bold;
+  color: #666; /* Gray color for the text */
+  margin-right: 10px; /* Add spacing between the number and the dropdown */
+}
+
+/* From Uiverse.io by taieb1919 */
+.customCheckBoxHolder {
+  margin: 5px;
+  display: flex;
+  flex-direction: column;
+  /* Stack items vertically */
+  align-items: center;
+  /* Center items horizontally */
+}
+
+.customCheckBox {
+  width: 100%;
+  /* Ensures each checkbox has the same width */
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 8px;
+  /* background-color: rgba(0, 0, 0, 0.16); */
+  background-color: #805EE550;
+  border-radius: 0.5rem;
+  /* color: rgba(255, 255, 255, 0.7); */
+  color: #1B1A4F;
+  transition-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition-duration: 300ms;
+  transition-property: color, background-color, box-shadow;
+  display: flex;
+  height: 32px;
+  align-items: center;
+  box-shadow:
+    rgba(0, 0, 0, 0.15) 0px 2px 1px 0px inset,
+    rgba(255, 255, 255, 0.17) 0px 1px 1px 0px;
+  outline: none;
+  justify-content: center;
+  min-width: 55px;
+}
+
+.customCheckBox:hover {
+  /* background-color: #2c2c2c; */
+  background-color: #805EE5;
+  color: white;
+  box-shadow:
+    rgba(0, 0, 0, 0.23) 0px -4px 1px 0px inset,
+    rgba(255, 255, 255, 0.17) 0px -1px 1px 0px,
+    rgba(0, 0, 0, 0.17) 0px 2px 4px 1px;
+}
+
+.customCheckBox.inner {
+  font-size: 18px;
+  font-weight: 900;
+  pointer-events: none;
+  transition-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition-duration: 300ms;
+  transition-property: transform;
+  transform: translateY(0px);
+}
+
+/* .customCheckBox:hover.inner {
+  transform: translateY(-2px);
+} */
+
+.customCheckBoxWrapper {
+  width: 100%;
+  /* Ensures each wrapper takes full width of the holder */
+}
+
+/* Multiple Checkboxes can be chained together for a radio input */
+.customCheckBoxWrapper:first-of-type.customCheckBox {
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+  border-right: 0px;
+}
+
+.customCheckBoxWrapper:last-of-type.customCheckBox {
+  border-bottom-right-radius: 5px;
+  border-bottom-left-radius: 5px;
+  border-left: 0px;
+}
+
+.customCheckBoxInput {
+  display: none;
+}
+
+.pf-v6-c-table__tr>Tr {
+  border: none;
+}
+
+.pf-c-printJob-table-row {
+  border: solid var(--soft-aloy) 1px;
+  /* border-left: solid var(--soft-aloy) 1px; */
+  border-radius: 5px;
+  margin-bottom: 0.2rem;
+  border-spacing: 0 2rem;
+  /* display: table-row; */
+}
+
+.pf-v6-c-label.pf-custom-label--ready {
+  background-color: #24A148 !important; 
+  color: white !important;
+}
+
+.shelf-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px dashed #ccc;
+  padding: 10px 0;
+}
+
+.shelf-number {
+  font-size: 14px;
+  font-weight: bold;
+  color: #666;
+  margin-right: 10px;
+}
+
+.shelf-content {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.build-plate {
+  display: flex;
+  align-items: center;
+  background-color: #e0f7fa;
+  padding: 5px 10px;
+  border-radius: 5px;
+  color: #333;
+}
+
+.add-button {
+  background-color: #a5d6a7;
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.delete-button {
+  background-color: #ef5350;
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 5px;
+  margin-left: 10px;
+  cursor: pointer;
+}
+
+.pf-custom-dropdown {
+  width: 100%;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: #FFFF;
+}
+
+
+/* Container uses a small vertical gap between shelves */
+.rack-visualizer {
+  display: flex;
+  flex-direction: column;
+  gap: 0px; /* adjust to taste (e.g., 2–8px) */
+}
+
+/* Remove dashed/bottom borders and background lines if any */
+.rack-visualizer .shelf-row.no-divider {
+  border: 0 !important;
+  background: none !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+/* If the dashed line comes from inner wrapper */
+.rack-visualizer .shelf-row.no-divider .customCheckBoxWrapper {
+  border: 0 !important;
+  background: none !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+/* Tighten the vertical density inside each row */
+.rack-visualizer .shelf-row {
+  padding-block: 2px;          /* was likely larger */
+}
+
+.rack-visualizer .customCheckBoxWrapper {
+  padding: 2px 4px;            /* reduce internal padding */
+  min-height: unset;           /* in case a min-height is forcing space */
+}
+
+/* Progress meta row under the bar: left percent, right ETA */
+.pf-custom-progress-wrapper .pf-custom-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-top: 4px;
+  font-size: 0.75rem; /* small text */
+  color: #0066cc;     /* PF Gray 600 */
+}
+.pf-custom-progress-wrapper .pf-custom-progress-percent {
+  text-align: left;
+  color: var(--blue-pringting-status);
+  font-weight: 600;
+}
+.pf-custom-progress-wrapper .pf-custom-progress-eta { margin-left: auto; text-align: right; }
+.pf-custom-progress-wrapper .pf-custom-progress-eta-label { color: #6a6e73; }
+.pf-custom-progress-wrapper .pf-custom-progress-eta-value { color: #000; font-weight: 600; }
+
+/* Stack duration above the progress bar */
+.pf-custom-progress-wrapper {
+  display: flex;
+  flex-direction: column;   /* duration above bar */
+  align-items: stretch;     /* children take full width */
+  justify-content: center;
+  flex: 1 1 100%;           /* grow to fill */
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  gap: 2px !important;             /* minimal spacing between duration, bar, and meta */
+}
+
+/* Duration above bar spans full width */
+.pf-custom-progress-duration {
+  width: 100%;
+  text-align: left;
+  align-self: flex-start;
+  margin-bottom: 0 !important;     /* no extra space above the bar */
+  font-size: 0.75rem;
+  color: #6a6e73;
+}
+
+/* Shared duration label+icon styles */
+.pf-custom-duration {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pf-custom-duration-icon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  /* filter: saturate(0) opacity(0.7); */
+}
+
+.pf-custom-progress-duration.pf-custom-duration {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+/* Progress component uses full width */
+.pf-custom-progress-wrapper .pf-v6-c-progress {
+  width: 100%;
+  margin: 0 !important;            /* remove default margins */
+  padding: 0 !important;           /* ensure tight vertical rhythm */
+}
+
+/* Progress track and indicator visible */
+.pf-custom-progress-wrapper .pf-v6-c-progress__bar {
+  background-color: #e6e6e6;
+  border-radius: 6px;
+  outline: 1px solid #d9d9d9;
+}
+.pf-custom-progress-wrapper .pf-v6-c-progress__indicator {
+  background-color: var(--blue-pringting-status) !important;
+  border-radius: 6px;
+}
+
+/* Progress cell grows to fill available space */
+.pf-custom-progress-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+/* Right-align and force single-line for date/time in the masthead */
+.pf-header-timestamp {
+  margin-left: auto;            /* push to far right */
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;          /* keep date and time on one line */
+  color: #fff;                  /* inherit previous white color */
+}
+.pf-header-timestamp .pf-v6-c-timestamp { color: inherit !important; }
+
+/* Custom app layout: sidebar + main content */
+.pf-custom-layout {
+  --sidebar-width: max(20%, 230px);   /* navbar takes 20% of width but minimum 230px */
+  display: grid;
+  grid-template-columns: var(--sidebar-width) 1fr;
+  grid-template-rows: 100vh;
+  height: 100vh;
+  width: 100%;
+}
+
+/* Responsive breakpoints using container queries */
+@container navbar (max-width: 200px) {
+  .pf-c-navbar-button,
+  .pf-c-navbar-button:link,
+  .pf-c-navbar-button:visited,
+  .pf-c-navbar-button-active,
+  .pf-c-navbar-button-active:link,
+  .pf-c-navbar-button-active:visited {
+    font-size: 0.75rem;
+    padding: 0.1rem 0.2rem;       /* Minimized outer padding for small screens */
+    flex-direction: row;       /* Keep horizontal layout */
+    text-align: left;          /* Left align text */
+  }
+  
+  .pf-custom-nav-icon {
+    height: 1.2em;             /* Match font height at small sizes */
+    margin-right: 1rem;        /* Keep 1rem gap even at small sizes */
+    margin-bottom: 0;          /* Remove vertical margin */
+  }
+}
+
+@container navbar (min-width: 201px) and (max-width: 260px) {
+  .pf-c-navbar-button,
+  .pf-c-navbar-button:link,
+  .pf-c-navbar-button:visited,
+  .pf-c-navbar-button-active,
+  .pf-c-navbar-button-active:link,
+  .pf-c-navbar-button-active:visited {
+    font-size: 1rem;
+    padding: 0.15rem 0.3rem;        /* Minimized outer padding for medium screens */
+  }
+  
+  .pf-custom-nav-icon {
+    height: 1.2em;             /* Match font height at medium sizes */
+    margin-right: 1rem;        /* Keep 1rem gap */
+  }
+}
+
+@container navbar (min-width: 261px) {
+  .pf-c-navbar-button,
+  .pf-c-navbar-button:link,
+  .pf-c-navbar-button:visited,
+  .pf-c-navbar-button-active,
+  .pf-c-navbar-button-active:link,
+  .pf-c-navbar-button-active:visited {
+    font-size: 1.5rem;
+    padding: 0.2rem 0.4rem;        /* Minimized outer padding for large screens */
+  }
+  
+  .pf-custom-nav-icon {
+    height: 1.2em;             /* Match font height at large sizes */
+    margin-right: 1rem;        /* Keep 1rem gap */
+  }
+}
+
+/* Ensure text doesn't wrap and uses ellipsis if needed */
+.pf-c-navbar-button span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 1;
+}

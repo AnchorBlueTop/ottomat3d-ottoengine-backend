@@ -6,6 +6,8 @@ const logger = require('../utils/logger');
 const fs = require('fs').promises;
 const path = require('path');
 
+const crypto = require('crypto');
+
 const printJobController = {
 
     /**
@@ -32,12 +34,38 @@ const printJobController = {
                 });
             }
 
+            // Optional AV scan (disabled by default). Enable by setting AV_SCAN_ENABLED=true
+            if (process.env.AV_SCAN_ENABLED === 'true') {
+                try {
+                    const { exec } = require('child_process');
+                    await new Promise((resolve, reject) => {
+                        exec(`clamscan --no-summary ${tempFilePath}`, { timeout: 15000 }, (err, stdout, stderr) => {
+                            if (err) {
+                                logger.error(`[PrintJobController] AV scan failed: ${stderr || err.message}`);
+                                return reject(new Error('Antivirus scan failed or detected a threat.'));
+                            }
+                            resolve();
+                        });
+                    });
+                } catch (scanErr) {
+                    return res.status(422).json({
+                        error: 'Unprocessable Entity',
+                        message: 'Upload rejected by antivirus scan.'
+                    });
+                }
+            }
+
+            // Compute checksum for integrity
+            const fileBuffer = await fs.readFile(tempFilePath);
+            const checksum_sha256 = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+
             // Create the print_item data structure
             const file_details_json = {
                 name: req.file.originalname,
-                location: null, // Backend will manage storage location later
+                location: tempFilePath, // Persist on server; retention policy applies
                 size_bytes: req.file.size,
-                format: path.extname(req.file.originalname).slice(1)
+                format: path.extname(req.file.originalname).slice(1),
+                checksum_sha256
             };
             
             const parsedData = parseResult.data;
@@ -76,16 +104,6 @@ const printJobController = {
         } catch (error) {
             logger.error(`[PrintJobController] Upload/Parse Error: ${error.message}`, error);
             next(error);
-        } finally {
-            // Cleanup the temporary file
-            if (tempFilePath) {
-                try {
-                    await fs.unlink(tempFilePath);
-                    logger.info(`[PrintJobController] Deleted temporary uploaded file: ${tempFilePath}`);
-                } catch (unlinkError) {
-                    logger.error(`[PrintJobController] Failed to delete temp file ${tempFilePath}: ${unlinkError.message}`);
-                }
-            }
         }
     },
 
@@ -231,6 +249,37 @@ const printJobController = {
             });
         } catch (error) {
             logger.error(`[PrintJobController] Complete Job Error: ${error.message}`, error);
+            next(error);
+        }
+    },
+
+    /**
+     * Manually start a NEW job -> transitions to QUEUED
+     * POST /api/print-jobs/:id/start
+     */
+    async startPrintJob(req, res, next) {
+        try {
+            const id = parseInt(req.params.id, 10);
+            if (isNaN(id)) {
+                return res.status(400).json({
+                    error: 'Bad Request',
+                    message: 'Job ID must be a valid number.'
+                });
+            }
+            const job = await printJobService.startPrintJob(id);
+            res.status(200).json({
+                id: job.id,
+                status: job.status,
+                status_message: job.status_message
+            });
+        } catch (error) {
+            if (error.message.includes('Only NEW jobs can be started')) {
+                return res.status(409).json({ error: 'Conflict', message: error.message });
+            }
+            if (error.message.includes('not found')) {
+                return res.status(404).json({ error: 'Not Found', message: error.message });
+            }
+            logger.error(`[PrintJobController] Start Job Error: ${error.message}`, error);
             next(error);
         }
     }

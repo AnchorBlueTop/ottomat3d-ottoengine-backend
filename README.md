@@ -20,14 +20,15 @@ OTTOengine is the core software powering the Ottomat3D automation ecosystem. It 
 	- Services: printer management, OTTOeject proxy (Moonraker), print jobs, parsing
 	- SQLite database (auto-initialized) with tables for printers, ottoejects, print_items, print_jobs, racks, job_events, ejection_sessions
 - Frontend (React + Vite):
-	- UI for managing printers, jobs, and automation (in `frontend/print-farm`)
+	- UI for managing printers, jobs, and automation (in `frontend/`)
 - Integrations:
 	- Bambu Local via MQTT (present)
 	- OTTOeject via Moonraker HTTP; WS planned for live ejection updates
 
 Repository layout
 - `backend/` — Node.js API server and database schema
-- `frontend/print-farm/` — React UI (Vite)
+- `frontend/` — React UI (Vite)
+- `frontend-java/` — Legacy Java/Maven module (moved out of frontend to avoid path conflicts)
 - `__beta_testing/` — Packaged Python app used during early beta (legacy)
 - `__python_scripts/` — Internal Python scripts used for testing (legacy)
 - `DATABASE_SETUP.md` — DB notes and troubleshooting
@@ -97,7 +98,7 @@ Database
 ### 2) Frontend UI (React/Vite)
 
 ```bash
-cd frontend/print-farm
+cd frontend
 npm install
 npm run dev
 ```
@@ -155,7 +156,7 @@ Persistence details
 	- Tables: `printers`, `ottoejects`, `print_items`, `print_jobs`, `storage_racks`, `rack_slots`, `job_events`, `ejection_sessions`
 
 - Frontend
-	- React + Vite in `frontend/print-farm`
+	- React + Vite in `frontend/`
 
 - Legacy assets
 	- `__beta_testing/` contains a packaged Python app used during beta

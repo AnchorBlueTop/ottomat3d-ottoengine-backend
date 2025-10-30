@@ -159,6 +159,25 @@ const printerController = {
         }
     },
 
+    // POST /api/printers/connect - Test connection without persisting
+    async connect(req, res, next) {
+        try {
+            const payload = req.body || {};
+            if (!payload.brand || !payload.ip_address) {
+                return res.status(400).json({ error: 'Bad Request', message: 'brand and ip_address are required.' });
+            }
+            const result = await printerService.connect(payload);
+            if (result.success) {
+                return res.status(200).json({ status: result.status || 'ONLINE', message: result.message || 'Connection OK' });
+            }
+            const notImplemented = result.message && result.message.toLowerCase().includes('not implemented');
+            return res.status(notImplemented ? 501 : 502).json({ error: notImplemented ? 'Not Implemented' : 'Connect Failed', message: result.message });
+        } catch (error) {
+            logger.error(`[PrinterController] connect Error: ${error.message}`, error.stack);
+            next(error);
+        }
+    },
+
     // --- v0.1 Core Proxy Methods Aligned with New API Doc ---
 
     // GET /api/printers/:id/status

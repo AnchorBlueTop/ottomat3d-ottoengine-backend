@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS printers (
     serial_number TEXT NULL UNIQUE,
     build_volume_json TEXT NULL,     -- Stores build volume object as JSON string
     current_filament_json TEXT NULL, -- Stores default/fallback filament object as JSON string
+    has_build_plate INTEGER NOT NULL DEFAULT 1, -- Track if printer currently has a build plate
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc'))
 );
@@ -49,6 +50,8 @@ CREATE TABLE IF NOT EXISTS print_items (
     -- JSON object storing parsed filament requirements
     -- e.g., { "type": "PLA", "required_weight_grams": 25.5, "color": "Blue" }
     filament_details_json TEXT NULL,
+    -- Max Z height for slot assignment (extracted from measurement_details_json)
+    max_z_height_mm DECIMAL(10,2) NULL,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc'))
 );
@@ -106,12 +109,13 @@ CREATE TABLE IF NOT EXISTS rack_slots (
     storage_rack_id INTEGER NOT NULL,
     slot_number INTEGER NOT NULL,
     type TEXT NOT NULL DEFAULT 'print_bed', -- e.g., 'print_bed', 'item_shelf'
-    
+
     -- Enhanced plate tracking columns
     -- DEFAULT: All new slots are completely empty (no plates)
+    occupied INTEGER NOT NULL DEFAULT 0, -- Boolean (0/1) - for backwards compatibility
     has_plate INTEGER NOT NULL DEFAULT 0, -- Boolean (0/1) - whether slot contains a plate
     plate_state TEXT DEFAULT NULL CHECK (plate_state IN ('empty', 'with_print') OR plate_state IS NULL),
-    
+
     -- Link to the print job currently occupying this slot
     print_job_id INTEGER NULL,
     
@@ -127,9 +131,42 @@ CREATE TABLE IF NOT EXISTS rack_slots (
     UNIQUE (storage_rack_id, slot_number)
 );
 
+-- =============================================================================
+-- SECTION 3: Observability Tables (Job Events & Ejection Sessions)
+-- =============================================================================
+
+-- Job events table for tracking all job state transitions
+CREATE TABLE IF NOT EXISTS job_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_id INTEGER NOT NULL,
+    type TEXT NOT NULL, -- e.g., 'status_changed', 'error', 'retry', 'assigned'
+    payload_json TEXT NULL, -- Store additional event data as JSON
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
+    FOREIGN KEY (job_id) REFERENCES print_jobs(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_job_events_job_id_created_at
+    ON job_events (job_id, created_at);
+
+-- Ejection sessions table for tracking ottoeject operations
+CREATE TABLE IF NOT EXISTS ejection_sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    job_id INTEGER NULL,
+    printer_id INTEGER NULL,
+    ottoeject_id INTEGER NULL,
+    status TEXT NOT NULL DEFAULT 'STARTED', -- 'STARTED', 'IN_PROGRESS', 'COMPLETED', 'FAILED'
+    error_message TEXT NULL,
+    started_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
+    ended_at TEXT NULL,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
+    FOREIGN KEY (job_id) REFERENCES print_jobs(id) ON DELETE SET NULL,
+    FOREIGN KEY (printer_id) REFERENCES printers(id) ON DELETE SET NULL,
+    FOREIGN KEY (ottoeject_id) REFERENCES ottoejects(id) ON DELETE SET NULL
+);
 
 -- =============================================================================
--- SECTION 3: Triggers for 'updated_at' columns
+-- SECTION 4: Triggers for 'updated_at' columns
 -- =============================================================================
 
 CREATE TRIGGER IF NOT EXISTS trigger_printers_updated_at AFTER UPDATE ON printers FOR EACH ROW
@@ -150,14 +187,18 @@ CREATE TRIGGER IF NOT EXISTS trigger_print_jobs_updated_at AFTER UPDATE ON print
 CREATE TRIGGER IF NOT EXISTS trigger_rack_slots_updated_at AFTER UPDATE ON rack_slots FOR EACH ROW
     BEGIN UPDATE rack_slots SET updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc') WHERE id = OLD.id; END;
 
+CREATE TRIGGER IF NOT EXISTS trigger_ejection_sessions_updated_at AFTER UPDATE ON ejection_sessions FOR EACH ROW
+    BEGIN UPDATE ejection_sessions SET updated_at = strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc') WHERE id = OLD.id; END;
+
 -- =============================================================================
--- SECTION 4: Data Initialization and Fixes
+-- SECTION 5: Data Initialization and Fixes
 -- =============================================================================
 
 -- Fix existing rack slots to have proper default state (completely empty)
 -- This ensures slot assignment works correctly for new print jobs
-UPDATE rack_slots SET 
-    has_plate = 0, 
+UPDATE rack_slots SET
+    occupied = 0,
+    has_plate = 0,
     plate_state = NULL,
     print_job_id = NULL
 WHERE has_plate IS NULL OR (has_plate = 1 AND plate_state IS NULL);

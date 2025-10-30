@@ -1,18 +1,12 @@
 # OttoEngine API Documentation
 
-Created by: Harshil
-Created time: September 7, 2025 10:57 PM
-Category: Software
-Last updated time: September 8, 2025 1:01 AM
-Last edited by: Harshil
-Status: In progress
-
-Created by: Harshil
-Created time: May 21, 2025 9:22 PM
-Category: Software
-Last updated time: September 8, 2025 1:02 AM
-Last edited by: Harshil Patel
-Status: In progress
+## CHANGELOG
+16/10/2025 1933 - Kalpesh
+    - Added api/printers/connect api to test connection without persisting
+07/09/2025 1055 - Harshil
+    - APIs v0.3
+21/05/2025 1722 - Harshil
+    - Intial set of APIs
 
 # OTTOMAT3D - OttoEngine APIs v0.3
 
@@ -34,39 +28,91 @@ Manage 3D printers (register, update, delete, retrieve printer(s) status and det
 
 - **Description:** Registers a new 3D printer with the system.
 - **Request Body (JSON):**
-    
+
     ```json
-    {    
-    			"name": "My_P1P",    
-    			"brand": "Bambu Lab",    
-    			"model": "P1P",    
-    			"type": "FDM",    
-    			"ip_address": "192.168.68.58",    
-    			"access_code": "14358945",    
-    			"serial_number": "01S00C371700385",    
-    			"build_volume": { // Optional      
-    					 "width_mm": 256,        
-    					 "depth_mm": 256,        
-    					 "height_mm": 256    
-    			 },    
-    		   "filament": { // Optional: Represents default/current filament to store in DB        
-    				   "material": "PLA",        
-    				   "color": "DefaultColorHex_or_Name"        
-    				   // Note: Only a single filament object is stored in current_filament_json for v0.1    
+    {
+    			"name": "My_P1P",
+    			"brand": "Bambu Lab",
+    			"model": "P1P",
+    			"type": "FDM",
+    			"ip_address": "192.168.68.58",
+    			"access_code": "14358945",
+    			"serial_number": "01S00C371700385",
+    			"build_volume": { // Optional
+    					 "width_mm": 256,
+    					 "depth_mm": 256,
+    					 "height_mm": 256
+    			 },
+    		   "filament": { // Optional: Represents default/current filament to store in DB
+    				   "material": "PLA",
+    				   "color": "DefaultColorHex_or_Name"
+    				   // Note: Only a single filament object is stored in current_filament_json for v0.1
     			 }
     }
     ```
-    
+
 - **Response (201 Created):**
-    
+
     ```json
-    {    
-    		 "id": 1,    
-    		 "name": "My_P1P",    
+    {
+    		 "id": 1,
+    		 "name": "My_P1P",
     		 "message": "Printer registered successfully"
     }
     ```
-    
+
+## Test Connection (no persistence)
+
+### POST `/api/printers/connect`
+
+- Description: Tests connectivity/authentication to a printer without saving it in the database. Useful to verify credentials and reachability before registration.
+- Request Body (JSON):
+        - For Bambu Lab brand, access_code and serial_number are required.
+
+        ```json
+        {
+            "brand": "Bambu Lab",
+            "ip_address": "192.168.68.58",
+            "access_code": "14312345",
+            "serial_number": "01A00B312300123"
+        }
+        ```
+
+- Successful Response (200 OK):
+        ```json
+        {
+            "status": "ONLINE",
+            "message": "Connection successful."
+        }
+        ```
+
+- Error Responses:
+        - 400 Bad Request: Missing required fields (brand, ip_address; also access_code and serial_number for Bambu Lab).
+        - 501 Not Implemented: Brand is not supported for connect testing yet.
+        - 502 Connect Failed: Communication/authentication to the device failed (message will include reason or timeout).
+
+        Example (Not Implemented):
+        ```json
+        {
+            "error": "Not Implemented",
+            "message": "Connect not implemented for brand 'prusa'."
+        }
+        ```
+
+        Example (Connect Failed):
+        ```json
+        {
+            "error": "Connect Failed",
+            "message": "Connection failed: Connect timed out after 20000ms"
+        }
+        ```
+
+- Notes:
+        - Debug logging can be enabled by setting environment variables before starting the backend:
+            - `LOG_LEVEL=DEBUG` or `BAMBU_API_DEBUG=true` to see detailed Bambu client logs.
+        - Timeouts can be tuned via:
+            - `PRINTER_CONNECT_TIMEOUT_MS` (default 20000)
+            - `PRINTER_PUSHALL_TIMEOUT_MS` (defaults to the connect timeout)
 
 ## Get All Printers
 
@@ -74,7 +120,7 @@ Manage 3D printers (register, update, delete, retrieve printer(s) status and det
 
 - **Description:** Retrieves a list of all registered printers. For v0.1, `status` and `filament` are placeholders (status is "IDLE", filament is from DB stored `current_filament_json` or default "N/A").
 - **Response (200 OK):**
-    
+
     ```json
     [
         {
@@ -90,7 +136,7 @@ Manage 3D printers (register, update, delete, retrieve printer(s) status and det
         // ... more printers
     ]
     ```
-    
+
 
 ## Get Printer by ID (Full Details)
 
@@ -98,7 +144,7 @@ Manage 3D printers (register, update, delete, retrieve printer(s) status and det
 
 - **Description:** Retrieves detailed information for a specific printer, including live status, live filament (if available from printer), live temperatures, and stored configuration like build volume.
 - **Response (200 OK):***(Note: `build_volume` will be `null` if not set during registration or update. `filament` shows live data if printer reports it, otherwise it shows DB stored `current_filament_json` or "N/A".)*
-    
+
     ```json
     {
         "id": 1,
@@ -127,7 +173,7 @@ Manage 3D printers (register, update, delete, retrieve printer(s) status and det
         "nozzle_temperature": 220.0
     }
     ```
-    
+
 
 ## Get Printer Status by ID (Focused Status)
 
@@ -135,7 +181,7 @@ Manage 3D printers (register, update, delete, retrieve printer(s) status and det
 
 - **Description:** Retrieves a focused set of live operational status details for a specific printer.
 - **Response (200 OK):**
-    
+
     ```json
     {
         "id": 1,
@@ -148,7 +194,7 @@ Manage 3D printers (register, update, delete, retrieve printer(s) status and det
         "remaining_time_minutes": 30 // Live remaining print time
     }
     ```
-    
+
 
 ## Send G-Code to Printer
 
@@ -156,21 +202,21 @@ Manage 3D printers (register, update, delete, retrieve printer(s) status and det
 
 - **Description:** Sends an arbitrary G-code command (or multiple commands separated by `\\\\n`) to the specified printer. Useful for actions like positioning the bed.
 - **Request Body (JSON):**
-    
+
     ```json
-    { 
-    	  "gcode": "G0 Z150 F3000\\\\nM117 Bed Ready for Ejection" 
+    {
+    	  "gcode": "G0 Z150 F3000\\\\nM117 Bed Ready for Ejection"
     }
     ```
-    
+
 - **Response (202 Accepted):**
-    
+
     ```json
-    {   
+    {
     		 "message": "G-code sent."
     }
     ```
-    
+
 
 ## Upload File to Printer
 
@@ -180,23 +226,23 @@ Manage 3D printers (register, update, delete, retrieve printer(s) status and det
 - **Request Body (multipart/form-data):**
     - **`file`** (File, required): The G-code file to be uploaded.
     - **`remote_filename`** (Text, optional): If provided, this name will be used for the file on the printer. If omitted, the original filename of the uploaded file will be used.
-    
+
     | Key | Type | Description | Required |
     | --- | --- | --- | --- |
     | `file` | File | The G-code file to be uploaded. | Yes |
     | `remote_filename` | Text | Desired filename on the printer. If omitted, uses original filename. | No |
 - **Response (200 OK - If upload to printer successful):***(Note: `filename` in the response reflects the name used on the printer. `file_size` is the size of the uploaded file. `upload_time` is the ISO timestamp when the backend successfully processed the upload to the printer.)*
-    
+
     ```json
     {
       "filename": "new_printer_filename.gcode.3mf",
       "file_size": "2.50 MB",
       "upload_time": "2025-05-21T10:00:00.000Z",
       "message": "File 'new_printer_filename.gcode.3mf' uploaded successfully to printer 1."
-      
+
     }
     ```
-    
+
 - **Error Responses:**
     - `400 Bad Request`: If no file is provided under the `file` key, or other request validation fails.
     - `404 Not Found`: If the specified printer ID is not found or not managed.
@@ -209,7 +255,7 @@ Manage 3D printers (register, update, delete, retrieve printer(s) status and det
 
 - **Description:** Commands the printer to start printing a file that is already present on its internal storage (e.g., SD card).
 - **Request Body (JSON):**
-    
+
     ```json
     {
         "filename": "PrintTestCubex1_V3.gcode.3mf"
@@ -217,15 +263,15 @@ Manage 3D printers (register, update, delete, retrieve printer(s) status and det
         // e.g., "useAms": true, "bed_leveling": true, "flow_cali": true
     }
     ```
-    
+
 - **Response (202 Accepted):**
-    
+
     ```json
-    {    
+    {
          "message": "Start print command for PrintTestCubex1_V3.gcode.3mf sent."
     }
     ```
-    
+
 
 ## Pause a Printer
 
@@ -233,13 +279,13 @@ Manage 3D printers (register, update, delete, retrieve printer(s) status and det
 
 - **Description:** Pauses the current print job on the specified printer.
 - **Response (202 Accepted):**
-    
+
     ```json
-    {    
+    {
          "message": "Pause command sent to printer."
     }
     ```
-    
+
 
 ## Resume a Printer
 
@@ -247,13 +293,13 @@ Manage 3D printers (register, update, delete, retrieve printer(s) status and det
 
 - **Description:** Resumes a paused print job on the specified printer.
 - **Response (202 Accepted):**
-    
+
     ```json
-    {    
+    {
          "message": "Resume command sent to printer."
     }
     ```
-    
+
 
 ## Stop a Printer
 
@@ -261,13 +307,13 @@ Manage 3D printers (register, update, delete, retrieve printer(s) status and det
 
 - **Description:** Stops the current print job on the specified printer.
 - **Response (202 Accepted):**
-    
+
     ```json
-    { 
-         "message": "Stop command sent to printer." 
+    {
+         "message": "Stop command sent to printer."
     }
     ```
-    
+
 
 ## Update Printer Details
 
@@ -275,24 +321,24 @@ Manage 3D printers (register, update, delete, retrieve printer(s) status and det
 
 - **Description:** Updates stored details for a specific printer (e.g., name, IP, build volume, default filament).
 - **Request Body (JSON):** Can include any subset of fields allowed at registration.
-    
+
     ```json
-    {    
-        "name": "My P1P (Updated)",    
-        "build_volume": {        
-            "width_mm": 256,        
-            "depth_mm": 256,        
-            "height_mm": 256    
-        },    
-        "filament": { // Updates the current_filament_json in DB        
-            "material": "PETG",        
-            "color": "TransparentRed_Hex"    
+    {
+        "name": "My P1P (Updated)",
+        "build_volume": {
+            "width_mm": 256,
+            "depth_mm": 256,
+            "height_mm": 256
+        },
+        "filament": { // Updates the current_filament_json in DB
+            "material": "PETG",
+            "color": "TransparentRed_Hex"
         }
     }
     ```
-    
+
 - **Response (200 OK):** Returns the full live printer details after the update, plus a success message.
-    
+
     ```json
     {
         "id": 1,
@@ -321,7 +367,7 @@ Manage 3D printers (register, update, delete, retrieve printer(s) status and det
         "message": "Printer updated successfully"
     }
     ```
-    
+
 
 ## Delete a Printer
 
@@ -329,13 +375,13 @@ Manage 3D printers (register, update, delete, retrieve printer(s) status and det
 
 - **Description:** Removes a printer registration from the system.
 - **Response (200 OK):**
-    
+
     ```json
-    {    
+    {
          "message": "Printer deleted successfully"
     }
     ```
-    
+
 ---
 
 # Ottoeject API (`/api/ottoeject/`)
@@ -348,25 +394,25 @@ Manage Ottoeject devices (registration, status, macro execution).
 
 - **Description:** Registers a new OttoEject device. For v0.1, only `device_name` and `ip_address` are stored.
 - **Request Body (JSON):**
-    
+
     ```json
-    {    
-         "device_name": "OttoEject-Mk2",    
+    {
+         "device_name": "OttoEject-Mk2",
          "ip_address": "192.168.68.74"
     }
     ```
-    
+
 - **Response (201 Created):***(Note: `status` in response is a static "ONLINE" for creation; actual status is polled live.)*
-    
+
     ```json
-    {    
-          "id": 1,    
-          "device_name": "OttoEject-Mk2",    
-          "status": "ONLINE",    
+    {
+          "id": 1,
+          "device_name": "OttoEject-Mk2",
+          "status": "ONLINE",
           "message": "Ottoeject registered successfully"
     }
     ```
-    
+
 
 ## Get All Ottoeject Devices
 
@@ -374,7 +420,7 @@ Manage Ottoeject devices (registration, status, macro execution).
 
 - **Description:** Retrieves a list of all registered OttoEject devices. For v0.1, `status` is a placeholder "ONLINE".
 - **Response (200 OK):**
-    
+
     ```json
     [
         {
@@ -385,7 +431,7 @@ Manage Ottoeject devices (registration, status, macro execution).
         // ... more Ottoejects
     ]
     ```
-    
+
 
 ## Retrieve Ottoeject by ID
 
@@ -393,7 +439,7 @@ Manage Ottoeject devices (registration, status, macro execution).
 
 - **Description:** Retrieves stored details for a specific OttoEject device, plus its live status.
 - **Response (200 OK):**
-    
+
     ```json
     {
         "id": 1,
@@ -401,7 +447,7 @@ Manage Ottoeject devices (registration, status, macro execution).
         "status": "ONLINE" // Live status (e.g., ONLINE, EJECTING, OFFLINE, ISSUE)
     }
     ```
-    
+
 
 ## Retrieve Ottoeject Status by ID
 
@@ -414,7 +460,7 @@ Manage Ottoeject devices (registration, status, macro execution).
     - `OFFLINE`: Backend cannot communicate with the OttoEject's Moonraker API.
     - `ISSUE`: Klipper is in an "Error" or "Shutdown" state.
 - **Response (200 OK):**
-    
+
     ```json
     {
         "id": 1,
@@ -422,7 +468,7 @@ Manage Ottoeject devices (registration, status, macro execution).
         "status": "EJECTING" // Example live status
     }
     ```
-    
+
 
 ## Update Ottoeject Details
 
@@ -430,17 +476,17 @@ Manage Ottoeject devices (registration, status, macro execution).
 
 - **Description:** Updates stored details for an OttoEject (e.g., `device_name`, `ip_address`).
 - **Request Body (JSON):**
-    
+
     ```json
     {    "device_name": "OttoEject-Mk2-Renamed",    "ip_address": "192.168.68.75"}
     ```
-    
+
 - **Response (200 OK):**
-    
+
     ```json
     {    "id": 1,    "device_name": "OttoEject-Mk2-Renamed",    "status": "ONLINE", // Placeholder status in this response    "message": "Ottoeject updated successfully"}
     ```
-    
+
 
 ## Delete an Ottoeject
 
@@ -448,11 +494,11 @@ Manage Ottoeject devices (registration, status, macro execution).
 
 - **Description:** Removes an OttoEject registration from the system.
 - **Response (200 OK):**
-    
+
     ```json
     {    "message": "Ottoeject deleted successfully"}
     ```
-    
+
 
 ## Execute Ottoeject Macro
 
@@ -460,32 +506,32 @@ Manage Ottoeject devices (registration, status, macro execution).
 
 - **Description:** Sends a command to the OttoEject to execute a pre-defined Klipper G-code macro.
 - **Request Body (JSON):Example (Homing)**
-    
+
     ```json
     {    "macro": "OTTOEJECT_HOME"}
     ```
-    
+
 - **Response (202 Accepted - If macro dispatched successfully):**
 Indicates the command was sent to the OttoEject. The client (e.g., Python script) should then poll `/api/ottoeject/{id}/status` to determine when the macro has finished (i.e., status returns to "ONLINE").
-    
+
     ```json
-    {    
-        "message": "Macro 'OTTOEJECT_HOME' command sent to Ottoeject 1.",    
-        "moonraker_response": { // Direct response from Moonraker when it accepted the command        
-            "result": "ok"    
+    {
+        "message": "Macro 'OTTOEJECT_HOME' command sent to Ottoeject 1.",
+        "moonraker_response": { // Direct response from Moonraker when it accepted the command
+            "result": "ok"
         }
     }
     ```
-    
+
 - **Response (502 Bad Gateway - If macro is long and backend times out waiting for Moonraker ACK):**
 
 **Explanation for Timeout Response:**
 The OttoEject (running Klipper/Moonraker) immediately starts executing a long macro. Moonraker might not send an HTTP "OK" back to the backend until Klipper finishes that block of G-code. If this takes longer than the backend's internal timeout to Moonraker (e.g., 30 seconds), the backend will respond with this 502 error. However, the macro is likely still running on the OttoEject. The controlling script must poll the OttoEject's status via `GET /api/ottoeject/{id}/status` to know when the physical action is complete (i.e., when status returns from "EJECTING" to "ONLINE").
 
 ```json
-{    
-    "error": "Macro Execution Proxy Error",    
-    "message": "Command 'EJECT_FROM_P1' sent to Ottoeject, but acknowledgement from device timed out. External polling for completion is required. Detail: Failed to execute G-code: No response from 192.168.68.74 (ECONNABORTED)",    
+{
+    "error": "Macro Execution Proxy Error",
+    "message": "Command 'EJECT_FROM_P1' sent to Ottoeject, but acknowledgement from device timed out. External polling for completion is required. Detail: Failed to execute G-code: No response from 192.168.68.74 (ECONNABORTED)",
     "moonraker_details": null
 }
 ```
@@ -503,12 +549,14 @@ Manage print jobs through a two-step process: file upload/parsing and job creati
 - **Description:** Uploads a G-code file (e.g., `.gcode`, `.gcode.3mf`) to the backend server and parses it to create a print item record. This is the first step in the print job creation process.
 - **Request Body (multipart/form-data):**
     - **`file`** (File, required): The G-code file to be uploaded and parsed.
-    
+
     | Key | Type | Description | Required |
     | --- | --- | --- | --- |
     | `file` | File | The G-code file to be uploaded and parsed. | Yes |
+- **Environment (optional):**
+    - `AV_SCAN_ENABLED=true` to enable ClamAV scan using `clamscan` before accepting the file
 - **Response (200 OK):**
-    
+
     ```json
     {
         "print_item_id": 1,
@@ -521,6 +569,10 @@ Manage print jobs through a two-step process: file upload/parsing and job creati
     }
     ```
     
+    Notes:
+    - Server persists the uploaded file path in `print_items.file_details_json.location` and stores `checksum_sha256` for integrity.
+    - File retention and cleanup policy are managed server-side.
+    
 
 ## Create Print Job (Step 2)
 
@@ -528,7 +580,7 @@ Manage print jobs through a two-step process: file upload/parsing and job creati
 
 - **Description:** Creates a new print job using a previously uploaded print item. Associates the job with a printer, ottoeject device, and sets job parameters.
 - **Request Body (JSON):**
-    
+
     ```json
     {
         "print_item_id": 1,
@@ -538,20 +590,37 @@ Manage print jobs through a two-step process: file upload/parsing and job creati
         "priority": 1
     }
     ```
-    
+
 - **Response (201 Created):**
-    
+
     ```json
     {
         "id": 1,
         "print_item_id": 1,
         "printer_id": 1,
         "ottoeject_id": 1,
-        "status": "QUEUED",
+        "status": "NEW",
         "priority": 1,
-        "auto_start": true,
+        "auto_start": false,
         "created_at": "2025-05-21T10:00:00.000Z",
         "message": "Print job created successfully"
+    }
+    ```
+    
+    Behavior:
+    - When `auto_start` is `false`, the job starts in `NEW` and must be manually started.
+    - When `auto_start` is `true`, the job starts in `QUEUED` and is picked up by the orchestrator.
+
+### POST `/api/print-jobs/{id}/start`
+
+- **Description:** Transitions a `NEW` job to `QUEUED` for orchestrator processing.
+- **Response (200 OK):**
+    
+    ```json
+    {
+        "id": 1,
+        "status": "QUEUED",
+        "status_message": "Job queued for processing by orchestrator."
     }
     ```
     
@@ -562,7 +631,7 @@ Manage print jobs through a two-step process: file upload/parsing and job creati
 
 - **Description:** Retrieves a list of all print jobs in the system with their current status and basic details.
 - **Response (200 OK):**
-    
+
     ```json
     [
         {
@@ -592,7 +661,7 @@ Manage print jobs through a two-step process: file upload/parsing and job creati
         // ... more print jobs
     ]
     ```
-    
+
 
 ## Get Specific Print Job
 
@@ -600,7 +669,7 @@ Manage print jobs through a two-step process: file upload/parsing and job creati
 
 - **Description:** Retrieves detailed information for a specific print job, including associated print item details, printer information, and current status.
 - **Response (200 OK):**
-    
+
     ```json
     {
         "id": 1,
@@ -632,7 +701,7 @@ Manage print jobs through a two-step process: file upload/parsing and job creati
         "completed_at": null
     }
     ```
-    
+
 
 ## Update Print Job
 
@@ -640,24 +709,24 @@ Manage print jobs through a two-step process: file upload/parsing and job creati
 
 - **Description:** Updates properties of an existing print job, such as priority or other configurable parameters.
 - **Request Body (JSON):**
-    
+
     ```json
-    {   
+    {
     	  "priority": 2
     }
     ```
-    
+
 - **Response (200 OK):**
-    
+
     ```json
-    {    
-         "id": 1,    
-         "priority": 2,    
-         "status": "QUEUED",    
+    {
+         "id": 1,
+         "priority": 2,
+         "status": "QUEUED",
          "message": "Print job updated successfully"
     }
     ```
-    
+
 
 ## Cancel Print Job
 
@@ -665,13 +734,13 @@ Manage print jobs through a two-step process: file upload/parsing and job creati
 
 - **Description:** Cancels and removes a print job from the system. If the job is currently printing, it will stop the print operation.
 - **Response (200 OK):**
-    
+
     ```json
-    {    
+    {
          "message": "Print job cancelled successfully"
     }
     ```
-    
+
 
 ## Complete a Print Job
 
@@ -679,16 +748,16 @@ Manage print jobs through a two-step process: file upload/parsing and job creati
 
 - **Description:** Marks a print job as completed. This is typically called when the print and ejection processes have finished successfully.
 - **Response (200 OK):**
-    
+
     ```json
-    {    
-         "id": 1,    
-         "status": "COMPLETED",    
-         "completed_at": "2025-05-21T11:30:00.000Z",    
+    {
+         "id": 1,
+         "status": "COMPLETED",
+         "completed_at": "2025-05-21T11:30:00.000Z",
          "message": "Print job marked as completed"
     }
     ```
-    
+
 
 ---
 
@@ -702,7 +771,7 @@ Manage OttoRack storage systems for organizing completed prints. OttoRacks are m
 
 - **Description:** Creates a new OttoRack storage unit with specified configuration including number of shelves and dimensions.
 - **Request Body (JSON):**
-    
+
     ```json
     {
         "name": "A",
@@ -711,9 +780,9 @@ Manage OttoRack storage systems for organizing completed prints. OttoRacks are m
         "bed_size": "256x256"
     }
     ```
-    
+
 - **Response (201 Created):**
-    
+
     ```json
     {
         "id": 1,
@@ -741,7 +810,7 @@ Manage OttoRack storage systems for organizing completed prints. OttoRacks are m
         "message": "Ottorack created successfully"
     }
     ```
-    
+
 
 ## Get All Ottoracks
 
@@ -749,7 +818,7 @@ Manage OttoRack storage systems for organizing completed prints. OttoRacks are m
 
 - **Description:** Retrieves a list of all Ottorack storage units with basic information and occupancy status.
 - **Response (200 OK):**
-    
+
     ```json
     [
         {
@@ -773,7 +842,7 @@ Manage OttoRack storage systems for organizing completed prints. OttoRacks are m
         // ... more ottoracks
     ]
     ```
-    
+
 
 ## Get Ottorack Details by ID
 
@@ -781,7 +850,7 @@ Manage OttoRack storage systems for organizing completed prints. OttoRacks are m
 
 - **Description:** Retrieves detailed information for a specific Ottorack, including the status of all individual shelves.
 - **Response (200 OK):**
-    
+
     ```json
     {
         "id": 1,
@@ -816,7 +885,7 @@ Manage OttoRack storage systems for organizing completed prints. OttoRacks are m
         "available_shelves": 7
     }
     ```
-    
+
 
 ## Update Shelf State
 
@@ -824,7 +893,7 @@ Manage OttoRack storage systems for organizing completed prints. OttoRacks are m
 
 - **Description:** Updates the plate and print state of a specific shelf in an OttoRack. Supports three states: completed print, empty plate, and no plate.
 - **Request Body (JSON):**
-    
+
     **For Completed Print:**
     ```json
     {
@@ -833,7 +902,7 @@ Manage OttoRack storage systems for organizing completed prints. OttoRacks are m
         "print_job_id": 1
     }
     ```
-    
+
     **For Empty Plate:**
     ```json
     {
@@ -842,7 +911,7 @@ Manage OttoRack storage systems for organizing completed prints. OttoRacks are m
         "print_job_id": null
     }
     ```
-    
+
     **For No Plate:**
     ```json
     {
@@ -851,9 +920,9 @@ Manage OttoRack storage systems for organizing completed prints. OttoRacks are m
         "print_job_id": null
     }
     ```
-    
+
 - **Response (200 OK):**
-    
+
     ```json
     {
         "id": 1,
@@ -865,7 +934,7 @@ Manage OttoRack storage systems for organizing completed prints. OttoRacks are m
         "message": "Shelf updated successfully"
     }
     ```
-    
+
 
 ## Reset Shelf (Mark as Empty)
 
@@ -873,7 +942,7 @@ Manage OttoRack storage systems for organizing completed prints. OttoRacks are m
 
 - **Description:** Resets a shelf to empty status, clearing any associated print job and marking it as available for new prints.
 - **Response (200 OK):**
-    
+
     ```json
     {
         "id": 1,
@@ -885,7 +954,7 @@ Manage OttoRack storage systems for organizing completed prints. OttoRacks are m
         "message": "Shelf reset successfully"
     }
     ```
-    
+
 
 ---
 
@@ -893,7 +962,7 @@ Manage OttoRack storage systems for organizing completed prints. OttoRacks are m
 
 **Primary Purpose: Development & Production Debugging**
 
-These endpoints provide deep insight into the Phase 3 orchestration system for debugging automated print job workflows, monitoring real-time job processing, and troubleshooting workflow execution issues. Essential for developers and operators to understand system behavior during lights-out manufacturing operations.
+These endpoints provide deep insight into the Phase 3 orchestration system for debugging automated print job workflows, monitoring real-time job processing, and troubleshooting workflow execution issues. The orchestrator now uploads the print file from server storage to the printer before starting the print when supported; if upload isn’t supported by the adapter, it passes the localPath to the adapter to upload during start.
 
 ## Get Orchestration Status
 
@@ -907,7 +976,7 @@ These endpoints provide deep insight into the Phase 3 orchestration system for d
   - **Polling Status:** Verify that the 5-second polling system is active and functioning
   - **Troubleshooting:** Identify if job processing is enabled and if there are any stuck workflows
 - **Response (200 OK):**
-    
+
     ```json
     {
         "success": true,
@@ -961,7 +1030,7 @@ These endpoints provide deep insight into the Phase 3 orchestration system for d
   - **Timing Analysis:** Check start times and duration of active workflows
   - **Orchestration State:** Understand the current orchestration status for each job (waiting, printing, ejecting, storing, completed, paused)
 - **Response (200 OK):**
-    
+
     ```json
     {
         "success": true,
@@ -1007,7 +1076,7 @@ These endpoints provide deep insight into the Phase 3 orchestration system for d
   - **Issue Identification:** Get specific error messages for failed components
   - **Recovery Planning:** Understand which services need attention during troubleshooting
 - **Response (200 OK - Healthy):**
-    
+
     ```json
     {
         "success": true,
@@ -1023,9 +1092,9 @@ These endpoints provide deep insight into the Phase 3 orchestration system for d
         }
     }
     ```
-    
+
 - **Response (503 Service Unavailable - Unhealthy):**
-    
+
     ```json
     {
         "success": false,
@@ -1064,7 +1133,7 @@ These endpoints provide deep insight into the Phase 3 orchestration system for d
   - Database connections and printer connections remain intact
   - Use when orchestrator status shows issues but system health is otherwise good
 - **Response (200 OK):**
-    
+
     ```json
     {
         "success": true,
@@ -1072,9 +1141,9 @@ These endpoints provide deep insight into the Phase 3 orchestration system for d
         "timestamp": "2025-09-28T10:30:00.000Z"
     }
     ```
-    
+
 - **Response (500 Internal Server Error):**
-    
+
     ```json
     {
         "success": false,

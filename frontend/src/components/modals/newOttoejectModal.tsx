@@ -61,8 +61,9 @@ export default function newOttoeject() {
                 <ModalHeader className="pf-custom-upload-header">
                     <Content component={ContentVariants.h3}>
                         <Brand src={ottoEjectIcon} alt="OttoEject logo" className='pf-custom-modal-icon' />
-                        {' ADD NEW ottoeject'}</Content>
+                        {' ADD NEW OTTOEJECT'}</Content>
                 </ModalHeader>
+                <div style={{ height: '3rem' }} />
                 <Grid hasGutter>
                     <GridItem span={8}>
                         <Form isHorizontal className="pf-custom-text-align-left">

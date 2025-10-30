@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { JobContext } from '../App';
-import uploadPrintFile from './modals/UploadPrintFIle';
+import uploadPrintFile from './modals/UploadPrintFile';
 import newPrintJob from './modals/newPrintJob';
 import AddNewPrintJobButton from './buttons/addNewPrintJobButton';
 import StartPrintJobsButton from './buttons/startPrintJobButton';

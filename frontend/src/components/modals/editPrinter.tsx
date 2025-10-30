@@ -91,6 +91,7 @@ export default function editPrinter() {
                         <Brand src={PrinterIcon} alt="Printer logo" className='pf-custom-modal-icon' />
                         {'EDIT PRINTER'}</Content>
                 </ModalHeader>
+                <div style={{ height: '3rem' }} />
                 <Grid hasGutter>
                     <GridItem span={8}>
                         <Form isHorizontal className="pf-custom-text-align-left">

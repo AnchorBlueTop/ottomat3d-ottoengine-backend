@@ -115,6 +115,7 @@ export default function newPrinter() {
                             <Brand src={printerIcon} alt="Printer logo" className='pf-custom-modal-icon' />
                             {' ADD NEW PRINTER'}</Content>
                     </ModalHeader>
+                    <div style={{ height: '3rem' }} />
                     <Grid hasGutter>
 
                         <GridItem span={8}>

@@ -9,8 +9,8 @@ import {
 
 // const BASE_URL = import.meta.env.BASE_URL || 'http://localhost:3000'; 
 // const BASE_URL = 'http://localhost:3000';
-// const BASE_URL = 'http://127.0.0.1:3000';
-const BASE_URL = 'http://100.79.73.105:3000';
+const BASE_URL = 'http://127.0.0.1:3000';
+// const BASE_URL = 'http://100.79.73.105:3000';
 
 /////// OTTO PRINTER APIs ///////
 export const registerPrinter = async (printerData: PrinterRegistrationRepresentation): Promise<PrinterRepresentation> => {

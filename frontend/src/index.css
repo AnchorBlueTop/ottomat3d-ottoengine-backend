@@ -13,6 +13,13 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+#root {
+  margin: 0 auto;
+  padding: 0; /* remove padding so header reaches the window edge */
+  text-align: center;
+  width: 100%; /* ensure full width */
+}
+
 a {
   font-weight: 500;
   color: #646cff;
@@ -24,7 +31,8 @@ a:hover {
 
 body {
   margin: 0;
-  display: inline !important;
+  display: block !important; /* was inline; prevent shrinking width */
+  width: 100%;
   place-items: center;
   min-width: 320px;
 }

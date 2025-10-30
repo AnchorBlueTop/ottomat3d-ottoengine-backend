@@ -123,9 +123,10 @@ export default function editOttorack() {
             <PageSection className="pf-custom-new-ottorack">
                 <ModalHeader className="pf-custom-upload-header">
                     <Content component={ContentVariants.h3}>
-                        {'EDIT ottorack'}
+                        {'EDIT OTTORACK'}
                     </Content>
                 </ModalHeader>
+                <div style={{ height: '3rem' }} />
                 <Grid hasGutter>
                     <GridItem span={8}>
                         <Form isHorizontal className="pf-custom-text-align-left">

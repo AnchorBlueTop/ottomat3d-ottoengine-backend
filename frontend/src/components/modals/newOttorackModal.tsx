@@ -1,4 +1,5 @@
 import {
+    Brand,
     Button,
     Content,
     ContentVariants,
@@ -17,6 +18,7 @@ import { OttoRackRegistration, Shelf, PrintJob } from "../../representations/ott
 import { createOttorack } from "../../ottoengine_API";
 import ShelfDetailsModal from "./ShelfDetailsModal";
 import RackVisualizer from "../rackVisualisation.tsx";
+import OttoRackIcon from '../../public/ottorack-icon.png';
 
 
 export default function newOttorack() {
@@ -598,9 +600,10 @@ export default function newOttorack() {
         <PageSection className="pf-custom-new-ottorack">
             <ModalHeader className="pf-custom-upload-header">
                 <Content component={ContentVariants.h3}>
-                    {'ADD NEW OTTOrack'}
-                </Content>
+                    <Brand src={OttoRackIcon} alt="Ottorack logo" className='pf-custom-modal-icon' />
+                    {'ADD NEW OTTORACK'}</Content>
             </ModalHeader>
+            <div style={{ height: '3rem' }} />
             <Grid hasGutter>
                 <GridItem span={8}>
                     <Form isHorizontal>

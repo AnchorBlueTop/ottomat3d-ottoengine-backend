@@ -21,7 +21,7 @@ export function Ottoeject() {
     const { ottoeject, setOttoeject, setOttoejectIndex, setIsOttoejectEditModalOpen } = useContext(JobContext);
     const fetchedRef = useRef(false);
     
-    const ottoEjectFecth = async () => {
+    const ottoEjectFetch = async () => {
         // Prevent multiple fetches (StrictMode/double render)
         if (fetchedRef.current) return;
         fetchedRef.current = true;
@@ -82,7 +82,7 @@ export function Ottoeject() {
     }
 
     useEffect(() => {
-        ottoEjectFecth();
+        ottoEjectFetch();
     }, []);
 
     return (

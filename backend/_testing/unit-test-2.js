@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * OttoStudio Test Setup Script
- * Automatically configures the system with printers, ottoejects, racks, and print jobs
+ * OttoStudio Test Setup Script - Manual Slot Assignment
+ * Tests the manual orchestration feature with user-specified store and grab locations
+ * Job 1: store_location=4, grab_location=3
+ * Job 2: store_location=3, grab_location=2
  */
 
 const axios = require('axios');
@@ -67,6 +69,11 @@ const config = {
     printFiles: [
         "/Users/harshilpatel/Desktop/Projects/MCP/sd-card/OTTO_LOGO_P1P_PLA_V1.gcode.3mf",
         "/Users/harshilpatel/Desktop/Projects/MCP/sd-card/ottologov1.gcode.3mf"
+    ],
+    // Manual slot assignments for each job
+    jobSlots: [
+        { store_location: 4, grab_location: 3 },  // Job 1
+        { store_location: 3, grab_location: 2 }   // Job 2
     ]
 };
 
@@ -95,7 +102,8 @@ async function apiCall(method, endpoint, data = null, isFormData = false) {
         return {
             success: false,
             error: error.response?.data?.message || error.message,
-            status: error.response?.status
+            status: error.response?.status,
+            details: error.response?.data
         };
     }
 }
@@ -103,7 +111,7 @@ async function apiCall(method, endpoint, data = null, isFormData = false) {
 // Test script execution
 async function runTestSetup() {
     log('\n' + '='.repeat(60), colors.bright);
-    log('🚀 OttoStudio Test Setup Script', colors.bright + colors.blue);
+    log('🚀 OttoStudio Manual Orchestration Test Script', colors.bright + colors.blue);
     log('='.repeat(60), colors.bright);
 
     let printerId, ottoejectId, ottorackId;
@@ -111,7 +119,7 @@ async function runTestSetup() {
 
     try {
         // Step 1: Create Printer
-        logStep('1/9', 'Creating printer...');
+        logStep('1/10', 'Creating printer...');
         const printerResult = await apiCall('POST', '/printers', config.printer);
         if (printerResult.success) {
             printerId = printerResult.data.id;
@@ -125,7 +133,7 @@ async function runTestSetup() {
         }
 
         // Step 2: Create OttoEject
-        logStep('2/9', 'Creating OttoEject...');
+        logStep('2/10', 'Creating OttoEject...');
         const ottoejectResult = await apiCall('POST', '/ottoeject', config.ottoeject);
         if (ottoejectResult.success) {
             ottoejectId = ottoejectResult.data.id;
@@ -139,7 +147,7 @@ async function runTestSetup() {
         }
 
         // Step 3: Create OttoRack
-        logStep('3/9', 'Creating OttoRack...');
+        logStep('3/10', 'Creating OttoRack...');
         const ottorackResult = await apiCall('POST', '/ottoracks', config.ottorack);
         if (ottorackResult.success) {
             ottorackId = ottorackResult.data.id;
@@ -152,9 +160,12 @@ async function runTestSetup() {
             ottorackId = 1;
         }
 
-        // Step 4-6: Configure shelves with empty plates
-        logStep('4-6/9', 'Configuring shelves 1-3 with empty plates...');
-        for (let shelfNum = 1; shelfNum <= 3; shelfNum++) {
+        // Step 4-7: Configure shelves 2-4 with empty plates
+        // Shelf 2 = grab slot for job 2
+        // Shelf 3 = grab slot for job 1, store slot for job 2
+        // Shelf 4 = store slot for job 1
+        logStep('4-7/10', 'Configuring shelves 2-4 with empty plates...');
+        for (let shelfNum = 2; shelfNum <= 4; shelfNum++) {
             const shelfData = {
                 has_plate: true,
                 plate_state: "empty",
@@ -168,10 +179,10 @@ async function runTestSetup() {
             }
         }
 
-        // Step 7-8: Upload print files and create jobs
+        // Step 8-10: Upload print files and create jobs with manual slot assignments
         for (let i = 0; i < config.printFiles.length; i++) {
             const filePath = config.printFiles[i];
-            const stepNum = 7 + (i * 2);
+            const stepNum = 8 + (i * 2);
 
             // Add delay before second print job to prevent race conditions
             if (i === 1) {
@@ -181,7 +192,7 @@ async function runTestSetup() {
             }
 
             // Upload file
-            logStep(`${stepNum}/9`, `Uploading print file ${i + 1}...`);
+            logStep(`${stepNum}/10`, `Uploading print file ${i + 1}...`);
 
             if (!fs.existsSync(filePath)) {
                 logError(`File not found: ${filePath}`);
@@ -204,41 +215,52 @@ async function runTestSetup() {
             }
 
             // Create print job with manual slot assignments
-            logStep(`${stepNum + 1}/9`, `Creating print job ${i + 1}...`);
+            logStep(`${stepNum + 1}/10`, `Creating print job ${i + 1} with manual slots...`);
+            const jobSlots = config.jobSlots[i];
             const jobData = {
                 print_item_id: printItemIds[i],
                 printer_id: printerId,
                 ottoeject_id: ottoejectId,
-                rack_id: ottorackId,
-                store_location: i + 2,  // Job 1 uses slot 2, Job 2 uses slot 3
-                grab_location: i + 1,   // Job 1 uses slot 1, Job 2 uses slot 2
+                rack_id: ottorackId,  // Manual rack selection
+                store_location: jobSlots.store_location,
+                grab_location: jobSlots.grab_location,
                 auto_start: true,
                 priority: 1
             };
+
+            log(`   Rack: ${ottorackId}, Store slot: ${jobSlots.store_location}, Grab slot: ${jobSlots.grab_location}`);
 
             const jobResult = await apiCall('POST', '/print-jobs', jobData);
             if (jobResult.success) {
                 logSuccess(`Print job created with ID: ${jobResult.data.id}`);
                 log(`   Status: ${jobResult.data.status}, Auto-start: ${jobResult.data.auto_start ? 'Yes' : 'No'}`);
+                log(`   Assigned store: ${jobResult.data.assigned_store_slot}, Assigned grab: ${jobResult.data.assigned_grab_slot}`);
             } else {
                 logError(`Failed to create print job: ${jobResult.error}`);
+                if (jobResult.details) {
+                    log(`   Details: ${JSON.stringify(jobResult.details, null, 2)}`, colors.red);
+                }
             }
         }
 
         // Summary
         log('\n' + '='.repeat(60), colors.bright);
-        log('✅ Test Setup Complete!', colors.green + colors.bright);
+        log('✅ Manual Orchestration Test Complete!', colors.green + colors.bright);
         log('='.repeat(60), colors.bright);
         log('\nSystem Configuration:');
         log(`  • Printer ID: ${printerId}`);
         log(`  • OttoEject ID: ${ottoejectId}`);
         log(`  • OttoRack ID: ${ottorackId}`);
         log(`  • Print Jobs Created: ${printItemIds.length}`);
+        log('\nManual Slot Assignments:');
+        log(`  • Job 1: Store → Slot 4, Grab → Slot 3`);
+        log(`  • Job 2: Store → Slot 3, Grab → Slot 2`);
         log('\nNext Steps:');
         log('  1. Monitor backend logs for orchestration activity');
         log('  2. Check job status: GET /api/print-jobs');
         log('  3. View orchestrator status: GET /api/orchestrator/status');
-        log('  4. Monitor rack state: GET /api/ottoracks/1\n');
+        log('  4. Monitor rack state: GET /api/ottoracks/1');
+        log('  5. Verify slot assignments match your specifications\n');
 
     } catch (error) {
         log('\n' + '='.repeat(60), colors.bright);

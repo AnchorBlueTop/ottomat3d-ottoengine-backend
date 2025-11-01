@@ -49,7 +49,8 @@ class PrinterMQTTClient extends EventEmitter {
             this.emit(eventName, ...args);
             return true;
         } catch (emitError) {
-            console.error(`[MQTT ERROR ${this._serialNumber}] Failed to emit '${eventName}':`, emitError.message);
+            // Suppressed: Error is already handled gracefully, no need to log
+            // console.error(`[MQTT ERROR ${this._serialNumber}] Failed to emit '${eventName}':`, emitError.message);
             return false;
         }
     };
@@ -466,13 +467,14 @@ class PrinterMQTTClient extends EventEmitter {
          return this._publishCommand(payload);
     };
 
-    startPrint = async (filename, plateIdentifier = null, useAms = false, amsMapping = [0], skipObjects = null) => { 
+    startPrint = async (filename, plateIdentifier = null, useAms = false, amsMapping = [0], skipObjects = null) => {
         const param = ""; // Force empty param based on successful tests
-        if (plateIdentifier !== null && plateIdentifier !== undefined && plateIdentifier !== "") { 
-            this.info(`Plate identifier provided, but using required empty 'param'.`); 
-        } else { 
-            this.info(`Using required empty 'param'.`); 
-        }
+        // Suppressed: Noisy log about empty param (always required for Bambu printers)
+        // if (plateIdentifier !== null && plateIdentifier !== undefined && plateIdentifier !== "") {
+        //     this.info(`Plate identifier provided, but using required empty 'param'.`);
+        // } else {
+        //     this.info(`Using required empty 'param'.`);
+        // }
         this.info(`Attempting print: File="${filename}", UseAMS=${useAms}, Param="${param}"`);
 
         const payload = {

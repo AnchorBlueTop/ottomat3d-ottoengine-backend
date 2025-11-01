@@ -1,7 +1,6 @@
 import React, { memo } from "react";
 import { Grid, GridItem, PageSection } from "@patternfly/react-core";
 // import uploadPrintFile from "./modals/UploadPrintFile";
-import newPrintJob from "./modals/newPrintJob";
 import { Printers } from "./Printers";
 import { Ottoeject } from "./OttoEject";
 import { Job } from "./Jobs";

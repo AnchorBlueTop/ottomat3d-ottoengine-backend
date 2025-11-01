@@ -12,7 +12,10 @@ const ottorackController = {
      */
     async createOttorack(req, res, next) {
         try {
-            const { name, number_of_shelves, shelf_spacing_mm, bed_size } = req.body;
+            const { name, number_of_shelves, shelves } = req.body;
+            // Accept both camelCase and snake_case for rack metadata
+            const shelf_spacing_mm = req.body.shelf_spacing_mm ?? req.body.shelfSpacingMm;
+            const bed_size = req.body.bed_size ?? req.body.bedSize;
             
             // Basic validation
             if (!name || !number_of_shelves) {
@@ -29,11 +32,23 @@ const ottorackController = {
                 });
             }
             
+            // Optional shelves normalization: accept '' (empty) or 'empty_plate' only on creation
+            let normalizedShelves = undefined;
+            if (Array.isArray(shelves)) {
+                normalizedShelves = shelves
+                    .map(s => ({
+                        shelf_number: Number(s.shelf_number ?? s.id),
+                        type: s.type === 'empty_plate' ? 'empty_plate' : ''
+                    }))
+                    .filter(s => Number.isFinite(s.shelf_number) && s.shelf_number >= 1 && s.shelf_number <= number_of_shelves);
+            }
+            
             const newRack = await ottorackService.createOttorack({
                 name, 
                 number_of_shelves, 
                 shelf_spacing_mm, 
-                bed_size
+                bed_size,
+                shelves: normalizedShelves
             });
             
             res.status(201).json(newRack);
@@ -45,6 +60,31 @@ const ottorackController = {
                     message: 'An Ottorack with this name already exists.' 
                 });
             }
+            next(error);
+        }
+    },
+
+    /**
+     * Update rack metadata (name, shelf_spacing_mm, bed_size)
+     * PUT /api/ottoracks/:id
+     */
+    async updateOttorackMeta(req, res, next) {
+        try {
+            const id = parseInt(req.params.id, 10);
+            if (isNaN(id) || id <= 0) {
+                return res.status(400).json({ error: 'Bad Request', message: 'Rack ID must be a positive integer.' });
+            }
+            const name = req.body.name;
+            const shelf_spacing_mm = req.body.shelf_spacing_mm ?? req.body.shelfSpacingMm;
+            const bed_size = req.body.bed_size ?? req.body.bedSize;
+
+            const updated = await ottorackService.updateOttorackMeta(id, { name, shelf_spacing_mm, bed_size });
+            if (!updated) {
+                return res.status(404).json({ error: 'Not Found', message: `Ottorack with ID ${id} not found.` });
+            }
+            res.status(200).json(updated);
+        } catch (error) {
+            logger.error(`[OttorackController] Update Meta Error: ${error.message}`, error);
             next(error);
         }
     },
@@ -295,6 +335,31 @@ const ottorackController = {
                 error: error.message,
                 orchestrator_notified: false
             });
+        }
+    },
+
+    /**
+     * Delete an Ottorack
+     * DELETE /api/ottoracks/:id
+     */
+    async deleteOttorack(req, res, next) {
+        try {
+            const id = parseInt(req.params.id, 10);
+            if (isNaN(id) || id <= 0) {
+                return res.status(400).json({
+                    error: 'Bad Request',
+                    message: 'Rack ID must be a positive integer.'
+                });
+            }
+
+            const success = await ottorackService.deleteOttorack(id);
+            if (success) {
+                return res.status(200).json({ message: 'Ottorack deleted successfully' });
+            }
+            return res.status(404).json({ error: 'Not Found', message: `Ottorack with ID ${id} not found.` });
+        } catch (error) {
+            logger.error(`[OttorackController] Delete Error: ${error.message}`, error);
+            next(error);
         }
     }
 };

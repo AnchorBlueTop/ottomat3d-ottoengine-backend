@@ -8,8 +8,8 @@ import {
 } from "./representations/printerRepresentation";
 
 // const BASE_URL = import.meta.env.BASE_URL || 'http://localhost:3000'; 
-// const BASE_URL = 'http://localhost:3000';
-const BASE_URL = 'http://127.0.0.1:3000';
+const BASE_URL = 'http://localhost:3000';
+// const BASE_URL = 'http://127.0.0.1:3000';
 // const BASE_URL = 'http://100.79.73.105:3000';
 
 /////// OTTO PRINTER APIs ///////
@@ -279,7 +279,7 @@ export const startPrintJob = async (id: number | string): Promise<any> => {
 
 /////// OTTO RACK APIs ///////
 
-// Create a new Ottorack
+// Create a new Ottorack (supports initial shelves assignment)
 export const createOttorack = async (ottorackData: any): Promise<any> => {
   const response = await fetch(`${BASE_URL}/api/ottoracks`, {
     method: "POST",
@@ -290,6 +290,21 @@ export const createOttorack = async (ottorackData: any): Promise<any> => {
   });
   if (!response.ok) {
     throw new Error(`Error creating Ottorack: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+// Update Ottorack metadata (name, shelf_spacing_mm, bed_size)
+export const updateOttorackMeta = async (id: number, updateData: { name?: string; shelf_spacing_mm?: number; bed_size?: string; }): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/ottoracks/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updateData),
+  });
+  if (!response.ok) {
+    throw new Error(`Error updating Ottorack ${id}: ${response.statusText}`);
   }
   return response.json();
 };

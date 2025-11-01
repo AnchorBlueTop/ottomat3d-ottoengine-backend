@@ -1,12 +1,11 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { JobContext } from '../App';
 import uploadPrintFile from './modals/UploadPrintFile';
-import newPrintJob from './modals/newPrintJob';
 import AddNewPrintJobButton from './buttons/addNewPrintJobButton';
 import StartPrintJobsButton from './buttons/startPrintJobButton';
 import newJobQueue from './modals/newJobQueue';
 import { getAllPrintJobs } from '../ottoengine_API';
-import editPrintJob from './modals/editPrintJob';
+import PrintJobModal from './modals/PrintJobModal';
 import {
   Grid, GridItem, PageSection, Label,
   DataList, DataListItem, DataListItemRow, DataListItemCells, DataListCell
@@ -14,10 +13,11 @@ import {
 import { PlayIcon } from '@patternfly/react-icons';
 import PrintJobProgress from './printJobProgress';
 import hourglass from '../public/hourglass.png';
-import printerIcon from '../public/printer-icon.svg';
+import printerIcon from '../public/printer-Icon.svg';
+import rackIcon from '../public/ottorack-icon.png';
 
 export const Job: React.FunctionComponent = () => {
-  const { printJob, setPrintJob, setPrintJobIndex, setPrintJobUID, setIsEditPrintJobModalOpen } = useContext(JobContext);
+  const { printJob, setPrintJob, setPrintJobIndex, setPrintJobUID, setIsEditPrintJobModalOpen, ottorack } = useContext(JobContext);
   const [loading, setLoading] = useState(true);
 
   const fetchPrintJobs = async () => {
@@ -32,15 +32,25 @@ export const Job: React.FunctionComponent = () => {
     }
   };
 
-  const statusColor = (status?: string): 'green' | 'orange' | 'blue' | 'purple' | 'grey' | 'red' => {
+  // Map status to our custom solid pill class
+  const statusClass = (status?: string) => {
     switch ((status || '').toUpperCase()) {
-      case 'READY': return 'green';
-      case 'QUEUED': return 'orange';
-      case 'PRINTING': return 'blue';
-      case 'EJECTED': return 'purple';
-      case 'COMPLETE': return 'grey';
-      case 'ERROR': return 'red';
-      default: return 'grey';
+      case 'NEW':
+      case 'READY':
+        return 'pf-custom-label pf-custom-label--ready';
+      case 'QUEUED':
+        return 'pf-custom-label pf-custom-label--queued';
+      case 'PRINTING':
+        return 'pf-custom-label pf-custom-label--printing';
+      case 'EJECTED':
+        return 'pf-custom-label pf-custom-label--ejected';
+      case 'COMPLETE':
+      case 'FINISHED':
+        return 'pf-custom-label pf-custom-label--complete';
+      case 'ERROR':
+        return 'pf-custom-label pf-custom-label--error';
+      default:
+        return 'pf-custom-label pf-custom-label--default';
     }
   };
 
@@ -61,6 +71,11 @@ export const Job: React.FunctionComponent = () => {
             const fileDetails = JSON.parse(value.file_details_json || '{}') || {};
             const durationText = value.duration || fileDetails.duration || '-';
             const printerText = value.printer_id || fileDetails.printer || '-';
+            // Map assigned_rack_id to a human-readable rack name from context (fallback to id or '-')
+            const rackId = (value as any)?.assigned_rack_id ?? fileDetails.assigned_rack_id;
+            const rackText = rackId != null && rackId !== ''
+              ? (ottorack?.find(r => String(r.id) === String(rackId))?.name || String(rackId))
+              : '-';
             const status = String(value?.status || '').toUpperCase();
             const showProgress = status === 'PRINTING' || status === 'COMPLETE' || status === 'FINISHED';
 
@@ -83,7 +98,7 @@ export const Job: React.FunctionComponent = () => {
 
                       // Status (content-sized)
                       <DataListCell key="status" isFilled={!showProgress} className="pf-u-display-flex pf-u-justify-content-center pf-u-align-items-center content-center-align">
-                        <Label color={statusColor(value.status)}>{value.status || 'Unknown'}</Label>
+                        <Label className={statusClass(value.status)}>{String(value.status || 'Unknown').toUpperCase()}</Label>
                       </DataListCell>,
 
                       // Printer (content-sized)
@@ -96,23 +111,23 @@ export const Job: React.FunctionComponent = () => {
                         {!showProgress ? (
                           <div className="pf-u-w-100 pf-u-text-align-left" style={{ textAlign: 'left' }}>
                             <div className="pf-u-font-weight-bold pf-custom-duration" style={{ alignSelf: 'flex-start', display: 'block' }}>
-                              <img src={printerIcon} alt="" className="pf-custom-duration-icon" />
+                              <img src={printerIcon} alt="" className="pf-custom-duration-icon pf-custom-purple-filter" />
                               {' Printer: ' + printerText}
                             </div>
                             <div className="pf-u-font-weight-bold pf-custom-duration" style={{ alignSelf: 'flex-start', display: 'block' }}>
-                              <img src={printerIcon} alt="" className="pf-custom-duration-icon" />
-                              {' Rack: ' + printerText}
+                              <img src={rackIcon} alt="" className="pf-custom-duration-icon pf-custom-purple-filter" />
+                              {' Rack: ' + rackText}
                             </div>
                           </div>
                         ) : (
                           <div className="pf-u-w-100 pf-u-text-align-left" style={{ textAlign: 'left' }}>
                             <div className="pf-u-font-weight-bold pf-custom-duration" style={{ alignSelf: 'flex-start', display: 'block' }}>
-                              <img src={printerIcon} alt="" className="pf-custom-duration-icon" />
+                              <img src={printerIcon} alt="" className="pf-custom-duration-icon pf-custom-purple-filter" />
                               {' Printer: ' + printerText}
                             </div>
                             <div className="pf-u-font-weight-bold pf-custom-duration" style={{ alignSelf: 'flex-start', display: 'block' }}>
-                              <img src={printerIcon} alt="" className="pf-custom-duration-icon" />
-                              {' Rack: ' + printerText}
+                              <img src={rackIcon} alt="" className="pf-custom-duration-icon pf-custom-purple-filter" />
+                              {' Rack: ' + rackText}
                             </div>
                           </div>
                         )}
@@ -185,8 +200,7 @@ export const Job: React.FunctionComponent = () => {
         </GridItem>
       </Grid>
       {newJobQueue()}
-      {newPrintJob()}
-      {editPrintJob()}
+      {PrintJobModal()}
       {uploadPrintFile()}
     </>
   );

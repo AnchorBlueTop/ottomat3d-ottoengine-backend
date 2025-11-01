@@ -20,6 +20,12 @@ router.put('/:id/shelves/:shelf_id', ottorackController.updateShelf);
 // POST /api/ottoracks/{id}/shelves/{id}/reset - Reset Shelf (Empty)
 router.post('/:id/shelves/:shelf_id/reset', ottorackController.resetShelf);
 
+// DELETE /api/ottoracks/{id} - Delete an Ottorack
+router.delete('/:id', ottorackController.deleteOttorack);
+
+// PUT /api/ottoracks/:id - Update Ottorack metadata (name, spacing, bed size)
+router.put('/:id', ottorackController.updateOttorackMeta);
+
 // GET /api/ottoracks/orchestrator/status - Get orchestrator service status
 router.get('/orchestrator/status', async (req, res) => {
     try {

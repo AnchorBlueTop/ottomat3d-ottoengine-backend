@@ -33,6 +33,7 @@ class OrchestratorService extends EventEmitter {
         this.rackStateCache = new Map();
         this.isInitialized = false;
         this.isShuttingDown = false;
+        this.lastLoggedQueueState = null; // Track queue state to reduce spam
         
         // Enhanced performance tracking
         this.eventProcessingStats = {
@@ -283,13 +284,14 @@ class OrchestratorService extends EventEmitter {
     async processQueuedJobs() {
         try {
             // Find jobs that are queued and have auto_start=true
+            // MANUAL MODE: Jobs already have assignments (assigned_rack_id IS NOT NULL)
             const queuedJobs = await dbAll(`
                 SELECT pj.*, pi.measurement_details_json, pi.file_details_json
                 FROM print_jobs pj
                 LEFT JOIN print_items pi ON pj.print_item_id = pi.id
-                WHERE pj.status = 'QUEUED' 
+                WHERE pj.status = 'QUEUED'
                 AND pj.auto_start = 1
-                AND pj.assigned_rack_id IS NULL
+                AND pj.assigned_rack_id IS NOT NULL
                 ORDER BY pj.priority ASC, pj.submitted_at ASC
                 LIMIT 10
             `);
@@ -298,13 +300,19 @@ class OrchestratorService extends EventEmitter {
                 return; // No jobs to process
             }
 
-            // Display comprehensive queue status with visual representation
-            await this._displayQueueStatus(queuedJobs);
+            // Filter out jobs whose printers are busy
+            const processableJobs = queuedJobs.filter(job => !this.activePrinters.has(job.printer_id));
 
-            // Process jobs sequentially (one at a time)
-            for (let i = 0; i < queuedJobs.length; i++) {
-                const job = queuedJobs[i];
-                logger.info(`[OrchestratorService] Processing job ${i + 1}/${queuedJobs.length}: Job ID ${job.id}`);
+            // Check if queue state changed (to reduce spam)
+            const queueStateChanged = this._queueStateChanged(queuedJobs, processableJobs);
+
+            // Display queue status only if state changed or there are processable jobs
+            if (queueStateChanged || processableJobs.length > 0) {
+                await this._displayQueueStatus(queuedJobs);
+            }
+
+            // Process only jobs with available printers
+            for (const job of processableJobs) {
                 await this._processIndividualJob(job);
             }
             
@@ -314,7 +322,32 @@ class OrchestratorService extends EventEmitter {
     }
 
     /**
+     * Check if queue state has changed to reduce spam
+     * Only returns true if job states, printer availability, or queue composition changed
+     */
+    _queueStateChanged(queuedJobs, processableJobs) {
+        // Create a fingerprint of current queue state
+        const currentState = {
+            jobIds: queuedJobs.map(j => j.id).join(','),
+            processableCount: processableJobs.length,
+            activeWorkflows: Array.from(this.activeWorkflows.keys()).sort().join(','),
+            activePrinters: Array.from(this.activePrinters).sort().join(',')
+        };
+
+        const stateString = JSON.stringify(currentState);
+
+        // Compare with last logged state
+        if (this.lastLoggedQueueState !== stateString) {
+            this.lastLoggedQueueState = stateString;
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
      * Process an individual job through the complete workflow
+     * MANUAL MODE: Uses user-specified printer and slot assignments
      */
     async _processIndividualJob(job) {
         const startTime = Date.now();
@@ -322,94 +355,84 @@ class OrchestratorService extends EventEmitter {
 
         try {
             const printHeight = this._extractPrintHeight(job);
-            logger.info(`[OrchestratorService] Processing job ${job.id}: ${job.file_details_json ? JSON.parse(job.file_details_json).name : 'Unknown'} (Height: ${printHeight}mm)`);
-            
-            // Step 1: Height-aware slot assignment
-            const slotAssignment = await this.assignSlotsForJob(job);
-            if (!slotAssignment.success) {
-                logger.warn(`[OrchestratorService] Cannot assign slots for job ${job.id}: ${slotAssignment.reason}`);
-                return;
-            }
-            
-            // Step 2: Find available printer
-            logger.info(`[OrchestratorService] 🔍 Step 2: Finding available printer for job ${job.id}...`);
-            const availablePrinter = await this._findAvailablePrinter(job);
+            const fileName = job.file_details_json ? JSON.parse(job.file_details_json).name : 'Unknown';
+            logger.info(`[OrchestratorService] Processing job ${job.id}: ${fileName} (Height: ${printHeight}mm)`);
 
-            if (!availablePrinter) {
-                logger.warn(`[OrchestratorService] ⚠️  No available printer for job ${job.id}, will retry later`);
+            // Step 1: Validate job has manual assignments
+            if (!job.printer_id || !job.assigned_rack_id || !job.assigned_store_slot || !job.assigned_grab_slot) {
+                logger.error(`[OrchestratorService] Job ${job.id} missing manual assignments (printer=${job.printer_id}, rack=${job.assigned_rack_id}, store=${job.assigned_store_slot}, grab=${job.assigned_grab_slot})`);
                 return;
             }
 
-            logger.info(`[OrchestratorService] ✅ Found available printer: ${availablePrinter.id} (${availablePrinter.name})`);
+            logger.info(`[OrchestratorService] ✅ Using manual assignments: Printer ${job.printer_id}, Store Slot ${job.assigned_store_slot}, Grab Slot ${job.assigned_grab_slot}`);
+
+            // Step 2: Check if specified printer is available
+            // Note: This should rarely trigger now since we filter busy printers before processing
+            if (this.activePrinters.has(job.printer_id)) {
+                logger.debug(`[OrchestratorService] Printer ${job.printer_id} is busy, skipping job ${job.id}`);
+                return;
+            }
+
+            logger.info(`[OrchestratorService] ✅ Printer ${job.printer_id} is available`);
 
             // CRITICAL: Mark printer as in-use IMMEDIATELY to prevent race conditions
-            // Must do this BEFORE any async operations (DB updates, etc.) that could delay us
-            this.activePrinters.add(availablePrinter.id);
-            lockedPrinterId = availablePrinter.id; // Track for error cleanup
-            logger.info(`[OrchestratorService] Job ${job.id} locked printer ${availablePrinter.id} (pre-assignment lock)`);
+            this.activePrinters.add(job.printer_id);
+            lockedPrinterId = job.printer_id; // Track for error cleanup
+            logger.info(`[OrchestratorService] Job ${job.id} locked printer ${job.printer_id}`);
 
-            // Step 3: Update job with assignments
-            // Note: We only track the store slot upfront. Post-print grab slot will be determined dynamically after storing.
-            logger.info(`[OrchestratorService] 📝 Step 3: Updating job ${job.id} assignments in database...`);
-            await this._updateJobAssignments(job.id, {
-                printer_id: availablePrinter.id,
-                assigned_rack_id: slotAssignment.rackId,
-                assigned_store_slot: slotAssignment.storeSlot,
-                assigned_grab_slot: null, // Post-print grab will be determined dynamically
-                effective_clearance_mm: slotAssignment.clearance,
-                slot_assignment_reason: slotAssignment.reason,
-                orchestration_status: 'assigned'
-            });
-            logger.info(`[OrchestratorService] ✅ Job ${job.id} assignments saved to database`);
-
-            // Step 3.5: Update rack slots
-            logger.info(`[OrchestratorService] 🔒 Step 3.5: Reserving slot ${slotAssignment.storeSlot} on rack ${slotAssignment.rackId}...`);
-            // Mark store slot as reserved for this job
-            await this._reserveRackSlot(slotAssignment.rackId, slotAssignment.storeSlot, job.id);
+            // Step 3: Reserve store slot (prevent conflicts)
+            logger.info(`[OrchestratorService] 🔒 Reserving store slot ${job.assigned_store_slot} on rack ${job.assigned_rack_id}...`);
+            await this._reserveRackSlot(job.assigned_rack_id, job.assigned_store_slot, job.id);
 
             // Invalidate cache so next job sees updated state
-            this.invalidateRackCache(slotAssignment.rackId);
-            logger.info(`[OrchestratorService] ✅ Rack ${slotAssignment.rackId} cache invalidated`);
+            this.invalidateRackCache(job.assigned_rack_id);
+            logger.info(`[OrchestratorService] ✅ Rack ${job.assigned_rack_id} cache invalidated`);
 
-            // Step 4: Create workflow tracker (printer already marked as in-use above)
-            logger.info(`[OrchestratorService] 🎯 Step 4: Creating workflow tracker for job ${job.id}...`);
+            // Step 4: Update job orchestration status
+            await this._updateJobAssignments(job.id, {
+                orchestration_status: 'assigned'
+            });
+
+            // Step 5: Create workflow tracker
+            logger.info(`[OrchestratorService] 🎯 Creating workflow tracker for job ${job.id}...`);
             this.activeWorkflows.set(job.id, {
                 jobId: job.id,
-                printerId: availablePrinter.id,
-                rackId: slotAssignment.rackId,
-                storeSlot: slotAssignment.storeSlot,
-                postPrintGrabSlot: null, // Will be set after storing
+                printerId: job.printer_id,
+                rackId: job.assigned_rack_id,
+                storeSlot: job.assigned_store_slot,
+                grabSlot: job.assigned_grab_slot,  // Use manual grab slot
                 phase: 'assigned',
                 startTime: Date.now(),
                 lastUpdate: Date.now()
             });
             logger.info(`[OrchestratorService] ✅ Workflow created for job ${job.id}`);
 
-            // === NEW: Step 5: Execute complete print workflow ===
-            logger.info(`[OrchestratorService] 🚀 Step 5: Starting full print workflow for job ${job.id}...`);
+            // Step 6: Execute complete print workflow
+            logger.info(`[OrchestratorService] 🚀 Starting full print workflow for job ${job.id}...`);
             await this._executeFullPrintWorkflow(job.id);
-            
+
             // Update statistics
             this.jobProcessingStats.jobs_processed++;
             this.jobProcessingStats.jobs_assigned_slots++;
-            this.jobProcessingStats.printers_utilized.add(availablePrinter.id);
-            
+            this.jobProcessingStats.printers_utilized.add(job.printer_id);
+
             const processingTime = Date.now() - startTime;
             this.jobProcessingStats.average_processing_time_ms =
                 (this.jobProcessingStats.average_processing_time_ms + processingTime) / 2;
 
             logger.info(`[OrchestratorService] ✅ Job ${job.id} processing completed in ${processingTime}ms`);
-            logger.info(`[OrchestratorService] 📊 Summary: Job ${job.id} → Printer ${availablePrinter.id} → Rack ${slotAssignment.rackId} Slot ${slotAssignment.storeSlot}`);
+            logger.info(`[OrchestratorService] 📊 Summary: Job ${job.id} → Printer ${job.printer_id} → Rack ${job.assigned_rack_id} → Store:${job.assigned_store_slot} Grab:${job.assigned_grab_slot}`);
 
             // Emit job assigned event
             this.emit('jobAssigned', {
                 jobId: job.id,
-                printerId: availablePrinter.id,
-                rackId: slotAssignment.rackId,
-                storeSlot: slotAssignment.storeSlot,
+                printerId: job.printer_id,
+                rackId: job.assigned_rack_id,
+                storeSlot: job.assigned_store_slot,
+                grabSlot: job.assigned_grab_slot,
                 processingTimeMs: processingTime
             });
-            
+
         } catch (error) {
             logger.error(`[OrchestratorService] Error processing job ${job.id}:`, error.message);
             this.jobProcessingStats.jobs_failed++;
@@ -556,6 +579,10 @@ class OrchestratorService extends EventEmitter {
                     const printer = await dbGet('SELECT name FROM printers WHERE id = ?', [workflow.printerId]);
                     const printerName = printer ? printer.name : `Printer ${workflow.printerId}`;
 
+                    // Get rack name
+                    const rack = await dbGet('SELECT name FROM storage_racks WHERE id = ?', [workflow.rackId]);
+                    const rackName = rack ? rack.name : `Rack ${workflow.rackId}`;
+
                     // Build status line
                     const phaseEmoji = {
                         'assigned': '📝',
@@ -571,7 +598,7 @@ class OrchestratorService extends EventEmitter {
                     const emoji = phaseEmoji[workflow.phase] || '❓';
                     lines.push(`  ${emoji} Job ${workflow.jobId}: ${filename}`);
                     lines.push(`     Printer: ${printerName} | Phase: ${workflow.phase}`);
-                    lines.push(`     Store: Slot ${workflow.storeSlot} | Grab: ${workflow.postPrintGrabSlot || 'TBD'}`);
+                    lines.push(`     Store: ${rackName} | Slot ${workflow.storeSlot} | Grab: Slot ${workflow.grabSlot}`);
 
                     // Show elapsed time
                     const elapsedMin = Math.floor((Date.now() - workflow.startTime) / 60000);
@@ -604,7 +631,7 @@ class OrchestratorService extends EventEmitter {
 
                 // Show assignment status if available
                 if (job.assigned_rack_id && job.assigned_store_slot) {
-                    lines.push(`     Assigned: Rack ${job.assigned_rack_id}, Store Slot ${job.assigned_store_slot}`);
+                    lines.push(`     Assigned: Rack ${job.assigned_rack_id}, Store Slot ${job.assigned_store_slot}, Grab Slot ${job.assigned_grab_slot}`);
                 } else {
                     lines.push(`     Status: Awaiting assignment`);
                 }
@@ -659,16 +686,14 @@ class OrchestratorService extends EventEmitter {
         // Strip ANSI color codes
         const cleanText = text.replace(/\u001b\[[0-9;]*m/g, '');
 
-        // Convert to array of actual characters (handles surrogate pairs correctly)
-        const chars = [...cleanText];
-
-        // Count actual displayed emojis (base emoji + optional variation selector)
-        // This regex matches emoji sequences, not individual code points
+        // Enhanced emoji regex that matches complete emoji sequences including variation selectors
         const emojiRegex = /([\u{1F000}-\u{1F9FF}][\u{FE00}-\u{FE0F}]?|[\u{2600}-\u{27BF}][\u{FE00}-\u{FE0F}]?|[\u{1F300}-\u{1F5FF}][\u{FE00}-\u{FE0F}]?|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}][\u{FE00}-\u{FE0F}]?|[\u{1F900}-\u{1F9FF}]|[\u{2300}-\u{23FF}]|[\u{2B50}])/gu;
-        const emojis = cleanText.match(emojiRegex) || [];
 
-        // Visual length = character count + emoji count (since each emoji displays as 2 chars)
-        return chars.length + emojis.length;
+        // Replace each emoji with a 2-character placeholder
+        const textWithPlaceholders = cleanText.replace(emojiRegex, 'XX');
+
+        // Now we can use simple length since emojis are replaced with XX
+        return textWithPlaceholders.length;
     }
 
     /**
@@ -1040,6 +1065,7 @@ class OrchestratorService extends EventEmitter {
             await this._updateJobAssignments(workflow.jobId, {
                 status: 'PRINTING',
                 orchestration_status: 'printing',
+                status_message: `Print started. Will store in slot ${workflow.storeSlot} when complete.`,
                 started_at: new Date().toISOString()
             });
             
@@ -1128,15 +1154,17 @@ class OrchestratorService extends EventEmitter {
                 workflow.lastUpdate = Date.now();
 
                 // Check if print is completed
-                if (status === 'FINISH' || (status === 'IDLE' && progress >= 99)) {
+                // FIXED: Added 'COMPLETED' status (Bambu printers return this instead of 'FINISH')
+                if (status === 'FINISH' || status === 'COMPLETED' || (status === 'IDLE' && progress >= 99)) {
                     clearInterval(monitorInterval);
 
-                    logger.info(`[OrchestratorService] [Job ${jobId}] ✅ Print completed!`);
+                    logger.info(`[OrchestratorService] [Job ${jobId}] ✅ Print completed! (Status: ${status})`);
                     logger.info(`[OrchestratorService] [Job ${jobId}] Phase: monitoring_active → print_completed`);
 
                     // Update job status
                     await this._updateJobAssignments(jobId, {
                         status: 'COMPLETED',
+                        status_message: 'Print completed. Starting ejection and storage workflow...',
                         finished_printing_at: new Date().toISOString(),
                         progress_percent: 100
                     });
@@ -1235,43 +1263,29 @@ class OrchestratorService extends EventEmitter {
             // Invalidate cache so next job sees updated state
             this.invalidateRackCache(workflow.rackId);
 
-            // ALWAYS try to load a fresh plate after storing (if available)
-            // This keeps the printer ready for the next job
-            const freshRackState = await this.getCurrentRackState(workflow.rackId);
-            const slotManager = this.slotManagers.get(workflow.rackId);
+            // ALWAYS load fresh plate after storing (using manual grab slot)
+            // MANUAL MODE: Use user-specified grab slot
+            if (workflow.grabSlot) {
+                logger.info(`[OrchestratorService] Loading fresh plate from manually specified slot ${workflow.grabSlot}`);
 
-            if (slotManager) {
-                const grabResult = slotManager.findOptimalGrabSlot(freshRackState, {
-                    excludeSlot: workflow.storeSlot // Don't grab from slot we just stored to
+                // Execute grab and load sequence (skip HOME since we already homed, skip PARK since we'll park at end)
+                await this._executeGrabAndLoadSequence(ottoeject.id, workflow.grabSlot, workflow.printerId, {
+                    skipHome: true,  // Already homed at start of eject-store sequence
+                    skipPark: true   // Will park at end of entire post-print workflow
                 });
 
-                if (grabResult.available) {
-                    logger.info(`[OrchestratorService] Loading fresh plate from slot ${grabResult.slot} to prepare for next job`);
+                // Mark the grab slot as empty
+                await this._markSlotAsEmpty(workflow.rackId, workflow.grabSlot);
 
-                    // Execute grab and load sequence (skip HOME since we already homed, skip PARK since we'll park at end)
-                    await this._executeGrabAndLoadSequence(ottoeject.id, grabResult.slot, workflow.printerId, {
-                        skipHome: true,  // Already homed at start of eject-store sequence
-                        skipPark: true   // Will park at end of entire post-print workflow
-                    });
+                // Mark printer as having a plate again
+                await this._setPrinterHasPlate(workflow.printerId, true);
 
-                    // Mark the grab slot as empty
-                    await this._markSlotAsEmpty(workflow.rackId, grabResult.slot);
+                // Invalidate cache after plate changes
+                this.invalidateRackCache(workflow.rackId);
 
-                    // Mark printer as having a plate again
-                    await this._setPrinterHasPlate(workflow.printerId, true);
-
-                    // Update workflow to track which slot we grabbed from (for monitoring)
-                    workflow.postPrintGrabSlot = grabResult.slot;
-                    workflow.lastUpdate = Date.now();
-
-                    // Invalidate cache after plate changes
-                    this.invalidateRackCache(workflow.rackId);
-
-                    logger.info(`[OrchestratorService] Printer ${workflow.printerId} now has fresh plate (grabbed from slot ${grabResult.slot})`);
-                } else {
-                    logger.info(`[OrchestratorService] No empty plates available - printer will remain without plate`);
-                    workflow.postPrintGrabSlot = null;
-                }
+                logger.info(`[OrchestratorService] Printer ${workflow.printerId} now has fresh plate (grabbed from slot ${workflow.grabSlot})`);
+            } else {
+                logger.warn(`[OrchestratorService] No grab slot specified for job ${workflow.jobId} - printer will remain without plate`);
             }
 
             // Check if there are more jobs queued
@@ -1299,17 +1313,21 @@ class OrchestratorService extends EventEmitter {
                     logger.info(`[OrchestratorService] Final job - ${printerInfo.brand} ${printerInfo.model} does not have a door`);
                 }
             } else {
-                logger.info(`[OrchestratorService] More jobs queued - printer ready with fresh plate for next job`);
+                // OPTIMIZATION: Release printer NOW so next job can start while ottoeject parks
+                if (workflow.printerId) {
+                    this.activePrinters.delete(workflow.printerId);
+                    logger.info(`[OrchestratorService] ⚡ Printer ${workflow.printerId} now released for next print job!`);
+                }
             }
 
             // Park OttoEject (final step)
             logger.info(`[OrchestratorService] Parking OttoEject after post-print workflow`);
             await ottoejectService.executeMacro(ottoeject.id, 'PARK_OTTOEJECT');
             await this._waitForOttoejectIdle(ottoeject.id);
-            
-            // Finalize the job
-            await this._finalizeJob(workflow.jobId);
-            
+
+            // Finalize the job with storage slot information
+            await this._finalizeJob(workflow.jobId, workflow.storeSlot);
+
             workflow.phase = 'completed';
             workflow.lastUpdate = Date.now();
 
@@ -1317,12 +1335,13 @@ class OrchestratorService extends EventEmitter {
 
             this.jobProcessingStats.jobs_completed++;
 
-            // CRITICAL: Release printer and ottoeject so next job can use them
-            if (workflow.printerId) {
+            // Release printer if not already released (final job case)
+            if (workflow.printerId && this.activePrinters.has(workflow.printerId)) {
                 this.activePrinters.delete(workflow.printerId);
                 logger.info(`[OrchestratorService] Released printer ${workflow.printerId} after workflow completion`);
             }
 
+            // Always release ottoeject after parking
             if (workflow.ottoejectId) {
                 this.activeOttoejects.delete(workflow.ottoejectId);
                 logger.info(`[OrchestratorService] Released ottoeject ${workflow.ottoejectId} after workflow completion`);
@@ -1709,16 +1728,21 @@ class OrchestratorService extends EventEmitter {
     /**
      * Finalize job completion
      */
-    async _finalizeJob(jobId) {
+    async _finalizeJob(jobId, storeSlot = null) {
         try {
+            const statusMessage = storeSlot
+                ? `Job completed successfully and stored in slot ${storeSlot}.`
+                : 'Job completed successfully.';
+
             await this._updateJobAssignments(jobId, {
                 status: 'COMPLETED',
                 orchestration_status: 'completed',
+                status_message: statusMessage,
                 completed_at: new Date().toISOString()
             });
-            
-            logger.info(`[OrchestratorService] Job ${jobId} finalized as completed`);
-            
+
+            logger.info(`[OrchestratorService] Job ${jobId} finalized as completed (stored in slot ${storeSlot || 'N/A'})`);
+
         } catch (error) {
             logger.error(`[OrchestratorService] Error finalizing job ${jobId}:`, error.message);
             throw error;

@@ -550,13 +550,13 @@
 					"response": []
 				},
 				{
-					"name": "Create Print Job (Step 2)",
+					"name": "Create Print Job (Step 2) - MANUAL MODE",
 					"request": {
 						"method": "POST",
 						"header": [],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"print_item_id\": 1,\n    \"printer_id\": 1,\n    \"ottoeject_id\": 1,\n    \"auto_start\": true,\n    \"priority\": 1\n}",
+							"raw": "{\n    \"print_item_id\": 1,\n    \"printer_id\": 1,\n    \"ottoeject_id\": 1,\n    \"store_location\": 4,\n    \"grab_location\": 3,\n    \"auto_start\": true,\n    \"priority\": 1\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -572,7 +572,8 @@
 								"api",
 								"print-jobs"
 							]
-						}
+						},
+						"description": "Creates a print job with manual orchestration.\n\n**Required Parameters:**\n- `print_item_id`: ID of uploaded print file\n- `printer_id`: Which printer to use\n- `ottoeject_id`: Which ottoeject device to use\n- `rack_id`: Which storage rack to use\n- `store_location`: Rack slot number where completed print will be stored (must be empty)\n- `grab_location`: Rack slot number to grab fresh plate from (must have empty plate)\n- `auto_start`: Whether to automatically start when printer available\n- `priority`: Job priority (lower number = higher priority)\n\n**Validation:**\n- Validates printer, rack, and slot availability\n- Checks for slot conflicts\n- Returns detailed error messages if validation fails"
 					},
 					"response": []
 				},

@@ -113,35 +113,101 @@ const printJobController = {
      */
     async createPrintJob(req, res, next) {
         try {
-            const { print_item_id, printer_id, ottoeject_id, auto_start = false, priority } = req.body;
+            const {
+                print_item_id,
+                printer_id,
+                ottoeject_id,
+                rack_id,           // NEW - Manual rack selection
+                store_location,    // NEW - Manual store slot
+                grab_location,     // NEW - Manual grab slot
+                auto_start = false,
+                priority
+            } = req.body;
+
+            // Validate required fields
             if (!print_item_id) {
-                return res.status(400).json({ 
-                    error: 'Bad Request', 
-                    message: 'print_item_id is required.' 
+                return res.status(400).json({
+                    error: 'Bad Request',
+                    message: 'print_item_id is required.'
                 });
             }
 
-            // Pass all relevant fields to the service
-            const newJob = await printJobService.createPrintJob({ 
-                print_item_id, printer_id, ottoeject_id, auto_start, priority 
+            if (!printer_id) {
+                return res.status(400).json({
+                    error: 'Bad Request',
+                    message: 'printer_id is required.'
+                });
+            }
+
+            if (!ottoeject_id) {
+                return res.status(400).json({
+                    error: 'Bad Request',
+                    message: 'ottoeject_id is required.'
+                });
+            }
+
+            if (!rack_id) {
+                return res.status(400).json({
+                    error: 'Bad Request',
+                    message: 'rack_id is required.'
+                });
+            }
+
+            if (store_location === undefined || store_location === null) {
+                return res.status(400).json({
+                    error: 'Bad Request',
+                    message: 'store_location is required.'
+                });
+            }
+
+            if (grab_location === undefined || grab_location === null) {
+                return res.status(400).json({
+                    error: 'Bad Request',
+                    message: 'grab_location is required.'
+                });
+            }
+
+            // Pass all relevant fields to the service (includes validation)
+            const newJob = await printJobService.createPrintJob({
+                print_item_id,
+                printer_id,
+                ottoeject_id,
+                rack_id,
+                store_location,
+                grab_location,
+                auto_start,
+                priority
             });
 
             res.status(201).json({
                 message: "Print job created successfully.",
                 id: newJob.id,
                 print_item_id: newJob.print_item_id,
+                printer_id: newJob.printer_id,
                 status: newJob.status,
                 priority: newJob.priority,
                 auto_start: newJob.auto_start,
-                max_z_height_mm: newJob.max_z_height_mm,  // === NEW: Include height info ===
+                assigned_store_slot: newJob.assigned_store_slot,
+                assigned_grab_slot: newJob.assigned_grab_slot,
+                max_z_height_mm: newJob.max_z_height_mm,
                 submitted_at: newJob.submitted_at
             });
         } catch (error) {
             logger.error(`[PrintJobController] Create Job Error: ${error.message}`, error);
+
+            // Handle validation errors
+            if (error.message.includes('Validation failed')) {
+                return res.status(400).json({
+                    error: 'Validation Error',
+                    message: error.message,
+                    details: error.details || []
+                });
+            }
+
             if (error.message.includes('FOREIGN KEY constraint failed')) {
-                return res.status(400).json({ 
-                    error: 'Bad Request', 
-                    message: 'Invalid print_item_id, printer_id, or ottoeject_id provided.' 
+                return res.status(400).json({
+                    error: 'Bad Request',
+                    message: 'Invalid print_item_id, printer_id, or ottoeject_id provided.'
                 });
             }
             next(error);

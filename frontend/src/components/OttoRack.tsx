@@ -111,13 +111,7 @@ export function Ottorack() {
                 <PageSection id='top-toolbar' className="pf-custom-top-toolbar">
                     {AddNewOttorackButton()}
                 </PageSection>
-                {loading ? (
-                    <Bullseye style={{ minHeight: 200 }}>
-                        <Spinner size="xl" />
-                    </Bullseye>
-                ) : (
-                    OttorackList()
-                )}
+                {OttorackList()}
             </div>
             <OttorackModal />
         </>

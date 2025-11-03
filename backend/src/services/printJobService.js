@@ -223,7 +223,7 @@ const printJobService = {
                 throw new Error(`Only NEW jobs can be started. Current status: ${job.status}`);
             }
             await dbRun(
-                `UPDATE print_jobs SET status = 'QUEUED', status_message = 'Job queued for processing by orchestrator.', queued_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                `UPDATE print_jobs SET status = 'QUEUED', status_message = 'Job queued to be printed.', queued_at = CURRENT_TIMESTAMP, auto_start = 1 WHERE id = ?`,
                 [id]
             );
             return await this.getPrintJobById(id);

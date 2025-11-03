@@ -92,6 +92,7 @@ CREATE TABLE IF NOT EXISTS print_jobs (
 
     -- Timestamps for tracking the job's lifecycle
     submitted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
+    queued_at TEXT NULL,
     started_at TEXT NULL,
     finished_printing_at TEXT NULL,
     stored_at TEXT NULL,

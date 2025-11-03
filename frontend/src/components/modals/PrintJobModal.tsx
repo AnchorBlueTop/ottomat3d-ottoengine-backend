@@ -7,7 +7,7 @@ import hourglass from '../../public/hourglass.png';
 import JSZip from 'jszip';
 import { PrinterRepresentation } from "../../representations/printerRepresentation";
 import PrintJobRepresentation from "../../representations/printJobRepresentation";
-import { createPrintJob, deletePrintJob, getAllOttoejectDevices, getAllPrinters, getAllPrintJobs, getPrintJobById } from "../../ottoengine_API";
+import { createPrintJob, deletePrintJob, getAllOttoejectDevices, getAllOttoracks, getAllPrinters, getAllPrintJobs, getPrintJobById, getOttorackById } from "../../ottoengine_API";
 import { updatePrintJob } from "../../ottoengine_API";
 
 export default function PrintJobModal() {
@@ -33,10 +33,15 @@ export default function PrintJobModal() {
 
   // Shared lists
   const [printers, setPrinters] = useState<PrinterRepresentation[]>([]);
+  const [ottoracks, setOttoracks] = useState<any[]>([]);
+  const [selectedOttorackDetails, setSelectedOttorackDetails] = useState<any>(null);
 
   // New job state
   const [selectedPrinter, setSelectedPrinter] = useState<number | null>(null);
   const [selectedOttoeject, setSelectedOttoeject] = useState<number | null>(null);
+  const [selectedOttorack, setSelectedOttorack] = useState<number | null>(null);
+  const [selectedStoreLocation, setSelectedStoreLocation] = useState<number>(1);
+  const [selectedGrabLocation, setSelectedGrabLocation] = useState<number>(2);
   const [nextItemId, setNextItemId] = useState<number>(1);
 
   // Edit job state
@@ -78,6 +83,11 @@ export default function PrintJobModal() {
           const devices = await getAllOttoejectDevices();
           if (!cancelled) setOttoeject(devices);
         }
+        // Load ottoracks
+        if (ottoracks.length === 0) {
+          const rackList = await getAllOttoracks();
+          if (!cancelled) setOttoracks(rackList);
+        }
         // If editing, load job details
         if (isEdit && printJobUID) {
           if (!cancelled) setLoading(true);
@@ -86,6 +96,10 @@ export default function PrintJobModal() {
             if (!cancelled) {
               setJob(jobResp);
               setSelectedPrinter(jobResp?.printer_id ?? null);
+              setSelectedOttoeject(jobResp?.ottoeject_id ?? null);
+              setSelectedOttorack(jobResp?.assigned_rack_id ?? null);
+              setSelectedStoreLocation(jobResp?.assigned_store_slot ?? 1);
+              setSelectedGrabLocation(jobResp?.assigned_grab_slot ?? 2);
             }
           } finally {
             if (!cancelled) setLoading(false);
@@ -109,6 +123,30 @@ export default function PrintJobModal() {
     return () => { cancelled = true; };
   }, [isOpen, isEdit, printJobUID]);
 
+  // Fetch ottorack details when selectedOttorack changes
+  useEffect(() => {
+    if (selectedOttorack) {
+      (async () => {
+        try {
+          const rackDetails = await getOttorackById(selectedOttorack);
+          setSelectedOttorackDetails(rackDetails);
+        } catch (e) {
+          console.error('Failed to fetch ottorack details', e);
+          setSelectedOttorackDetails(null);
+        }
+      })();
+    } else {
+      setSelectedOttorackDetails(null);
+    }
+  }, [selectedOttorack]);
+
+  // Generate slot options based on selected ottorack
+  const generateSlotOptions = () => {
+    if (!selectedOttorackDetails?.shelf_count) return [];
+    const slotCount = selectedOttorackDetails.shelf_count;
+    return Array.from({ length: slotCount }, (_, i) => i + 1);
+  };
+
   const onClose = () => {
     if (isEdit) setIsEditPrintJobModalOpen(false);
     else setIsPrintTaskModalOpen(false);
@@ -117,6 +155,10 @@ export default function PrintJobModal() {
     setPrintFile(undefined);
     setSelectedPrinter(null);
     setSelectedOttoeject(null);
+    setSelectedOttorack(null);
+    setSelectedOttorackDetails(null);
+    setSelectedStoreLocation(1);
+    setSelectedGrabLocation(2);
     setJob(null);
     setLoading(false);
     setDeleting(false);
@@ -205,12 +247,15 @@ export default function PrintJobModal() {
   };
 
   const handleCreate = async () => {
-    if (!selectedPrinter || !selectedOttoeject) return;
+    if (!selectedPrinter || !selectedOttoeject || !selectedOttorack) return;
     const printJobData = {
       // Prefer the server-provided print_item_id from the upload flow; fall back to computed next id
       print_item_id: printJobUID ?? nextItemId,
       printer_id: selectedPrinter,
       ottoeject_id: selectedOttoeject,
+      rack_id: selectedOttorack,
+      store_location: selectedStoreLocation,
+      grab_location: selectedGrabLocation,
       auto_start: false,
     };
     try {
@@ -244,6 +289,10 @@ export default function PrintJobModal() {
     try {
       const payload: any = {};
       if (selectedPrinter && selectedPrinter !== job.printer_id) payload.printer_id = selectedPrinter;
+      if (selectedOttoeject && selectedOttoeject !== job.ottoeject_id) payload.ottoeject_id = selectedOttoeject;
+      if (selectedOttorack && selectedOttorack !== job.assigned_rack_id) payload.rack_id = selectedOttorack;
+      if (selectedStoreLocation && selectedStoreLocation !== job.assigned_store_slot) payload.store_location = selectedStoreLocation;
+      if (selectedGrabLocation && selectedGrabLocation !== job.assigned_grab_slot) payload.grab_location = selectedGrabLocation;
       // Add future editable fields here
       if (Object.keys(payload).length > 0) {
         await updatePrintJob(Number(job.id), payload);
@@ -293,6 +342,30 @@ export default function PrintJobModal() {
                       {printers.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
                     </select>
                   </FormGroup>
+                  <FormGroup className="pf-custom-formGroup" label="Linked Ottorack">
+                    <select className="pf-custom-dropdown" value={selectedOttorack ?? ''} onChange={(e) => setSelectedOttorack(e.target.value ? Number(e.target.value) : null)}>
+                      <option value="">Select an ottorack</option>
+                      {ottoracks.map((rack) => (<option key={rack.id} value={rack.id}>{rack.name}</option>))}
+                    </select>
+                  </FormGroup>
+                  {selectedOttorack && (
+                    <>
+                      <FormGroup className="pf-custom-formGroup" label="Store Location">
+                        <select className="pf-custom-dropdown" value={selectedStoreLocation} onChange={(e) => setSelectedStoreLocation(Number(e.target.value))}>
+                          {generateSlotOptions().map(slot => (
+                            <option key={slot} value={slot}>Slot {slot}</option>
+                          ))}
+                        </select>
+                      </FormGroup>
+                      <FormGroup className="pf-custom-formGroup" label="Grab Location">
+                        <select className="pf-custom-dropdown" value={selectedGrabLocation} onChange={(e) => setSelectedGrabLocation(Number(e.target.value))}>
+                          {generateSlotOptions().map(slot => (
+                            <option key={slot} value={slot}>Slot {slot}</option>
+                          ))}
+                        </select>
+                      </FormGroup>
+                    </>
+                  )}
                 </Form>
               </GridItem>
               <GridItem span={4}>
@@ -330,6 +403,32 @@ export default function PrintJobModal() {
                     ))}
                   </select>
                 </FormGroup>
+                <FormGroup className="pf-custom-formGroup" label="OTTORACK">
+                  <select className="pf-custom-dropdown" value={selectedOttorack || ''} onChange={(e) => setSelectedOttorack(Number(e.target.value))}>
+                    <option value="" disabled>Select an Ottorack</option>
+                    {ottoracks.map((rack) => (
+                      <option key={rack.id} value={rack.id}>{rack.name}</option>
+                    ))}
+                  </select>
+                </FormGroup>
+                {selectedOttorack && (
+                  <>
+                    <FormGroup className="pf-custom-formGroup" label="STORE LOCATION:">
+                      <select className="pf-custom-dropdown" value={selectedStoreLocation} onChange={(e) => setSelectedStoreLocation(Number(e.target.value))}>
+                        {generateSlotOptions().map(slot => (
+                          <option key={slot} value={slot}>Slot {slot}</option>
+                        ))}
+                      </select>
+                    </FormGroup>
+                    <FormGroup className="pf-custom-formGroup" label="GRAB LOCATION:">
+                      <select className="pf-custom-dropdown" value={selectedGrabLocation} onChange={(e) => setSelectedGrabLocation(Number(e.target.value))}>
+                        {generateSlotOptions().map(slot => (
+                          <option key={slot} value={slot}>Slot {slot}</option>
+                        ))}
+                      </select>
+                    </FormGroup>
+                  </>
+                )}
                 <FormGroup className="pf-custom-formGroup" label={'MATERIAL: '}>{(printFile as any)?.filament}</FormGroup>
                 <FormGroup className="pf-custom-formGroup" label={'MATERIAL REQUIRED: '}>{(printFile as any)?.filament_weight}</FormGroup>
                 <FormGroup className="pf-custom-formGroup" label={'DURATION: '}>{(printFile as any)?.duration}</FormGroup>
@@ -359,7 +458,7 @@ export default function PrintJobModal() {
           ) : (
             <>
               <Button isDisabled={(currentFiles?.length ?? 0) === 0} variant="danger" onClick={onClose}>Cancel</Button>
-              <Button isDisabled={(currentFiles?.length ?? 0) === 0 || !selectedPrinter || !selectedOttoeject} className="pf-custom-button" onClick={handleCreate}>CREATE</Button>
+              <Button isDisabled={(currentFiles?.length ?? 0) === 0 || !selectedPrinter || !selectedOttoeject || !selectedOttorack} className="pf-custom-button" onClick={handleCreate}>CREATE</Button>
             </>
           )}
         </ModalFooter>

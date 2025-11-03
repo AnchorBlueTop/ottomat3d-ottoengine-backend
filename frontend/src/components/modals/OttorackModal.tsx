@@ -265,8 +265,8 @@ export default function OttorackModal() {
         </Grid>
         <ModalFooter>
           <Button variant="danger" onClick={onClose}>{'Cancel'}</Button>
-          <Button variant="primary" isDisabled={submitting || isSaveDisabled} onClick={handleSave}>
-            {submitting ? 'Saving…' : 'Save'}
+          <Button className="pf-custom-button" isDisabled={submitting || isSaveDisabled} onClick={handleSave}>
+            {submitting ? 'Saving…' : (isEdit ? 'Save' : 'CREATE')}
           </Button>
           {isEdit && (
             <Button className="pf-custom-button" variant="danger" isDisabled={submitting} onClick={handleDelete}>

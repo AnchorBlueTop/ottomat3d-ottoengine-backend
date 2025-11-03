@@ -84,7 +84,7 @@ const printerService = {
                     }
                 } catch (e) {
                     logger.error(`[PrinterService] connect: Error connecting to Bambu at ${ip_address}: ${e.message}`);
-                    return { success: false, message: `Connection failed: ${e.message}` };
+                    return { success: false, message: `${e.message}` };
                 } finally {
                     try { if (instance && typeof instance.disconnect === 'function') await instance.disconnect(); } catch (_) {}
                 }

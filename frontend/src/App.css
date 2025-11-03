@@ -167,7 +167,60 @@
   height: 2rem;
   justify-content: center !important;
   align-items: center !important;
-  margin-right: 1rem;
+}
+
+/* Green start print button */
+.pf-custom-start-print-button {
+  background-color: var(--green-ready-status) !important;
+  border-radius: 10px;
+  border: none;
+  color: white !important;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  height: 2rem;
+  justify-content: center !important;
+  align-items: center !important;
+  min-width: 2rem;
+}
+
+.pf-custom-start-print-button:hover {
+  background-color: #1e7e34 !important;
+}
+
+/* Pause button styling */
+.pf-custom-pause-button {
+  background-color: var(--organge-queued-status) !important;
+  border-radius: 10px;
+  border: none;
+  color: white !important;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  height: 2rem;
+  justify-content: center !important;
+  align-items: center !important;
+  min-width: 2rem;
+}
+
+.pf-custom-pause-button:hover {
+  background-color: #e6930d !important;
+}
+
+/* Cancel button styling */
+.pf-custom-cancel-button {
+  background-color: #D32F2F !important;
+  border-radius: 10px;
+  border: none;
+  color: white !important;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  height: 2rem;
+  justify-content: center !important;
+  align-items: center !important;
+  min-width: 2rem;
+}
+
+.pf-custom-cancel-button:hover {
+  background-color: #c62828 !important;
 }
 
 .pf-c-navbar-button-active {
@@ -301,6 +354,18 @@
   margin-right: 0.75rem;
   margin-left: 0.75rem;
   /* align-items: center; */
+}
+
+/* Dashboard section borders */
+.pf-custom-dashboard-section {
+  border: 1px solid var(--soft-aloy);
+  border-radius: 10px;
+  background-color: var(--box-color-light);
+  padding: 1rem !important;
+}
+
+.pf-v6-l-grid.pf-m-gutter {
+  grid-gap: 0.5rem !important;
 }
 
 /* @media (min-width: 1200px) {
@@ -1074,7 +1139,7 @@
 .pf-v6-c-label.pf-custom-label--queued { background-color: var(--organge-queued-status) !important; }
 .pf-v6-c-label.pf-custom-label--printing { background-color: var(--blue-pringting-status) !important; }
 .pf-v6-c-label.pf-custom-label--ejected { background-color: var(--purple-ejected-status) !important; }
-.pf-v6-c-label.pf-custom-label--complete { background-color: #6B7280 !important; }
+.pf-v6-c-label.pf-custom-label--complete { background-color: var(--green-ready-status) !important; }
 .pf-v6-c-label.pf-custom-label--error { background-color: #D32F2F !important; }
 
 /* Backwards-compat: keep older rule for ready (redundant but harmless) */
@@ -1097,7 +1162,7 @@
 .pf-v6-c-label.pf-custom-label--ejected,
 .pf-v6-c-label.pf-custom-label--ejected .pf-v6-c-label__content { background-color: var(--purple-ejected-status) !important; color: #fff !important; }
 .pf-v6-c-label.pf-custom-label--complete,
-.pf-v6-c-label.pf-custom-label--complete .pf-v6-c-label__content { background-color: #6B7280 !important; color: #fff !important; }
+.pf-v6-c-label.pf-custom-label--complete .pf-v6-c-label__content { background-color: var(--green-ready-status) !important; color: #fff !important; }
 .pf-v6-c-label.pf-custom-label--error,
 .pf-v6-c-label.pf-custom-label--error .pf-v6-c-label__content { background-color: #D32F2F !important; color: #fff !important; }
 
@@ -1129,6 +1194,6 @@
 .pf-v6-c-label.pf-custom-label--queued .pf-v6-c-label__content::before { background-color: var(--organge-queued-status) !important; }
 .pf-v6-c-label.pf-custom-label--printing .pf-v6-c-label__content::before { background-color: var(--blue-pringting-status) !important; }
 .pf-v6-c-label.pf-custom-label--ejected .pf-v6-c-label__content::before { background-color: var(--purple-ejected-status) !important; }
-.pf-v6-c-label.pf-custom-label--complete .pf-v6-c-label__content::before { background-color: #6B7280 !important; }
+.pf-v6-c-label.pf-custom-label--complete .pf-v6-c-label__content::before { background-color: var(--green-ready-status) !important; }
 .pf-v6-c-label.pf-custom-label--error .pf-v6-c-label__content::before { background-color: #D32F2F !important; }
 .pf-v6-c-label.pf-custom-label--default .pf-v6-c-label__content::before { background-color: #6a6e73 !important; }

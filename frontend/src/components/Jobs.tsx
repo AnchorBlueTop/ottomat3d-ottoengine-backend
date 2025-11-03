@@ -163,7 +163,12 @@ export const Job: React.FunctionComponent = () => {
                       <DataListCell key="actions" isFilled={false} className="pf-u-display-flex pf-u-align-items-center">
                         <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', width: '100%' }}>
                           {value.id ? (
-                            <StartPrintJobsButton jobId={value.id} variant="plain">
+                            <StartPrintJobsButton 
+                              jobId={value.id} 
+                              variant="plain"
+                              jobStatus={value.status}
+                              printerId={value.printer_id}
+                            >
                               <PlayIcon />
                             </StartPrintJobsButton>
                           ) : null}

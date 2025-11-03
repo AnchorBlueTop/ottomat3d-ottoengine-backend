@@ -67,8 +67,8 @@ const moonrakerService = {
         }
     },
 
-    async queryObjects(deviceIp, objects // e.g., ['idle_timeout'] or just 'idle_timeout' as string
-    ) {
+    async queryObjects(deviceIp, objects) // e.g., ['idle_timeout'] or just 'idle_timeout' as string
+    {
         const baseUrl = this.getBaseUrl(deviceIp);
         let queryString = "";
         if (Array.isArray(objects)) {
@@ -86,7 +86,10 @@ const moonrakerService = {
              const response = await axios.get(url, { timeout: MOONRAKER_TIMEOUT_MS / 2 }); // Shorter timeout for status
              logger.debug(`[MoonrakerService] Object query response from ${baseUrl}: ${response.status}`);
              if (response.data && response.data.result) {
-                 return { success: true, data: response.data.result };
+                 return { 
+                    success: true, 
+                    data: response.data.result 
+                };
              } else {
                   logger.warn(`[MoonrakerService] Unexpected object query response format from ${baseUrl}:`, response.data);
                   throw new Error(`Unexpected response format during object query from ${deviceIp}`);

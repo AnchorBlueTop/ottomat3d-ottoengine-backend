@@ -131,6 +131,43 @@ export const testPrinterConnection = async (
   return data;
 };
 
+//  TODO: Confirm Pause, resume, and stop printer API endpoints
+export const pausePrinter = async (id: number): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/printers/${id}/pause`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Error pausing printer ID ${id}: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+export const resumePrinter = async (id: number): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/printers/${id}/resume`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Error resuming printer ID ${id}: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+
+export const cancelPrintJob = async (id: number): Promise<void> => {
+  const response = await fetch(`${BASE_URL}/api/print-jobs/${id}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(`Error canceling print job ID ${id}: ${response.statusText}`);
+  }
+};
+
 export const uploadFile = async (file: File, fileId: number) => {
   const formdata = new FormData();
   formdata.append("file", file, file.name);
@@ -209,6 +246,25 @@ export const sendOttoejectMacro = async (id: number, macroPayload: OttoejectMacr
   if (!response.ok) {
     throw new Error(`Error sending macro to Ottoeject device ID ${id}: ${response.statusText}`);
   }
+  return response.json();
+};
+
+// Test ottoeject connection using IP address (ad-hoc connection test)
+export const testOttoejectConnection = async (
+  payload: Partial<OttoejectRegistration & OttoejectDevice>
+): Promise<{ connected?: boolean; message?: string }> => {
+  const response = await fetch(`${BASE_URL}/api/ottoeject/connect`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Connection test failed: ${response.statusText}`);
+  }
+  
   return response.json();
 };
 

@@ -50,6 +50,32 @@ const ottoejectController = {
         }
     },
 
+    // POST /api/ottoeject/connect
+    async connect(req, res, next) {
+        try {
+            const { device_name, ip_address } = req.body;
+            
+            if (!ip_address) {
+                return res.status(400).json({ 
+                    error: 'Bad Request', 
+                    message: 'ip_address is required for connection test.' 
+                });
+            }
+
+            const result = await ottoejectService.connect({ device_name, ip_address });
+            res.json(result);
+        } catch (error) {
+            logger.error(`[OttoejectController] Connect Error: ${error.message}`, error.stack);
+            if (error.message.includes('Missing required') || error.message.includes('Invalid')) {
+                return res.status(400).json({ error: 'Bad Request', message: error.message });
+            }
+            res.status(500).json({ 
+                connected: false, 
+                message: error.message || 'Connection test failed' 
+            });
+        }
+    },
+
     // GET /api/ottoeject/
     async getAllOttoejects(req, res, next) {
         try {

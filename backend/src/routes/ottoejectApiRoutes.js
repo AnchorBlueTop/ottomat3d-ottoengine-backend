@@ -18,6 +18,9 @@ router.use((req, res, next) => {
 // POST /api/ottoeject/ - Register an Ottoeject device
 router.post('/', ottoejectController.registerOttoeject);
 
+// POST /api/ottoeject/connect - Test connection to an Ottoeject device (ad-hoc)
+router.post('/connect', ottoejectController.connect);
+
 // GET /api/ottoeject - Get all Ottoeject devices
 router.get('/', ottoejectController.getAllOttoejects);
 

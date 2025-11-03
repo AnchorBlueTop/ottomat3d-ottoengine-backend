@@ -91,7 +91,37 @@ const ottoejectService = {
         }
     },
 
-    // --- v0.1 Core Proxy Methods for Ottoeject ---
+    // --- Connection Testing ---
+
+    /**
+     * Test connection to an Ottoeject device using IP address (ad-hoc connection test)
+     * Does not require device to be registered in database
+     */
+    async connect(data) {
+        const { device_name, ip_address } = data;
+        if (!ip_address) {
+            throw new Error('IP address is required for connection test');
+        }
+
+        try {
+            logger.debug(`[OttoejectService] Testing connection to ${ip_address}${device_name ? ` (${device_name})` : ''}`);
+            const moonrakerResult = await moonrakerService.queryObjects(ip_address, 'idle_timeout');
+            
+            apiStatus = getOEStatus(moonrakerResult);
+
+            return {
+                connected: true, 
+                message: `Connection successful`
+            }
+        } catch (error) {
+            logger.error(`[OttoejectService] Connection test failed for ${ip_address}: ${error.message}`);
+            // Return a structure that controller can use to send 502 or appropriate error
+            return { 
+                connected: false, 
+                message: `Connection failed: ${error.message}`
+            };
+        }
+    },
 
     /**
      * Gets live status from the Ottoeject (via Moonraker HTTP) and maps it.
@@ -111,23 +141,7 @@ const ottoejectService = {
             // Query Moonraker for 'idle_timeout' which contains Klipper's main state
             const moonrakerResult = await moonrakerService.queryObjects(ottoeject.ip_address, 'idle_timeout');
             
-            let apiStatus = "OFFLINE"; // Default if Moonraker call fails or state unknown
-            if (moonrakerResult.success && moonrakerResult.data && moonrakerResult.data.status && moonrakerResult.data.status.idle_timeout) {
-                const klipperState = moonrakerResult.data.status.idle_timeout.state?.toLowerCase();
-                if (klipperState === 'printing' || klipperState === 'busy') { // Klipper is "Printing" when running a macro
-                    apiStatus = "EJECTING"; // Or "BUSY_PROCESSING_MACRO" - "EJECTING" is from API doc
-                } else if (klipperState === 'ready' || klipperState === 'idle') {
-                    apiStatus = "ONLINE";
-                } else if (klipperState === 'error' || klipperState === 'shutdown') {
-                    apiStatus = "ISSUE"; // Or "OFFLINE" for shutdown
-                } else {
-                    apiStatus = "UNKNOWN_MOONRAKER_STATE";
-                }
-                logger.info(`[OttoejectService] Ottoeject ${ottoejectId} Klipper state: '${klipperState}', API status: '${apiStatus}'`);
-            } else {
-                 logger.warn(`[OttoejectService] Failed to get valid idle_timeout state from Moonraker for Ottoeject ${ottoejectId}. Moonraker response:`, moonrakerResult.data);
-                 // apiStatus remains "OFFLINE"
-            }
+            apiStatus = getOEStatus(moonrakerResult, ottoejectId)
             
             return { 
                 success: true, // Indicates backend successfully attempted to get status
@@ -191,6 +205,28 @@ const ottoejectService = {
             return { success: false, message: returnMessage, details: null };
         }
     }
+};
+
+function getOEStatus(moonrakerResult) {
+    let apiStatus = "OFFLINE"; // Default if Moonraker call fails or state unknown
+    
+    if (moonrakerResult.success && moonrakerResult.data && moonrakerResult.data.status && moonrakerResult.data.status.idle_timeout) {
+        const klipperState = moonrakerResult.data.status.idle_timeout.state?.toLowerCase();
+        if (klipperState === 'printing' || klipperState === 'busy') { // Klipper is "Printing" when running a macro
+            apiStatus = "EJECTING"; // Or "BUSY_PROCESSING_MACRO" - "EJECTING" is from API doc
+        } else if (klipperState === 'ready' || klipperState === 'idle') {
+            apiStatus = "ONLINE";
+        } else if (klipperState === 'error' || klipperState === 'shutdown') {
+            apiStatus = "ISSUE"; // Or "OFFLINE" for shutdown
+        } else {
+            apiStatus = "UNKNOWN_MOONRAKER_STATE";
+        }
+        logger.info(`[OttoejectService] Ottoeject - Klipper state: '${klipperState}', API status: '${apiStatus}'`);
+    } else {
+            logger.warn(`[OttoejectService] Failed to get valid idle_timeout state from Moonraker for Ottoeject. Moonraker response:`, moonrakerResult.data);
+            // apiStatus remains "OFFLINE"
+    }
+    return apiStatus;
 };
 
 module.exports = ottoejectService;

@@ -13,7 +13,7 @@ import { useContext, useEffect } from "react";
 import { JobContext } from "../App";
 import PrinterModal from "./modals/PrinterModal";
 import AddNewPrinterButton from "./buttons/addNewPrinterButton";
-import { getAllPrinters, getPrinterById } from "../ottoengine_API";
+import { getAllPrinters, getPrinterById, getPrinterStatusById } from "../ottoengine_API";
 import { PrinterRepresentation } from "../representations/printerRepresentation";
 import { PRINTER_BRANDS } from "../constants/printerBrands";
 
@@ -36,6 +36,21 @@ export function Printers() {
         for (const value of allPrinters) {
             if (value.id) {
                 const printerData = await getPrinterById(value.id);
+                
+                // Try to get live status for each printer
+                try {
+                    const liveStatus = await getPrinterStatusById(value.id);
+                    // Merge live status data into printer data
+                    printerData.current_stage = liveStatus.current_stage;
+                    // Update the status with live status if available
+                    if (liveStatus.status) {
+                        printerData.status = liveStatus.status;
+                    }
+                } catch (error) {
+                    console.warn(`Failed to fetch live status for printer ${value.id}:`, error);
+                    // Keep the existing status from basic printer data
+                }
+                
                 details.push(printerData);
             }
         }
@@ -76,6 +91,27 @@ export function Printers() {
         return PRINTER_BRANDS.find(b => b.value === brandValue)?.label || brandValue;
     };
 
+    const formatCurrentStatus = (current_stage?: string, status?: string) => {
+        // Use current_stage if available, otherwise fall back to status
+        if (current_stage) {
+            // Format current_stage for better display
+            return current_stage.toLowerCase()
+                .split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+        
+        if (status) {
+            // Format status for better display
+            return status.toLowerCase()
+                .split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+        
+        return 'Unknown';
+    };
+
     const isConnected = (status?: string) => {
         if (!status) return false;
         const s = String(status).toUpperCase();
@@ -92,6 +128,7 @@ export function Printers() {
                             <Tr>
                                 <Th aria-label="status"/>
                                 <Th>{'Name'}</Th>
+                                <Th>{'Current Status'}</Th>
                                 <Th>{'Make and Model'}</Th>
                                 <Th>{'Bed Temperature'}</Th>
                             </Tr>
@@ -123,6 +160,7 @@ export function Printers() {
                                         </span>
                                     </Td>
                                     <Td>{value.name}</Td>
+                                    <Td>{formatCurrentStatus(value.current_stage, value.status)}</Td>
                                     <Td>{getBrandLabel(value.brand)} {value.model}</Td>
                                     <Td>{value.bed_temperature}</Td>
                                 </Tr>

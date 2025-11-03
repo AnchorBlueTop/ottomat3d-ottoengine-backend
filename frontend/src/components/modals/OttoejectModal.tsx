@@ -20,7 +20,7 @@ import { JobContext } from "../../App";
 import ottoEjectIcon from '../../public/ottoEject-Icon.svg';
 import thumbnail from '../../public/thumbnail.png';
 import { OttoejectDevice } from "../../representations/ottoejectRepresentation";
-import { deleteOttoeject, getOttoejectById, registerOttoeject, sendOttoejectMacro } from "../../ottoengine_API";
+import { deleteOttoeject, getOttoejectById, registerOttoeject, sendOttoejectMacro, testOttoejectConnection } from "../../ottoengine_API";
 
 export default function OttoejectModal() {
   const {
@@ -42,10 +42,16 @@ export default function OttoejectModal() {
 
   const [temp, setTemp] = useState<Partial<OttoejectDevice>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testMessage, setTestMessage] = useState<string | undefined>(undefined);
+  const [testSuccess, setTestSuccess] = useState<boolean | undefined>(undefined);
 
   useEffect(() => {
     if (!isOpen) return;
     setSubmitting(false);
+    setTesting(false);
+    setTestMessage(undefined);
+    setTestSuccess(undefined);
     if (isEdit && selected) {
       setTemp({ ...selected });
     } else {
@@ -57,6 +63,30 @@ export default function OttoejectModal() {
     if (isEdit) setIsOttoejectEditModalOpen(false);
     else setIsOttoejectAddModalOpen(false);
     setTemp({});
+    setTestMessage(undefined);
+    setTestSuccess(undefined);
+    setSubmitting(false);
+    setTesting(false);
+  };
+
+  const handleTestConnection = async () => {
+    if (!temp?.ip_address) return;
+    setTesting(true);
+    setTestMessage(undefined);
+    setTestSuccess(undefined);
+    try {
+      const res = await testOttoejectConnection({
+        device_name: temp.device_name,
+        ip_address: temp.ip_address,
+      });
+      setTestSuccess(res.connected || false);
+      setTestMessage(res.message || (res.connected ? 'Connection successful' : 'Connection failed'));
+    } catch (error: any) {
+      setTestSuccess(false);
+      setTestMessage(error.message || 'Connection failed');
+    } finally {
+      setTesting(false);
+    }
   };
 
   const handleSave = async () => {
@@ -156,6 +186,25 @@ export default function OttoejectModal() {
                       <TextInputGroupMain id='ottoeject-connection-ipaddress' value={temp?.ip_address || ''}
                         onChange={(_e, v: any) => setTemp(prev => ({ ...(prev || {}), ip_address: v }))} />
                     </TextInputGroup>
+                  </GridItem>
+                </Grid>
+                <Grid>
+                  <GridItem span={3}><Content>{''}</Content></GridItem>
+                  <GridItem span={8}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
+                      <Button
+                        variant="secondary"
+                        isDisabled={testing || !temp?.ip_address}
+                        onClick={handleTestConnection}
+                      >
+                        {testing ? 'Testing…' : 'Test Connection'}
+                      </Button>
+                      {testMessage && (
+                        <span style={{ color: testSuccess ? '#3E8635' : '#C9190B', fontWeight: 500 }}>
+                          {testMessage}
+                        </span>
+                      )}
+                    </div>
                   </GridItem>
                 </Grid>
               </div>

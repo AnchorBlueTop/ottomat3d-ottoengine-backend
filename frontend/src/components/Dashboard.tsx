@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import { memo } from "react";
 import { Grid, GridItem, PageSection } from "@patternfly/react-core";
 // import uploadPrintFile from "./modals/UploadPrintFile";
 import { Printers } from "./Printers";
@@ -18,20 +18,26 @@ function Dashboard() {
           </PageSection>
           <Grid hasGutter>
             <GridItem className="pf-c-overflow-auto" span={7} rowSpan={2}>
-              <PageSection isWidthLimited className="pf-c-dashboard-jobs">
+              <PageSection isWidthLimited className="pf-c-dashboard-jobs pf-custom-dashboard-section">
                 <Job />
               </PageSection>
             </GridItem>
             <GridItem span={5}>
               <Grid hasGutter>
                 <GridItem className="pf-c-overflow-auto" span={12}>
-                  <Printers />
+                  <div className="pf-custom-dashboard-section">
+                    <Printers />
+                  </div>
                 </GridItem>
                 <GridItem className="pf-c-overflow-auto" span={12}>
-                  <Ottoeject />
+                  <div className="pf-custom-dashboard-section">
+                    <Ottoeject />
+                  </div>
                 </GridItem>
                 <GridItem className="pf-c-overflow-auto" span={12}>
-                  <Ottorack />
+                  <div className="pf-custom-dashboard-section">
+                    <Ottorack />
+                  </div>
                 </GridItem>
               </Grid>
             </GridItem>

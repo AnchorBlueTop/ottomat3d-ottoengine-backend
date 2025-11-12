@@ -135,20 +135,75 @@ const printJobService = {
 
     async createPrintJob(jobData) {
         const {
-            print_item_id, printer_id, ottoeject_id, auto_start, priority = 1
+            print_item_id,
+            printer_id,
+            ottoeject_id,
+            rack_id,           // NEW - Manual rack selection
+            store_location,    // NEW - Manual store slot
+            grab_location,     // NEW - Manual grab slot
+            auto_start,
+            priority = 1
         } = jobData;
-        const initialStatus = auto_start ? 'QUEUED' : 'NEW';
-        const initialStatusMessage = auto_start
-            ? 'Job has been queued and is awaiting an available printer.'
-            : 'Job created and awaiting manual start.';
-        const sql = `
-            INSERT INTO print_jobs (print_item_id, printer_id, ottoeject_id, auto_start, priority, status, status_message)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        `;
-        const params = [print_item_id, printer_id, ottoeject_id, auto_start ? 1 : 0, priority, initialStatus, initialStatusMessage];
+
         try {
+            // Use rack_id from request (manual rack selection)
+
+            // Validate manual slot assignments
+            const manualSlotValidator = require('../utils/ManualSlotValidator');
+            const validation = await manualSlotValidator.validateJobAssignment({
+                printerId: printer_id,
+                rackId: rack_id,
+                storeSlot: store_location,
+                grabSlot: grab_location
+            });
+
+            if (!validation.valid) {
+                const error = new Error('Validation failed');
+                error.details = validation.errors;
+                error.message = `Validation failed: ${validation.errors.join(', ')}`;
+                throw error;
+            }
+
+            // Determine initial status and message
+            const initialStatus = auto_start ? 'QUEUED' : 'NEW';
+            const initialStatusMessage = auto_start
+                ? `Job queued. Will store in slot ${store_location} and grab from slot ${grab_location}.`
+                : 'Job created and awaiting manual start.';
+
+            // Insert job with manual slot assignments
+            const sql = `
+                INSERT INTO print_jobs (
+                    print_item_id,
+                    printer_id,
+                    ottoeject_id,
+                    assigned_rack_id,
+                    assigned_store_slot,
+                    assigned_grab_slot,
+                    auto_start,
+                    priority,
+                    status,
+                    status_message
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `;
+            const params = [
+                print_item_id,
+                printer_id,
+                ottoeject_id,
+                rack_id,
+                store_location,
+                grab_location,
+                auto_start ? 1 : 0,
+                priority,
+                initialStatus,
+                initialStatusMessage
+            ];
+
             const result = await dbRun(sql, params);
+            logger.info(`[PrintJobService] Created job ${result.lastID} with manual assignments: store=slot ${store_location}, grab=slot ${grab_location}`);
+
             return await this.getPrintJobById(result.lastID);
+
         } catch (error) {
             logger.error(`[PrintJobService] Error creating print_job: ${error.message}`);
             throw error;
@@ -168,7 +223,7 @@ const printJobService = {
                 throw new Error(`Only NEW jobs can be started. Current status: ${job.status}`);
             }
             await dbRun(
-                `UPDATE print_jobs SET status = 'QUEUED', status_message = 'Job queued for processing by orchestrator.', queued_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                `UPDATE print_jobs SET status = 'QUEUED', status_message = 'Job queued to be printed.', queued_at = CURRENT_TIMESTAMP, auto_start = 1 WHERE id = ?`,
                 [id]
             );
             return await this.getPrintJobById(id);

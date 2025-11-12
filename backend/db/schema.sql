@@ -63,8 +63,10 @@ CREATE TABLE IF NOT EXISTS storage_racks (
     shelf_spacing_mm INTEGER NULL,
     -- Stores the compatible bed size, e.g., "256x256"
     bed_size TEXT NULL,
+    ottoeject_id INTEGER NULL,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
-    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc'))
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
+    FOREIGN KEY (ottoeject_id) REFERENCES ottoejects(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS print_jobs (
@@ -90,6 +92,7 @@ CREATE TABLE IF NOT EXISTS print_jobs (
 
     -- Timestamps for tracking the job's lifecycle
     submitted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
+    queued_at TEXT NULL,
     started_at TEXT NULL,
     finished_printing_at TEXT NULL,
     stored_at TEXT NULL,

@@ -9,8 +9,8 @@ import {
 
 // const BASE_URL = import.meta.env.BASE_URL || 'http://localhost:3000'; 
 // const BASE_URL = 'http://localhost:3000';
-// const BASE_URL = 'http://127.0.0.1:3000';
-const BASE_URL = 'http://100.79.73.105:3000';
+const BASE_URL = 'http://127.0.0.1:3000';
+// const BASE_URL = 'http://100.79.73.105:3000';
 
 /////// OTTO PRINTER APIs ///////
 export const registerPrinter = async (printerData: PrinterRegistrationRepresentation): Promise<PrinterRepresentation> => {
@@ -131,6 +131,43 @@ export const testPrinterConnection = async (
   return data;
 };
 
+//  TODO: Confirm Pause, resume, and stop printer API endpoints
+export const pausePrinter = async (id: number): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/printers/${id}/pause`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Error pausing printer ID ${id}: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+export const resumePrinter = async (id: number): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/printers/${id}/resume`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Error resuming printer ID ${id}: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+
+export const cancelPrintJob = async (id: number): Promise<void> => {
+  const response = await fetch(`${BASE_URL}/api/print-jobs/${id}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(`Error canceling print job ID ${id}: ${response.statusText}`);
+  }
+};
+
 export const uploadFile = async (file: File, fileId: number) => {
   const formdata = new FormData();
   formdata.append("file", file, file.name);
@@ -212,6 +249,25 @@ export const sendOttoejectMacro = async (id: number, macroPayload: OttoejectMacr
   return response.json();
 };
 
+// Test ottoeject connection using IP address (ad-hoc connection test)
+export const testOttoejectConnection = async (
+  payload: Partial<OttoejectRegistration & OttoejectDevice>
+): Promise<{ connected?: boolean; message?: string }> => {
+  const response = await fetch(`${BASE_URL}/api/ottoeject/connect`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Connection test failed: ${response.statusText}`);
+  }
+  
+  return response.json();
+};
+
 /////// PRINT JOB APIs ///////
 
 export const createPrintJob = async (printJobData: any): Promise<any> => {
@@ -279,7 +335,7 @@ export const startPrintJob = async (id: number | string): Promise<any> => {
 
 /////// OTTO RACK APIs ///////
 
-// Create a new Ottorack
+// Create a new Ottorack (supports initial shelves assignment)
 export const createOttorack = async (ottorackData: any): Promise<any> => {
   const response = await fetch(`${BASE_URL}/api/ottoracks`, {
     method: "POST",
@@ -290,6 +346,21 @@ export const createOttorack = async (ottorackData: any): Promise<any> => {
   });
   if (!response.ok) {
     throw new Error(`Error creating Ottorack: ${response.statusText}`);
+  }
+  return response.json();
+};
+
+// Update Ottorack metadata (name, shelf_spacing_mm, bed_size)
+export const updateOttorackMeta = async (id: number, updateData: { name?: string; shelf_spacing_mm?: number; bed_size?: string; }): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/ottoracks/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updateData),
+  });
+  if (!response.ok) {
+    throw new Error(`Error updating Ottorack ${id}: ${response.statusText}`);
   }
   return response.json();
 };

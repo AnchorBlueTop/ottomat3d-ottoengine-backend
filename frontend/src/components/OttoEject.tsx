@@ -13,15 +13,13 @@ import { useContext, useEffect, useRef } from "react";
 import { JobContext } from "../App";
 import { getAllOttoejectDevices, getOttoejectById } from "../ottoengine_API";
 import AddNewOttoejectButton from "./buttons/addNewOttoejectButton";
-import newOttoeject from "./modals/newOttoejectModal";
-import editOttoeject from "./modals/editOttoeject";
-import { OttoejectDevice } from "../representations/ottoejectRepresentation";
+import OttoejectModal from "./modals/OttoejectModal";
 
 export function Ottoeject() {
     const { ottoeject, setOttoeject, setOttoejectIndex, setIsOttoejectEditModalOpen } = useContext(JobContext);
     const fetchedRef = useRef(false);
     
-    const ottoEjectFecth = async () => {
+    const ottoEjectFetch = async () => {
         // Prevent multiple fetches (StrictMode/double render)
         if (fetchedRef.current) return;
         fetchedRef.current = true;
@@ -82,7 +80,7 @@ export function Ottoeject() {
     }
 
     useEffect(() => {
-        ottoEjectFecth();
+        ottoEjectFetch();
     }, []);
 
     return (
@@ -93,8 +91,7 @@ export function Ottoeject() {
                 </PageSection>
                 {OttoejectList()}
             </div>
-            {newOttoeject()}
-            {editOttoeject()}
+            <OttoejectModal />
         </>
     );
 }

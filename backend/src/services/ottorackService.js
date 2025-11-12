@@ -9,7 +9,7 @@ const ottorackService = {
      * Create a new Ottorack with specified number of shelves
      */
     async createOttorack(rackData) {
-        const { name, number_of_shelves, shelf_spacing_mm, bed_size } = rackData;
+        const { name, number_of_shelves, shelf_spacing_mm, bed_size, shelves } = rackData;
         
         const sql = `
             INSERT INTO storage_racks (name, shelf_count, shelf_spacing_mm, bed_size)
@@ -20,8 +20,8 @@ const ottorackService = {
             const result = await dbRun(sql, [name, number_of_shelves, shelf_spacing_mm, bed_size]);
             const rackId = result.lastID;
             
-            // Create individual shelves for this rack
-            await this._createShelvesForRack(rackId, number_of_shelves);
+            // Create individual shelves for this rack, honoring optional initial shelf state
+            await this._createShelvesForRack(rackId, number_of_shelves, Array.isArray(shelves) ? shelves : undefined);
             
             return {
                 id: rackId,
@@ -38,20 +38,40 @@ const ottorackService = {
 
     /**
      * Create individual shelves for an OttoRack
-     * FIXED: Initialize slots with empty plates for orchestrator workflow
+     * Initialize slots, optionally using provided initial shelf states.
+     * Only two initial states are supported on creation:
+     *  - empty (no plate): has_plate=0, plate_state=NULL
+     *  - empty_plate: has_plate=1, plate_state='empty'
      */
-    async _createShelvesForRack(rackId, shelfCount) {
+    async _createShelvesForRack(rackId, shelfCount, initialShelves) {
         const sql = `
             INSERT INTO rack_slots (storage_rack_id, slot_number, type, print_job_id, has_plate, plate_state)
             VALUES (?, ?, ?, ?, ?, ?)
         `;
+
+        // Build lookup by slot_number from provided initialShelves
+        const initialBySlot = new Map();
+        if (Array.isArray(initialShelves)) {
+            for (const s of initialShelves) {
+                const slot = Number(s.shelf_number ?? s.id);
+                if (Number.isFinite(slot)) initialBySlot.set(slot, s);
+            }
+        }
         
         try {
             for (let shelfNumber = 1; shelfNumber <= shelfCount; shelfNumber++) {
-                // Initialize all slots as completely empty (no plates) as requested
-                await dbRun(sql, [rackId, shelfNumber, 'print_bed', null, 0, null]);
+                let has_plate = 0;
+                let plate_state = null;
+                const init = initialBySlot.get(shelfNumber);
+                const t = init?.type || '';
+                // Only allow 'empty_plate' at creation; any other non-empty is treated as empty_plate=false
+                if (t === 'empty_plate') {
+                    has_plate = 1;
+                    plate_state = 'empty';
+                }
+                await dbRun(sql, [rackId, shelfNumber, 'print_bed', null, has_plate, plate_state]);
             }
-            logger.info(`[OttorackService] Created ${shelfCount} empty shelves for rack ${rackId}`);
+            logger.info(`[OttorackService] Created ${shelfCount} shelves for rack ${rackId} with initial states`);
         } catch (error) {
             logger.error(`[OttorackService] Error creating shelves for rack ${rackId}: ${error.message}`);
             throw error;
@@ -265,6 +285,53 @@ const ottorackService = {
             logger.error(`[OttorackService] Error resetting shelf ${shelfNumber} in rack ${rackId}: ${error.message}`);
             throw error;
         }
+    },
+
+    /**
+     * Delete an Ottorack by ID
+     */
+    async deleteOttorack(id) {
+        const sql = `DELETE FROM storage_racks WHERE id = ?`;
+        try {
+            const result = await dbRun(sql, [id]);
+            const success = result.changes > 0;
+            if (success) {
+                logger.info(`[OttorackService] Deleted Ottorack ${id}`);
+            } else {
+                logger.warn(`[OttorackService] Attempted to delete non-existent Ottorack ${id}`);
+            }
+            return success;
+        } catch (error) {
+            logger.error(`[OttorackService] Error deleting Ottorack ${id}: ${error.message}`);
+            throw error;
+        }
+    },
+
+    /**
+     * Update rack metadata (name, shelf_spacing_mm, bed_size)
+     */
+    async updateOttorackMeta(rackId, { name, shelf_spacing_mm, bed_size }) {
+        const fields = [];
+        const params = [];
+        if (typeof name === 'string' && name.trim()) {
+            fields.push('name = ?');
+            params.push(name.trim());
+        }
+        if (typeof shelf_spacing_mm !== 'undefined') {
+            fields.push('shelf_spacing_mm = ?');
+            params.push(shelf_spacing_mm);
+        }
+        if (typeof bed_size !== 'undefined') {
+            fields.push('bed_size = ?');
+            params.push(bed_size);
+        }
+        if (!fields.length) {
+            return await this.getOttorackById(rackId);
+        }
+        const sql = `UPDATE storage_racks SET ${fields.join(', ')} WHERE id = ?`;
+        params.push(rackId);
+        await dbRun(sql, params);
+        return await this.getOttorackById(rackId);
     }
 };
 

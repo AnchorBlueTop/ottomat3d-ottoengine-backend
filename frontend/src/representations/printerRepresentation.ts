@@ -8,6 +8,7 @@ export interface PrinterRepresentation {
     access_code?: string;
     type?: string;
     status?: string;
+    current_stage?: string;
     bed_temperature?: number;
 }
 
@@ -23,6 +24,7 @@ export interface PrinterRegistrationRepresentation {
 
 export interface PrinterStatus {
     status?: string;
+    current_stage?: string;
     remaining_time_minutes?: number;
 }
 

@@ -2,13 +2,20 @@
 
 /**
  * Interactive Testing Script for OTTOMAT3D Slot Management Algorithm
- * 
+ *
  * This script allows you to:
  * 1. Configure a rack with custom clearance
  * 2. Set initial slot states (occupied/empty_plate/nothing)
  * 3. Input print jobs with heights
  * 4. Simulate the complete storage workflow
  * 5. See how the rack evolves with each job
+ *
+ * UPDATED: November 2025
+ * - Matches current orchestration system behavior
+ * - empty_plate slots are NEVER used for storage (reserved for grabbing only)
+ * - Only 'nothing' (no_plate) slots are used for storage
+ * - New AVAILABILITY weight (0.3) prioritizes immediate slots
+ * - Updated scoring weights to match production system
  */
 
 const readline = require('readline');
@@ -27,6 +34,7 @@ const colors = {
 };
 
 // Simplified AdvancedSlotManager for testing
+// UPDATED: November 2025 - Matches production orchestration system
 class TestSlotManager {
     constructor(slotSpacing = 80, totalSlots = 6) {
         this.slotSpacing = slotSpacing;
@@ -43,10 +51,11 @@ class TestSlotManager {
         };
         
         this.WEIGHTS = {
-            HEIGHT_EFFICIENCY: 0.4,
-            SLOT_POSITION: 0.3,
-            CLEARANCE_WASTE: 0.2,
-            FUTURE_FLEXIBILITY: 0.1
+            AVAILABILITY: 0.3,          // NEW: Strongly prefer immediate availability
+            HEIGHT_EFFICIENCY: 0.3,     // Reduced from 0.4
+            SLOT_POSITION: 0.2,         // Reduced from 0.3
+            CLEARANCE_WASTE: 0.15,      // Reduced from 0.2
+            FUTURE_FLEXIBILITY: 0.05    // Reduced from 0.1
         };
     }
 
@@ -101,23 +110,11 @@ class TestSlotManager {
 
     _getAllStorageOptions(rackState, requiredClearance) {
         const options = [];
-        
-        // Strategy 1: In-place storage on EMPTY_PLATE slots
-        // CRITICAL: In-place only has BASE clearance!
-        for (let slot = 1; slot <= this.totalSlots; slot++) {
-            if (rackState[slot] === 'empty_plate' && !this._isSlotBlockedByPrintsBelow(slot, rackState)) {
-                const clearance = this.slotSpacing; // Always 80mm for in-place
-                if (clearance >= requiredClearance) {
-                    options.push({
-                        slot,
-                        clearance,
-                        strategy: 'in_place'
-                    });
-                }
-            }
-        }
-        
-        // Strategy 2: Storage in empty slots (requires grabbing a plate)
+
+        // CRITICAL: empty_plate slots are NEVER used for storage - they're reserved for grabbing!
+        // Only 'nothing' (no_plate) slots can be used for storage
+
+        // Storage in empty/no_plate slots (printer already has a plate from previous job)
         for (let slot = 1; slot <= this.totalSlots; slot++) {
             if (rackState[slot] === 'nothing' && !this._isSlotBlockedByPrintsBelow(slot, rackState)) {
                 const clearance = this._calculateClearance(slot, rackState);
@@ -125,13 +122,14 @@ class TestSlotManager {
                     options.push({
                         slot,
                         clearance,
-                        strategy: 'place_and_store',
-                        requiresPlate: true
+                        strategy: 'store_immediate',
+                        requiresPlate: false,
+                        availableNow: true
                     });
                 }
             }
         }
-        
+
         return options;
     }
 
@@ -165,33 +163,38 @@ class TestSlotManager {
 
     _scoreOptions(options, printHeight, rackState, remainingJobs) {
         const heightCategory = this._categorizeHeight(printHeight);
-        
+
         return options.map(option => {
             let score = 0;
-            
+            const breakdown = {};
+
+            // NEW: Availability score - strongly prefer immediate availability
+            const availabilityScore = option.availableNow ? 1.0 : 0.3;
+            breakdown.availability = availabilityScore;
+            score += availabilityScore * this.WEIGHTS.AVAILABILITY;
+
             // Height efficiency
             const utilization = printHeight / option.clearance;
             const heightScore = utilization >= 0.8 ? 1.0 : utilization >= 0.6 ? 0.8 : 0.5;
+            breakdown.heightEfficiency = heightScore;
             score += heightScore * this.WEIGHTS.HEIGHT_EFFICIENCY;
-            
+
             // Position score
             const positionScore = this._getPositionScore(option.slot, heightCategory);
+            breakdown.position = positionScore;
             score += positionScore * this.WEIGHTS.SLOT_POSITION;
-            
+
             // Waste penalty (reduced when few options)
             const wasteScore = this._getWasteScore(option, printHeight, options.length);
+            breakdown.waste = wasteScore;
             score += wasteScore * this.WEIGHTS.CLEARANCE_WASTE;
-            
+
             // Future flexibility
             const flexScore = this._getFutureScore(option, rackState, remainingJobs);
+            breakdown.future = flexScore;
             score += flexScore * this.WEIGHTS.FUTURE_FLEXIBILITY;
-            
-            // Bonus for in-place
-            if (option.strategy === 'in_place') {
-                score += 0.05;
-            }
-            
-            return { ...option, score };
+
+            return { ...option, score, breakdown };
         }).sort((a, b) => b.score - a.score);
     }
 
@@ -313,7 +316,8 @@ class SlotSimulator {
         
         // Step 2: Set initial rack state
         console.log(`\n${colors.bright}Configure initial rack state:${colors.reset}`);
-        console.log(`For each slot, enter: ${colors.green}o${colors.reset}=occupied, ${colors.blue}e${colors.reset}=empty plate, ${colors.dim}n${colors.reset}=nothing\n`);
+        console.log(`For each slot, enter: ${colors.green}o${colors.reset}=occupied, ${colors.blue}e${colors.reset}=empty plate, ${colors.dim}n${colors.reset}=nothing`);
+        console.log(`${colors.dim}NOTE: empty_plate slots are reserved for grabbing. Only 'nothing' slots can store prints.${colors.reset}\n`);
         
         for (let slot = totalSlots; slot >= 1; slot--) {
             const stateStr = await this.question(`Slot ${slot}: `);
@@ -403,34 +407,29 @@ class SlotSimulator {
                 continue;
             }
             
-            // Check if we need to grab a plate first
-            let grabSlot = null;
-            if (storageResult.strategy === 'place_and_store') {
-                const grabResult = this.slotManager.findOptimalGrabSlot(this.rackState, storageResult.slot);
-                if (!grabResult.available) {
-                    console.log(`${colors.red}❌ Need plate but none available!${colors.reset}`);
-                    continue;
-                }
-                grabSlot = grabResult.slot;
-            }
-            
-            // CRITICAL FIX: Update print heights BEFORE making future decisions
-            // Execute operations
-            if (grabSlot) {
-                console.log(`${colors.yellow}1. Grab plate from slot ${grabSlot}${colors.reset}`);
-                this.rackState[grabSlot] = 'nothing';
-            }
-            
-            console.log(`${colors.green}2. Store ${height}mm print in slot ${storageResult.slot}${colors.reset}`);
+            // The new orchestration system assumes printer already has a plate from previous job
+            // So we don't grab plates - we just store the completed print
+            console.log(`${colors.green}1. Store ${height}mm print in slot ${storageResult.slot}${colors.reset}`);
             this.rackState[storageResult.slot] = 'occupied';
-            
-            // FIXED: Update print height IMMEDIATELY so future assignments can see conflicts
+
+            // CRITICAL: Update print height IMMEDIATELY so future assignments can see conflicts
             this.slotManager.printHeights[storageResult.slot] = height;
             console.log(`${colors.dim}   Print height ${height}mm recorded for slot ${storageResult.slot}${colors.reset}`);
             
             console.log(`   Strategy: ${storageResult.strategy}`);
             console.log(`   Clearance: ${storageResult.clearance}mm`);
             console.log(`   Score: ${storageResult.score.toFixed(3)}`);
+
+            // Show score breakdown if available
+            if (storageResult.breakdown) {
+                const b = storageResult.breakdown;
+                console.log(`${colors.dim}   Score breakdown:`);
+                console.log(`     Availability: ${(b.availability * this.slotManager.WEIGHTS.AVAILABILITY).toFixed(3)} (${b.availability.toFixed(2)} × ${this.slotManager.WEIGHTS.AVAILABILITY})`);
+                console.log(`     Height Eff:   ${(b.heightEfficiency * this.slotManager.WEIGHTS.HEIGHT_EFFICIENCY).toFixed(3)} (${b.heightEfficiency.toFixed(2)} × ${this.slotManager.WEIGHTS.HEIGHT_EFFICIENCY})`);
+                console.log(`     Position:     ${(b.position * this.slotManager.WEIGHTS.SLOT_POSITION).toFixed(3)} (${b.position.toFixed(2)} × ${this.slotManager.WEIGHTS.SLOT_POSITION})`);
+                console.log(`     Waste:        ${(b.waste * this.slotManager.WEIGHTS.CLEARANCE_WASTE).toFixed(3)} (${b.waste.toFixed(2)} × ${this.slotManager.WEIGHTS.CLEARANCE_WASTE})`);
+                console.log(`     Future:       ${(b.future * this.slotManager.WEIGHTS.FUTURE_FLEXIBILITY).toFixed(3)} (${b.future.toFixed(2)} × ${this.slotManager.WEIGHTS.FUTURE_FLEXIBILITY})${colors.reset}`);
+            }
             
             this.displayRack();
             

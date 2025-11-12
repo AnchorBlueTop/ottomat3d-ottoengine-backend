@@ -11,28 +11,24 @@ import {
 } from "@patternfly/react-table";
 import { useContext, useEffect } from "react";
 import { JobContext } from "../App";
-import newPrinter from "./modals/newPrinterModal";
-import editPrinter from "./modals/editPrinter";
+import PrinterModal from "./modals/PrinterModal";
 import AddNewPrinterButton from "./buttons/addNewPrinterButton";
-import { getAllPrinters, getPrinterById } from "../ottoengine_API";
+import { getAllPrinters, getPrinterById, getPrinterStatusById } from "../ottoengine_API";
 import { PrinterRepresentation } from "../representations/printerRepresentation";
 import { PRINTER_BRANDS } from "../constants/printerBrands";
 
 export function Printers() {
     const { printer, setPrinter, setIsPrinterEditModalOpen, setPrinterIndex } = useContext(JobContext);
-    // const printerFecth = async () => {
-    //     var tempPrinterList: PrinterRepresentation[] = [];
 
-    //     // TODO: UPDATE PRINT BED TEMP MORE FREQUENTLY
-    //     const allPrinters = await getAllPrinters();
-    //     for (const value of allPrinters) {
-    //         if (value.id && !printer.find((e) => e.id === value.id)?.id) {
-    //             const printerData = await getPrinterById(value.id);
-    //             tempPrinterList.push(printerData);
-    //             setPrinter([...tempPrinterList]);
-    //         }
-    //     }
-    // }
+    // Identity helper shared across steps
+    const identityKeys = (p: PrinterRepresentation): string[] => {
+        const parts: string[] = [];
+        if (p.id != null) parts.push(`id:${p.id}`);
+        if (p.serial_number) parts.push(`serial:${p.serial_number}`);
+        if (p.ip_address) parts.push(`ip:${p.ip_address}`);
+        parts.push(`nbm:${p.name ?? ''}|${p.brand ?? ''}|${p.model ?? ''}`);
+        return parts;
+    };
 
     const printerFetch = async () => {
         const allPrinters = await getAllPrinters();
@@ -40,28 +36,80 @@ export function Printers() {
         for (const value of allPrinters) {
             if (value.id) {
                 const printerData = await getPrinterById(value.id);
+                
+                // Try to get live status for each printer
+                try {
+                    const liveStatus = await getPrinterStatusById(value.id);
+                    // Merge live status data into printer data
+                    printerData.current_stage = liveStatus.current_stage;
+                    // Update the status with live status if available
+                    if (liveStatus.status) {
+                        printerData.status = liveStatus.status;
+                    }
+                } catch (error) {
+                    console.warn(`Failed to fetch live status for printer ${value.id}:`, error);
+                    // Keep the existing status from basic printer data
+                }
+                
                 details.push(printerData);
             }
         }
-        setPrinter(prev => {
-            const byId = new Map<string, PrinterRepresentation>();
-            // Keep existing first (preserve any local edits/order)
-            for (const p of prev) {
-                const key = String(p.id ?? `${p.name}-${p.brand}-${p.model}`);
-                byId.set(key, p);
-            }
-            // Merge fetched (overwrites same id)
+
+        // Dedupe fetched details themselves first
+        const dedupedFetched: PrinterRepresentation[] = (() => {
+            const seen = new Set<string>();
+            const out: PrinterRepresentation[] = [];
             for (const p of details) {
-                const key = String(p.id ?? `${p.name}-${p.brand}-${p.model}`);
-                byId.set(key, p);
+                const keys = identityKeys(p);
+                const has = keys.some(k => seen.has(k));
+                if (!has) {
+                    keys.forEach(k => seen.add(k));
+                    out.push(p);
+                }
             }
-            return Array.from(byId.values());
+            return out;
+        })();
+
+        // Merge without duplicates (prefer fetched over existing on overlap)
+        setPrinter(prev => {
+            const fetchedKeySet = new Set<string>();
+            for (const p of dedupedFetched) {
+                for (const k of identityKeys(p)) fetchedKeySet.add(k);
+            }
+            const result: PrinterRepresentation[] = [...dedupedFetched];
+            for (const p of prev) {
+                const keys = identityKeys(p);
+                const overlaps = keys.some(k => fetchedKeySet.has(k));
+                if (!overlaps) result.push(p);
+            }
+            return result;
         });
     }
 
     const getBrandLabel = (brandValue?: string) => {
         if (!brandValue) return '';
         return PRINTER_BRANDS.find(b => b.value === brandValue)?.label || brandValue;
+    };
+
+    const formatCurrentStatus = (current_stage?: string, status?: string) => {
+        // Use current_stage if available, otherwise fall back to status
+        if (current_stage) {
+            // Format current_stage for better display
+            return current_stage.toLowerCase()
+                .split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+        
+        if (status) {
+            // Format status for better display
+            return status.toLowerCase()
+                .split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+        
+        return 'Unknown';
     };
 
     const isConnected = (status?: string) => {
@@ -80,6 +128,7 @@ export function Printers() {
                             <Tr>
                                 <Th aria-label="status"/>
                                 <Th>{'Name'}</Th>
+                                <Th>{'Current Status'}</Th>
                                 <Th>{'Make and Model'}</Th>
                                 <Th>{'Bed Temperature'}</Th>
                             </Tr>
@@ -111,6 +160,7 @@ export function Printers() {
                                         </span>
                                     </Td>
                                     <Td>{value.name}</Td>
+                                    <Td>{formatCurrentStatus(value.current_stage, value.status)}</Td>
                                     <Td>{getBrandLabel(value.brand)} {value.model}</Td>
                                     <Td>{value.bed_temperature}</Td>
                                 </Tr>
@@ -134,8 +184,7 @@ export function Printers() {
                 </PageSection>
                 {printerList()}
             </div>
-            {newPrinter()}
-            {editPrinter()}
+            <PrinterModal />
         </>
     );
 }

@@ -1,5 +1,7 @@
 import {
     PageSection,
+    Bullseye,
+    Spinner,
 } from "@patternfly/react-core";
 import {
     Table,
@@ -12,46 +14,48 @@ import {
 import { useContext, useEffect, useState } from "react";
 import { JobContext } from "../App";
 import AddNewOttorackButton from "./buttons/addNewOttorackButton";
-import newOttorack from "./modals/newOttorackModal";
+import OttorackModal from "./modals/OttorackModal";
 import { OttoRack } from "../representations/ottorackRepresentation";
-import editOttorack from "./modals/editOttorack";
 import { getAllOttoracks, getOttorackById } from "../ottoengine_API";
 
 export function Ottorack() {
-    const { ottorack, setOttorack, ottorackIndex, setOttorackIndex, setIsOttorackEditModalOpen } = useContext(JobContext);
+    const { ottorack, setOttorack, setOttorackIndex, setIsOttorackEditModalOpen } = useContext(JobContext);
+    const [loading, setLoading] = useState<boolean>(true);
 
-    const ottoRackFecth = async () => {
-        // var tempOttorackList: OttoRack[] = [];
+    // Helper to compute capacity metrics
+    const getCapacity = (r: OttoRack) => {
+        const shelves = r?.shelves ?? [];
+        const isEmptyPlate = (s: any) => s?.has_plate === true && s?.plate_state === 'empty';
+        const isEmptySlot = (s: any) => s?.has_plate === false;
 
-        // //  TODO: IMPLEMENT ONCE API EXITS
-        // getAllOttoracks().then((allOttoracks) => {
-        //     allOttoracks.map((value, index) => {
-        //         if (value.id && !ottorack.find((e) => e.id === value.id)?.id) {
-        //             getOttorackById(value.id).then((ottorackData) => {
-        //                 tempOttorackList.push(ottorackData);
-        //                 setOttorack(tempOttorackList);
-        //             })
-        //         }
+        const emptyPlates = shelves.filter(isEmptyPlate).length;
+        const emptySlots = shelves.filter(isEmptySlot).length;
+        return { emptyPlates, emptySlots, totalUsable: emptyPlates + emptySlots };
+    };
 
-        //     })
-        // });
-
+    const ottoRackFetch = async () => {
         try {
-            const allOttoracks = await getAllOttoracks(); // Fetch all Ottoracks
-            const tempOttorackList: OttoRack[] = [];
-    
-            // Fetch details for each Ottorack
-            for (const rack of allOttoracks) {
-                if (rack.id && !ottorack.find((e) => e.id === rack.id)) {
-                    const ottorackData = await getOttorackById(rack.id);
-                    tempOttorackList.push(ottorackData);
-                }
-            }
-    
-            // Update the state with the fetched Ottoracks
-            setOttorack(tempOttorackList);
+            setLoading(true);
+            const allOttoracks = await getAllOttoracks();
+
+            const list = (allOttoracks || []).filter((r: any) => r?.id);
+            const details = await Promise.all(
+                list.map((r: any) =>
+                    getOttorackById(r.id).catch((e) => {
+                        console.warn('Failed to fetch rack details for id', r.id, e);
+                        return null;
+                    })
+                )
+            );
+
+            const finalList: OttoRack[] = details.filter(Boolean) as OttoRack[];
+            // Only set when we have a concrete array (even if empty), avoids stale state
+            setOttorack(finalList);
         } catch (error) {
             console.error("Error fetching Ottoracks:", error);
+            // On error, don't clear existing UI list; keep current state
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -65,31 +69,40 @@ export function Ottorack() {
                                 <Tr>
                                     <Th>{'Name'}</Th>
                                     <Th>{'Number of Shelves'}</Th>
+                                    <Th>{'Empty plates'}</Th>
+                                    <Th>{'Empty slots'}</Th>
+                                    <Th>{'Capacity (usable)'}</Th>
                                 </Tr>
                             </Thead>
                             <Tbody>
-                                {ottorack.map((value, index) => (
-                                    <Tr
-                                        key={index}
-                                        onClick={() => {
-                                            setOttorackIndex(index);
-                                            setIsOttorackEditModalOpen(true);
-                                        }}
-                                    >
-                                        <Td>{value.name}</Td>
-                                        <Td>{value.shelves?.length}</Td>
-                                    </Tr>
-                                ))}
+                                {ottorack.map((value, index) => {
+                                    const { emptyPlates, emptySlots, totalUsable } = getCapacity(value);
+                                    return (
+                                        <Tr
+                                            key={value.id ?? index}
+                                            onClick={() => {
+                                                setOttorackIndex(index);
+                                                setIsOttorackEditModalOpen(true);
+                                            }}
+                                        >
+                                            <Td>{value.name}</Td>
+                                            <Td>{value.shelves?.length ?? 0}</Td>
+                                            <Td>{emptyPlates}</Td>
+                                            <Td>{emptySlots}</Td>
+                                            <Td>{totalUsable}</Td>
+                                        </Tr>
+                                    );
+                                })}
                             </Tbody>
-
                         </Table> : ''
                     }
-                </>)
+                </>
+            )
         }
     }
 
     useEffect(() => {
-        ottoRackFecth();
+        ottoRackFetch();
     }, []);
 
     return (
@@ -100,8 +113,7 @@ export function Ottorack() {
                 </PageSection>
                 {OttorackList()}
             </div>
-            {newOttorack()}
-            {editOttorack()}
+            <OttorackModal />
         </>
     );
 }

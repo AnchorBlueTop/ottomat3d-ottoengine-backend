@@ -190,9 +190,16 @@ class PrinterMQTTClient extends EventEmitter {
         if (this._mqttClient) {
             this.log('Calling _removeListeners and client.end() for explicit disconnect.');
             this._removeListeners(); // Remove our handlers
+
+            // Add a final error handler to catch any lingering timeout errors after disconnect
+            this._mqttClient.on('error', (err) => {
+                this.log(`Post-disconnect error caught and suppressed: ${err.message}`);
+                // Suppress the error to prevent crashes - this is expected during forced disconnect
+            });
+
             this._mqttClient.end(true, () => { // true = force close
                 this.log('MQTT client.end() callback received.');
-            }); 
+            });
             this._mqttClient = null; // Destroy our reference
         }
         

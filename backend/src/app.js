@@ -12,7 +12,7 @@ const logger = require('./utils/logger');
 const { db, initializeDatabase } = require('./db');
 
 // --- Service Initialization ---
-const PrinterStateManager = require('./services/printerStateManager');
+const bambuStateManager = require('./services/bambuStateManager');
 const adapterStateManager = require('./services/adapterStateManager');
 const orchestratorService = require('./services/orchestratorService');
 
@@ -135,16 +135,16 @@ async function initializeAndStartServer() {
         // After the server is confirmed to be running, start connecting to devices in the background.
         // We don't `await` this, so it doesn't block the server from starting.
         if (printersFromDb.length > 0) {
-            logger.info(`[App Startup] Initializing PrinterStateManager with ${printersFromDb.length} Bambu printers in the background...`);
-            PrinterStateManager.initialize(printersFromDb)
+            logger.info(`[App Startup] Initializing bambuStateManager with ${printersFromDb.length} Bambu printers in the background...`);
+            bambuStateManager.initialize(printersFromDb)
                 .then(() => {
-                    logger.info('[App Startup] PrinterStateManager background initialization complete.');
+                    logger.info('[App Startup] bambuStateManager background initialization complete.');
                 })
                 .catch(err => {
-                    logger.error(`[App Startup] An error occurred during background PrinterStateManager initialization: ${err.message}`);
+                    logger.error(`[App Startup] An error occurred during background bambuStateManager initialization: ${err.message}`);
                 });
         } else {
-            logger.warn("[App Startup] No Bambu printers found in DB to initialize with PrinterStateManager.");
+            logger.warn("[App Startup] No Bambu printers found in DB to initialize with bambuStateManager.");
         }
     } catch (error) {
         logger.error('Failed to initialize and start server:', error);
@@ -166,9 +166,9 @@ async function gracefulShutdownHandler(signal) {
         await adapterStateManager.shutdown();
     }
 
-    // Shutdown legacy PrinterStateManager (fallback)
-    if (PrinterStateManager && typeof PrinterStateManager.gracefulShutdown === 'function') {
-        await PrinterStateManager.gracefulShutdown();
+    // Shutdown legacy bambuStateManager (fallback)
+    if (bambuStateManager && typeof bambuStateManager.gracefulShutdown === 'function') {
+        await bambuStateManager.gracefulShutdown();
     }
 
     if (db && typeof db.close === 'function') {

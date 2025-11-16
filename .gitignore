@@ -81,3 +81,7 @@ frontend/dist/
 
 # Ignore temp files
 uploads/temp_*/
+
+# Documentation and Claude Code instructions (local only)
+backend/docs/
+backend/.claude_code

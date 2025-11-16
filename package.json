@@ -1,0 +1,78 @@
+{
+  "name": "ottostudio",
+  "version": "1.0.0",
+  "description": "OTTOMAT3D - 24/7 Automated 3D Printing Manufacturing System",
+  "main": "electron/main.js",
+  "author": "OTTOMAT3D",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "echo 'Backend needs no build'",
+    "package": "electron-forge package",
+    "package:x64": "electron-forge package --arch=x64",
+    "sign": "node scripts/sign.js",
+    "package:signed": "npm run build:frontend && npm run package && npm run sign",
+    "package:signed:x64": "npm run build:frontend && npm run package:x64 && npm run sign",
+    "make": "electron-forge make",
+    "publish": "electron-forge publish",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.5.0",
+    "@electron-forge/maker-deb": "^7.5.0",
+    "@electron-forge/maker-rpm": "^7.5.0",
+    "@electron-forge/maker-squirrel": "^7.5.0",
+    "@electron-forge/maker-zip": "^7.5.0",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.5.0",
+    "@electron-forge/plugin-fuses": "^7.5.0",
+    "@electron/fuses": "^1.8.0",
+    "electron": "^33.2.0"
+  },
+  "config": {
+    "forge": {
+      "packagerConfig": {
+        "name": "OttoStudio",
+        "executableName": "Ottostudio",
+        "icon": "./assets/icon",
+        "asar": false
+      },
+      "makers": [
+        {
+          "name": "@electron-forge/maker-squirrel",
+          "config": {
+            "name": "Ottostudio",
+            "setupIcon": "./assets/icon.ico",
+            "iconUrl": "https://ottostudio.com/icon.ico"
+          }
+        },
+        {
+          "name": "@electron-forge/maker-zip",
+          "platforms": [
+            "darwin",
+            "linux"
+          ]
+        },
+        {
+          "name": "@electron-forge/maker-deb",
+          "config": {
+            "options": {
+              "name": "Ottostudio",
+              "productName": "OttoStudio",
+              "icon": "./assets/icon.png"
+            }
+          }
+        },
+        {
+          "name": "@electron-forge/maker-rpm",
+          "config": {}
+        }
+      ]
+    }
+  }
+}

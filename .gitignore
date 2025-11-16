@@ -81,3 +81,13 @@ frontend/dist/
 
 # Ignore temp files
 uploads/temp_*/
+
+# Electron build output
+out/
+
+# Claude Code artifacts
+backend/.claude_code/
+
+# Test/documentation files
+backend/gcode/
+backend/docs/

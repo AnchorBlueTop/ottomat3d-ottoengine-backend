@@ -8,6 +8,14 @@ const readline = require('readline');
 
 const gcodeParsingService = {
     async parseGcodeFile(filePath) {
+        const fileExt = path.extname(filePath).toLowerCase();
+
+        // Handle plain .gcode files
+        if (fileExt === '.gcode') {
+            return await this._parsePlainGcodeFile(filePath);
+        }
+
+        // Handle .3mf files (zip archives)
         logger.info(`[GcodeParsingService] Parsing .3mf file: ${filePath}`);
         const tempExtractionPath = path.join(path.dirname(filePath), `temp_extract_${Date.now()}`);
         
@@ -67,6 +75,55 @@ const gcodeParsingService = {
             } catch (cleanupError) {
                 logger.error(`[GcodeParsingService] Failed to clean up temp directory ${tempExtractionPath}: ${cleanupError.message}`);
             }
+        }
+    },
+
+    /**
+     * Parse plain .gcode files (non-3mf)
+     * @param {string} filePath - Path to .gcode file
+     * @returns {Promise<{success: boolean, data?: object, message?: string}>}
+     * @private
+     */
+    async _parsePlainGcodeFile(filePath) {
+        logger.info(`[GcodeParsingService] Parsing plain .gcode file: ${filePath}`);
+
+        try {
+            // Read first 500 lines for metadata
+            const gcodeHeaderContent = await this._readGcodeHeader(filePath, 500);
+
+            // Extract metadata from comments (try multiple formats)
+            const filament_used_g = this._extractMetadata(gcodeHeaderContent, /total filament weight \[g\]\s*:\s*([\d.]+)/)
+                || this._extractMetadata(gcodeHeaderContent, /filament used \[g\]\s*=\s*([\d.]+)/)
+                || this._extractMetadata(gcodeHeaderContent, /total filament used.*?(\d+\.?\d*)\s*g/i);
+
+            const duration_string = this._extractMetadata(gcodeHeaderContent, /total estimated time:\s*(.*)/, 'string')
+                || this._extractMetadata(gcodeHeaderContent, /estimated printing time.*?:\s*(.*)/, 'string')
+                || this._extractMetadata(gcodeHeaderContent, /TIME:\s*(.*)/, 'string');
+
+            const max_z_height_mm = this._extractMetadata(gcodeHeaderContent, /max_z_height:\s*([\d.]+)/)
+                || this._extractMetadata(gcodeHeaderContent, /max_layer_z\s*=\s*([\d.]+)/)
+                || this._extractMetadata(gcodeHeaderContent, /layer_height\s*=\s*([\d.]+)/);
+
+            const filament_type = this._extractMetadata(gcodeHeaderContent, /filament_type\s*=\s*(.*)/, 'string')
+                || this._extractMetadata(gcodeHeaderContent, /filament type.*?:\s*(.*)/, 'string');
+
+            const metadata = {
+                filament_used_g: filament_used_g || null,
+                duration: duration_string || 'Unknown',
+                dimensions: {
+                    x: null,  // Not available in plain gcode without parsing all coordinates
+                    y: null,
+                    z: max_z_height_mm || null
+                },
+                filament_type: filament_type || "Unknown"
+            };
+
+            logger.info(`[GcodeParsingService] Successfully parsed plain .gcode metadata:`, metadata);
+            return { success: true, data: metadata };
+
+        } catch (error) {
+            logger.error(`[GcodeParsingService] Error parsing plain .gcode file ${filePath}: ${error.message}`, error);
+            return { success: false, message: `Failed to parse .gcode file: ${error.message}` };
         }
     },
 

@@ -141,6 +141,8 @@ export function Printers() {
                                         setPrinterIndex(index)
                                         setIsPrinterEditModalOpen(true)
                                     }}
+                                    className="clickable-job-row"
+                                    style={{ cursor: 'pointer' }}
                                 >
                                     <Td width={10}>
                                         <span

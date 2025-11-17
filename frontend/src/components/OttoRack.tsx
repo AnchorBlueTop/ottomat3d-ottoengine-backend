@@ -81,6 +81,8 @@ export function Ottorack() {
                                                 setOttorackIndex(index);
                                                 setIsOttorackEditModalOpen(true);
                                             }}
+                                            className="clickable-job-row"
+                                            style={{ cursor: 'pointer' }}
                                         >
                                             <Td>{value.name}</Td>
                                             <Td>{value.shelves?.length ?? 0}</Td>

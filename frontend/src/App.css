@@ -758,6 +758,17 @@
   transform: translateY(-2px);
 } */
 
+/* Clickable row hover effects for Jobs, Printers, Ottoeject */
+.clickable-job-row:hover {
+  background-color: rgba(128, 94, 229, 0.1) !important;
+  transition: background-color 0.2s ease;
+}
+
+.clickable-job-row {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
 .customCheckBoxWrapper {
   width: 100%;
   /* Ensures each wrapper takes full width of the holder */

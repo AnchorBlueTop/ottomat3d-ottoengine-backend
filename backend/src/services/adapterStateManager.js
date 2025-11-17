@@ -164,17 +164,24 @@ class AdapterStateManager {
 
             // Authenticate and connect
             logger.debug(`[AdapterStateManager] Authenticating adapter for printer ${printerId}...`);
-            await adapter.authenticate(config);
+
+            try {
+                await adapter.authenticate(config);
+            } catch (authError) {
+                logger.warn(`[AdapterStateManager] Authentication error for printer ${printerId}: ${authError.message}`);
+            }
+
+            // Add adapter regardless of authentication status
+            // This allows offline/dummy printers to still show up and be managed
+            this.activeAdapters.set(printerId, adapter);
 
             if (adapter.isAuthenticated()) {
-                this.activeAdapters.set(printerId, adapter);
                 logger.info(`[AdapterStateManager] ✓ Successfully connected and authenticated adapter for printer ${printerId}`);
-                return adapter;
             } else {
-                logger.warn(`[AdapterStateManager] ✗ Adapter authentication failed for printer ${printerId} - adapter.isAuthenticated() returned false`);
-                await adapter.close();
-                return null;
+                logger.info(`[AdapterStateManager] ⚠ Adapter created but not authenticated for printer ${printerId} (offline/dummy mode)`);
             }
+
+            return adapter;
 
         } catch (error) {
             logger.error(`[AdapterStateManager] Error connecting adapter for printer ${printerId}: ${error.message}`);

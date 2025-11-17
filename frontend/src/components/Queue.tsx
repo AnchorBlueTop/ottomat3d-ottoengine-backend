@@ -24,7 +24,7 @@ export default async function startQueue(queue: QueueRepresentation[], setPrintJ
             break;
         }
 
-        const printSuccess = await start_Print(element.printer.id, { filename: element.fileName, printJobId: element.printJobId }, setPrintJob, currentFiles);
+        const printSuccess = await start_Print(element.printer.id, { filename: element.fileName, printJobId: element.printJobId }, setPrintJob, _currentFiles);
 
         if (printSuccess) {
             console.log(`Print for job ${job_id} ('${element.fileName}') completed.`);
@@ -327,7 +327,7 @@ const performEjectionSequence = async (ottoejectId: number, printerId: number, p
             }
             return f;
         });
-        const _parkOttoeject = await sendOttoejectMacro(ottoejectId, { macro: 'PARK_OTTOEJECT' });
+        await sendOttoejectMacro(ottoejectId, { macro: 'PARK_OTTOEJECT' });
         return e;
 
     }).catch(() => {
@@ -381,7 +381,7 @@ const resetPrintBed = async (ottoejectId: number, job_count: number, element: an
             }
             return f;
         });
-        const _parkOttoeject = await sendOttoejectMacro(ottoejectId, { macro: 'PARK_OTTOEJECT' });
+        await sendOttoejectMacro(ottoejectId, { macro: 'PARK_OTTOEJECT' });
         return e;
 
     }).catch(() => {

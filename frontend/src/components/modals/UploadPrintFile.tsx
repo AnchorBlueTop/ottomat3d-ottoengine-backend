@@ -167,7 +167,7 @@ export default function uploadPrintFile() {
                     titleIcon={<UploadIcon />}
                     titleText="Drag and drop files here"
                     titleTextSeparator="or"
-                    infoText="Accepted file types: .gcode, .3mf"
+                    infoText="Accepted file types: .gcode, .gcode.3mf"
                 />
                 {showStatus && (
                     <>

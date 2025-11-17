@@ -760,7 +760,7 @@
 
 /* Clickable row hover effects for Jobs, Printers, Ottoeject */
 .clickable-job-row:hover {
-  background-color: rgba(128, 94, 229, 0.1) !important;
+  background-color: rgba(128, 128, 128, 0.15) !important;
   transition: background-color 0.2s ease;
 }
 

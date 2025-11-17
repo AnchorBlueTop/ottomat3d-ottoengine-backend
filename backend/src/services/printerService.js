@@ -8,8 +8,8 @@ const logger = require('../utils/logger');
 const adapterStateManager = require('./adapterStateManager');
 const { AdapterError, JobSpec } = require('../../packages/integration-adapter');
 
-// Fallback to original PrinterStateManager for non-adapter printers
-const PrinterStateManager = require('./printerStateManager');
+// Fallback to BambuStateManager for Bambu Lab printers (MQTT connections)
+const bambuStateManager = require('./bambuStateManager');
 
 // Import Bambu Labs API for direct connection tests (used in connect())
 const bl_api = require('../bambulabs-api');
@@ -41,11 +41,13 @@ const printerService = {
      */
     async connect(payload) {
         try {
-            const { brand, ip_address, access_code, serial_number } = payload || {};
+            const { brand, ip_address, access_code, serial_number, serial_code, check_code, api_key } = payload || {};
             if (!brand || !ip_address) {
                 return { success: false, message: 'brand and ip_address are required.' };
             }
             const brandKey = printerBrand(brand);
+
+            // BAMBU LAB - Use legacy MQTT API
             if (brandKey === 'bambu_lab') {
                 if (!access_code || !serial_number) {
                     return { success: false, message: 'For Bambu Lab, access_code and serial_number are required.' };
@@ -56,8 +58,15 @@ const printerService = {
                         ip: ip_address,
                         accessCode: access_code,
                         serial: serial_number,
-                        // Enable verbose logging via env: LOG_LEVEL=DEBUG or BAMBU_API_DEBUG=true
                         debug: (process.env.LOG_LEVEL === 'DEBUG' || String(process.env.BAMBU_API_DEBUG).toLowerCase() === 'true')
+                    });
+
+                    // Add error handlers to prevent crashes during connection test
+                    instance.on('error', (err) => {
+                        logger.error(`[PrinterService] Test connection MQTT error: ${err.message || err}`);
+                    });
+                    instance.on('mqtt_error', (err) => {
+                        logger.error(`[PrinterService] Test connection MQTT error: ${err.message || err}`);
                     });
                 } catch (e) {
                     logger.error(`[PrinterService] connect: Failed to create Bambu printer instance: ${e.message}`);
@@ -80,17 +89,101 @@ const printerService = {
                         try { if (typeof instance.pushall === 'function') await withTimeout(instance.pushall(), pushMs, 'Pushall'); } catch (_) {}
                         return { success: true, status: 'ONLINE', message: 'Connection successful.' };
                     } else {
-                        return { success: false, status: 'OFFLINE', message: 'Could not establish connection.' };
+                        return { success: false, status: 'OFFLINE', message: 'Connection failed. Check printer details.' };
                     }
                 } catch (e) {
                     logger.error(`[PrinterService] connect: Error connecting to Bambu at ${ip_address}: ${e.message}`);
-                    return { success: false, message: `${e.message}` };
+                    return { success: false, status: 'OFFLINE', message: 'Connection failed. Check printer details.' };
                 } finally {
-                    try { if (instance && typeof instance.disconnect === 'function') await instance.disconnect(); } catch (_) {}
+                    // Disconnect MQTT - keep error handlers attached to prevent crashes
+                    try {
+                        if (instance && typeof instance.disconnect === 'function') {
+                            await instance.disconnect();
+                        }
+                    } catch (cleanupError) {
+                        logger.debug(`[PrinterService] Error during disconnect: ${cleanupError.message}`);
+                    }
                 }
             }
 
-            return { success: false, message: `Connect not implemented for brand '${brand}'.` };
+            // ALL OTHER BRANDS - Use Integration Adapters
+            logger.info(`[PrinterService] Testing connection for ${brandKey} printer at ${ip_address}`);
+
+            // Map brand to adapter parameters
+            const { makeAdapter: makeAdapterFn } = require('../../packages/integration-adapter');
+            let adapterBrand, adapterMode;
+
+            // Map canonical brand to adapter name
+            switch (brandKey) {
+                case 'flashforge':
+                    adapterBrand = 'flashforge';
+                    adapterMode = 'hybrid';
+                    break;
+                case 'prusa':
+                    adapterBrand = 'prusa';
+                    adapterMode = 'lan';
+                    break;
+                case 'creality':
+                    adapterBrand = 'creality';
+                    adapterMode = 'websocket';
+                    break;
+                case 'anycubic':
+                    adapterBrand = 'anycubic';
+                    adapterMode = 'moonraker';
+                    break;
+                case 'elegoo':
+                    adapterBrand = 'elegoo';
+                    adapterMode = 'websocket';
+                    break;
+                default:
+                    logger.warn(`[PrinterService] Brand '${brandKey}' not supported by adapter system`);
+                    return { success: false, message: `Printer brand '${brand}' is not yet supported.` };
+            }
+
+            const tempConfig = {
+                ip: ip_address,
+                accessCode: access_code,
+                serial: serial_number,
+                serialCode: serial_code,
+                checkCode: check_code,
+                apiKey: api_key
+            };
+
+            // Try to create and test adapter
+            try {
+                logger.debug(`[PrinterService] Creating ${adapterBrand}/${adapterMode} adapter for connection test`);
+                const adapter = makeAdapterFn(adapterBrand, adapterMode);
+
+                if (!adapter) {
+                    return { success: false, message: `No adapter available for brand '${brand}'.` };
+                }
+
+                // Try to authenticate
+                await adapter.authenticate(tempConfig);
+
+                // Check if authenticated
+                if (adapter.isAuthenticated()) {
+                    // Try to get status as connection test
+                    try {
+                        await adapter.getStatus();
+                        // Clean up
+                        await adapter.close();
+                        return { success: true, status: 'ONLINE', message: 'Connection successful.' };
+                    } catch (statusError) {
+                        // Clean up
+                        await adapter.close();
+                        logger.warn(`[PrinterService] Authenticated but status check failed: ${statusError.message}`);
+                        return { success: false, status: 'OFFLINE', message: 'Connection failed. Check printer details.' };
+                    }
+                } else {
+                    await adapter.close();
+                    return { success: false, status: 'OFFLINE', message: 'Authentication failed. Please check credentials.' };
+                }
+            } catch (adapterError) {
+                logger.error(`[PrinterService] Adapter connection test failed: ${adapterError.message}`);
+                return { success: false, status: 'OFFLINE', message: 'Connection failed. Check printer details.' };
+            }
+
         } catch (e) {
             logger.error(`[PrinterService] connect unexpected error: ${e.message}`);
             return { success: false, message: 'Unexpected server error during connect.' };
@@ -106,28 +199,41 @@ const printerService = {
             model = null,
             type = null,
             ip_address,
-            access_code = null,
-            serial_number = null,
+            // Authentication fields (brand-specific)
+            access_code = null,      // Bambu Lab
+            serial_number = null,    // Bambu Lab
+            serial_code = null,      // FlashForge
+            check_code = null,       // FlashForge
+            api_key = null,          // Prusa
+            // Note: Creality, Anycubic, Elegoo only require ip_address
             build_volume = null
         } = printerData;
-        
+
         if (!name || !ip_address) {
             throw new Error('Missing required fields: Name, IP Address.');
         }
-        
+
         // Normalize brand and validate required fields for supported printers (brand-based)
         const brandCanonical = printerBrand(brand);
-        if ((brandCanonical === 'bambu_lab') && (!access_code || !serial_number)) {
+
+        // Brand-specific auth validation
+        if (brandCanonical === 'bambu_lab' && (!access_code || !serial_number)) {
             throw new Error('For Bambu Lab printers, access_code and serial_number are required.');
+        }
+        if (brandCanonical === 'flashforge' && (!serial_code || !check_code)) {
+            throw new Error('For FlashForge printers, serial_code and check_code are required.');
+        }
+        if (brandCanonical === 'prusa' && !api_key) {
+            throw new Error('For Prusa printers, api_key is required.');
         }
 
         const buildVolumeJsonString = build_volume ? JSON.stringify(build_volume) : null;
 
         const sql = `
-            INSERT INTO printers (name, brand, model, type, ip_address, access_code, serial_number, build_volume_json, current_filament_json) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL) 
+            INSERT INTO printers (name, brand, model, type, ip_address, access_code, serial_number, serial_code, check_code, api_key, build_volume_json, current_filament_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
         `;
-    const params = [name, brandCanonical, model, type, ip_address, access_code, serial_number, buildVolumeJsonString];
+    const params = [name, brandCanonical, model, type, ip_address, access_code, serial_number, serial_code, check_code, api_key, buildVolumeJsonString];
         
         try {
             logger.debug(`[PrinterService] Creating printer: ${name}`);
@@ -141,10 +247,10 @@ const printerService = {
                     const adapter = await adapterStateManager.addAndConnectAdapter(newPrinterRecord);
                     
                     if (!adapter && String(newPrinterRecord.brand || '').toLowerCase() === 'bambu_lab') {
-                        // Fallback to original PrinterStateManager
-                        logger.info(`[PrinterService] Adapter failed, falling back to PrinterStateManager for printer ${newPrinterRecord.id}`);
-                        PrinterStateManager.addAndConnectPrinter(newPrinterRecord)
-                            .catch(err => logger.error(`PrinterStateManager fallback failed: ${err.message}`));
+                        // Fallback to original bambuStateManager
+                        logger.info(`[PrinterService] Adapter failed, falling back to bambuStateManager for printer ${newPrinterRecord.id}`);
+                        bambuStateManager.addAndConnectPrinter(newPrinterRecord)
+                            .catch(err => logger.error(`bambuStateManager fallback failed: ${err.message}`));
                     }
                 }
                 
@@ -160,22 +266,24 @@ const printerService = {
 
     async getAllPrinters() {
         logger.info('[PrinterService] Getting live details for ALL printers using adapters...');
-        
+
         try {
             const allPrinterRecords = await dbAll('SELECT id FROM printers');
-            
-            const printerDetailsPromises = allPrinterRecords.map(p => 
+
+            // Use allSettled to handle individual printer failures gracefully
+            const printerDetailsPromises = allPrinterRecords.map(p =>
                 this.getPrinterLiveDetails(p.id)
             );
-            
-            const results = await Promise.all(printerDetailsPromises);
-            
-            const successfulPrinters = results
-                .filter(res => res.success && res.data)
-                .map(res => res.data);
 
-            return successfulPrinters;
-            
+            const results = await Promise.allSettled(printerDetailsPromises);
+
+            const printers = results
+                .filter(res => res.status === 'fulfilled' && res.value && res.value.data)
+                .map(res => res.value.data);
+
+            logger.info(`[PrinterService] Successfully retrieved ${printers.length}/${allPrinterRecords.length} printers`);
+            return printers;
+
         } catch (error) {
             logger.error(`[PrinterService] Error fetching all printers: ${error.message}`);
             throw error;
@@ -185,7 +293,7 @@ const printerService = {
     async getPrinterById(id) {
         try {
             return await dbGet(
-                'SELECT id, name, brand, model, type, ip_address, access_code, serial_number, build_volume_json, current_filament_json FROM printers WHERE id = ?', 
+                'SELECT id, name, brand, model, type, ip_address, access_code, serial_number, serial_code, check_code, api_key, build_volume_json, current_filament_json FROM printers WHERE id = ?',
                 [id]
             );
         } catch (error) {
@@ -197,7 +305,7 @@ const printerService = {
     async updatePrinter(id, updateData) {
         const { build_volume, filament, ...otherUpdates } = updateData;
         const allowedDirectUpdates = { ...otherUpdates };
-        const validDirectFields = ['name', 'brand', 'model', 'type', 'ip_address', 'access_code', 'serial_number'];
+        const validDirectFields = ['name', 'brand', 'model', 'type', 'ip_address', 'access_code', 'serial_number', 'serial_code', 'check_code', 'api_key'];
         
         for (const key in allowedDirectUpdates) {
             if (!validDirectFields.includes(key)) delete allowedDirectUpdates[key];
@@ -253,8 +361,8 @@ const printerService = {
                 // Also update original system if needed
                 const brandLower = String(updatedPrinterRecord.brand || '').toLowerCase();
                 if (brandLower === 'bambu_lab') {
-                    await PrinterStateManager.removePrinterInstance(id);
-                    await PrinterStateManager.addAndConnectPrinter(updatedPrinterRecord);
+                    await bambuStateManager.removePrinterInstance(id);
+                    await bambuStateManager.addAndConnectPrinter(updatedPrinterRecord);
                 }
             }
             
@@ -270,7 +378,7 @@ const printerService = {
         try {
             // Remove from both adapter manager and original system
             await adapterStateManager.removeAdapter(id);
-            await PrinterStateManager.removePrinterInstance(id);
+            await bambuStateManager.removePrinterInstance(id);
             
             const result = await dbRun('DELETE FROM printers WHERE id = ?', [id]);
             logger.info(`[PrinterService] Printer ID ${id} deleted from DB (changes: ${result.changes}).`);
@@ -330,22 +438,22 @@ const printerService = {
             }
         }
 
-        // FALLBACK: Try PrinterStateManager for Bambu Lab printers
-        logger.info(`[PrinterService] No adapter available, trying PrinterStateManager fallback for printer ${printerId}`);
+        // FALLBACK: Try bambuStateManager for Bambu Lab printers
+        logger.info(`[PrinterService] No adapter available, trying bambuStateManager fallback for printer ${printerId}`);
         
-        let printerInstance = PrinterStateManager.getInstance(printerId);
+        let printerInstance = bambuStateManager.getInstance(printerId);
         
         // If no instance exists, try to create one
         if (!printerInstance) {
-            logger.warn(`[PrinterService] No PrinterStateManager instance for printer ${printerId}, attempting to create one`);
+            logger.warn(`[PrinterService] No bambuStateManager instance for printer ${printerId}, attempting to create one`);
             const printerRecord = await this.getPrinterById(printerId);
             if (printerRecord) {
                 try {
-                    await PrinterStateManager.addAndConnectPrinter(printerRecord);
-                    printerInstance = PrinterStateManager.getInstance(printerId);
-                    logger.info(`[PrinterService] Successfully created PrinterStateManager instance for printer ${printerId}`);
+                    await bambuStateManager.addAndConnectPrinter(printerRecord);
+                    printerInstance = bambuStateManager.getInstance(printerId);
+                    logger.info(`[PrinterService] Successfully created bambuStateManager instance for printer ${printerId}`);
                 } catch (error) {
-                    logger.error(`[PrinterService] Failed to create PrinterStateManager instance: ${error.message}`);
+                    logger.error(`[PrinterService] Failed to create bambuStateManager instance: ${error.message}`);
                 }
             }
         }
@@ -354,7 +462,7 @@ const printerService = {
             try {
                 // Add timeout to prevent hanging
                 const timeout = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('PrinterStateManager timeout')), 5000);
+                    setTimeout(() => reject(new Error('bambuStateManager timeout')), 5000);
                 });
                 
                 const statusPromise = Promise.resolve({
@@ -388,20 +496,40 @@ const printerService = {
                     last_update: new Date().toISOString()
                 };
                 
-                logger.info(`[PrinterService] PrinterStateManager fallback successful for printer ${printerId}`);
+                logger.info(`[PrinterService] bambuStateManager fallback successful for printer ${printerId}`);
                 return { success: true, data: responseData };
                 
             } catch (error) {
-                logger.error(`[PrinterService] PrinterStateManager fallback failed: ${error.message}`);
+                logger.error(`[PrinterService] bambuStateManager fallback failed: ${error.message}`);
             }
         }
 
-        // No connection available
-        return { 
-            success: false, 
-            message: `No adapter or PrinterStateManager connection available for printer ${printerId}`, 
-            data: null 
+        // No connection available - return DB data with OFFLINE status
+        logger.warn(`[PrinterService] No live connection available for printer ${printerId}, returning DB data with OFFLINE status`);
+
+        const responseData = {
+            id: parseInt(printerFromDb.id),
+            name: printerFromDb.name,
+            brand: printerFromDb.brand,
+            model: printerFromDb.model,
+            type: printerFromDb.type,
+            status: 'OFFLINE',
+            current_stage: 'N/A',
+            progress_percent: 0,
+            remaining_time_minutes: 0,
+            layer_progress: null,
+            filament: null,
+            build_volume: printerFromDb.build_volume_json ? JSON.parse(printerFromDb.build_volume_json) : null,
+            ip_address: printerFromDb.ip_address,
+            serial_number: printerFromDb.serial_number,
+            access_code: printerFromDb.access_code,
+            bed_temperature: null,
+            nozzle_temperature: null,
+            adapter_source: 'database_only',
+            last_update: new Date().toISOString()
         };
+
+        return { success: true, data: responseData };
     },
 
     // --- Enhanced Print Control with Adapter Support ---
@@ -449,39 +577,39 @@ const printerService = {
             }
         }
 
-        // FALLBACK: Try PrinterStateManager for Bambu Lab printers
-        logger.info(`[PrinterService] No adapter available, trying PrinterStateManager fallback for printer ${printerId}`);
+        // FALLBACK: Try bambuStateManager for Bambu Lab printers
+        logger.info(`[PrinterService] No adapter available, trying bambuStateManager fallback for printer ${printerId}`);
         
-        const printerInstance = PrinterStateManager.getInstance(printerId);
+        const printerInstance = bambuStateManager.getInstance(printerId);
         if (printerInstance) {
             try {
                 // Add timeout to prevent hanging
                 const timeout = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('PrinterStateManager start timeout')), 10000);
+                    setTimeout(() => reject(new Error('bambuStateManager start timeout')), 10000);
                 });
                 
                 // Check if start_print method exists
                 if (!printerInstance.start_print || typeof printerInstance.start_print !== 'function') {
-                    throw new Error('PrinterStateManager instance does not have start_print method');
+                    throw new Error('bambuStateManager instance does not have start_print method');
                 }
                 
-                // Use PrinterStateManager start method
+                // Use bambuStateManager start method
                 logger.debug(`[PrinterService] Calling start_print with filename: ${filename}`);
                 const startPromise = Promise.resolve(printerInstance.start_print(filename));
                 const result = await Promise.race([startPromise, timeout]);
                 
-                logger.info(`[PrinterService] PrinterStateManager start print successful for printer ${printerId}`);
+                logger.info(`[PrinterService] bambuStateManager start print successful for printer ${printerId}`);
                 return {
                     success: true,
-                    message: `Print started via PrinterStateManager: ${filename}`,
+                    message: `Print started via bambuStateManager: ${filename}`,
                     adapter_source: 'printer_state_manager_fallback'
                 };
                 
             } catch (error) {
-                logger.error(`[PrinterService] PrinterStateManager start print failed: ${error.message}`);
+                logger.error(`[PrinterService] bambuStateManager start print failed: ${error.message}`);
                 return {
                     success: false,
-                    message: `PrinterStateManager start failed: ${error.message}`,
+                    message: `bambuStateManager start failed: ${error.message}`,
                     adapter_source: 'printer_state_manager_fallback'
                 };
             }
@@ -491,7 +619,7 @@ const printerService = {
         const debugInfo = {
             adapterId: adapter ? 'exists' : 'null',
             adapterAuth: adapter ? adapter.isAuthenticated() : 'n/a',
-            printerStateManager: PrinterStateManager.getInstance(printerId) ? 'exists' : 'null'
+            printerStateManager: bambuStateManager.getInstance(printerId) ? 'exists' : 'null'
         };
         
         logger.error(`[PrinterService] No connection available for printer ${printerId}. Debug: ${JSON.stringify(debugInfo)}`);
@@ -674,7 +802,7 @@ const printerService = {
 
     async getStatusStream(printerId) {
         const adapter = adapterStateManager.getAdapter(printerId);
-        
+
         if (adapter && adapter.isAuthenticated()) {
             try {
                 return adapter.getStatusStream();
@@ -683,8 +811,256 @@ const printerService = {
                 throw error;
             }
         }
-        
+
         throw new Error('No authenticated adapter available for status stream');
+    },
+
+    async calibratePrinter(printerId) {
+        logger.info(`[PrinterService] Calibrating printer ID: ${printerId}`);
+
+        const printerFromDb = await this.getPrinterById(printerId);
+        if (!printerFromDb) {
+            return { success: false, message: `Printer ${printerId} not found in DB.` };
+        }
+
+        const brand = String(printerFromDb.brand || '').toLowerCase();
+        const adapter = adapterStateManager.getAdapter(printerId);
+
+        if (!adapter || !adapter.isAuthenticated()) {
+            return { success: false, message: 'No authenticated adapter available for this printer' };
+        }
+
+        try {
+            // Brand-specific calibration logic
+            if (brand === 'bambu_lab') {
+                return await this._calibrateBambuLab(adapter, printerFromDb);
+            } else if (brand === 'flashforge') {
+                return await this._calibrateFlashForge(adapter, printerFromDb);
+            } else if (brand === 'creality') {
+                return await this._calibrateCreality(adapter, printerFromDb);
+            } else if (brand === 'anycubic') {
+                return await this._calibrateAnycubic(adapter, printerFromDb);
+            } else if (brand === 'prusa') {
+                return await this._calibratePrusa(adapter, printerFromDb);
+            } else if (brand === 'elegoo') {
+                return await this._calibrateElegoo(adapter, printerFromDb);
+            } else {
+                return {
+                    success: false,
+                    message: `Calibration not supported for brand: ${printerFromDb.brand}`
+                };
+            }
+        } catch (error) {
+            logger.error(`[PrinterService] Calibration error: ${error.message}`);
+            return { success: false, message: error.message };
+        }
+    },
+
+    async _calibrateBambuLab(adapter, printerFromDb) {
+        logger.info('[PrinterService] Bambu Lab calibration');
+
+        // Determine bed type based on model (simplified - default to z_bed)
+        const model = String(printerFromDb.model || '').toLowerCase();
+        const isSlingBed = model.includes('a1');
+
+        try {
+            // Step 1: Home all axes (required by Bambu Lab)
+            await adapter.sendGcode('G28');
+            logger.info('[PrinterService] Bambu: Homing complete');
+
+            // Step 2: Move to calibration position
+            if (isSlingBed) {
+                // A1 uses Y-axis sling bed
+                await adapter.sendGcode('G90\nG1 Y170 F1000');
+                logger.info('[PrinterService] Bambu: Moved to Y170mm (A1 sling bed)');
+                return { success: true, message: 'Calibration complete: Bed moved to Y170mm (A1 sling bed)' };
+            } else {
+                // P1P, P1S, X1C use Z-axis bed
+                await adapter.sendGcode('G90\nG1 Z200 F600');
+                logger.info('[PrinterService] Bambu: Moved to Z200mm (Z-bed)');
+                return { success: true, message: 'Calibration complete: Bed moved to Z200mm' };
+            }
+        } catch (error) {
+            logger.error(`[PrinterService] Bambu calibration error: ${error.message}`);
+            return { success: false, message: `Calibration failed: ${error.message}` };
+        }
+    },
+
+    async _calibrateFlashForge(adapter, printerFromDb) {
+        logger.info('[PrinterService] FlashForge calibration');
+
+        try {
+            // FlashForge calibration uses TCP commands with ~ prefix
+            // These commands are sent via the adapter's sendGcode method
+
+            // Step 1: Login
+            await adapter.sendGcode('~M601 S1');
+            logger.info('[PrinterService] FlashForge: Login successful');
+
+            // Step 2: Home Z axis
+            await adapter.sendGcode('~G28 Z0');
+            logger.info('[PrinterService] FlashForge: Z-axis homed');
+
+            // Step 3: Wait for completion
+            await adapter.sendGcode('~M400');
+
+            // Step 4: Set absolute positioning
+            await adapter.sendGcode('~G90');
+
+            // Step 5: Move to Z190mm
+            await adapter.sendGcode('~G1 Z190 F600');
+            logger.info('[PrinterService] FlashForge: Moved to Z190mm');
+
+            // Step 6: Wait for completion
+            await adapter.sendGcode('~M400');
+
+            // Step 7: Logout
+            await adapter.sendGcode('~M602');
+            logger.info('[PrinterService] FlashForge: Logout successful');
+
+            return { success: true, message: 'Calibration complete: Bed moved to Z190mm' };
+        } catch (error) {
+            logger.error(`[PrinterService] FlashForge calibration error: ${error.message}`);
+            return { success: false, message: `Calibration failed: ${error.message}` };
+        }
+    },
+
+    async _calibrateCreality(adapter, printerFromDb) {
+        logger.info('[PrinterService] Creality calibration');
+
+        try {
+            // Step 1: Home Z axis
+            await adapter.sendGcode('G28 Z');
+            logger.info('[PrinterService] Creality: Z-axis homed');
+
+            // Step 2: Move to Z230mm (no compensation needed for Creality)
+            await adapter.sendGcode('G1 Z230 F600');
+            logger.info('[PrinterService] Creality: Moved to Z230mm');
+
+            return { success: true, message: 'Calibration complete: Bed moved to Z230mm' };
+        } catch (error) {
+            logger.error(`[PrinterService] Creality calibration error: ${error.message}`);
+            return { success: false, message: `Calibration failed: ${error.message}` };
+        }
+    },
+
+    async _calibrateAnycubic(adapter, printerFromDb) {
+        logger.info('[PrinterService] Anycubic calibration');
+
+        // CRITICAL: +13mm compensation for Anycubic (beta script line 425)
+        // This compensates for difference between G-code end positioning vs manual console commands
+        const recommendedPos = 200;
+        const compensationOffset = 13;
+        const actualPosition = recommendedPos + compensationOffset; // 213mm
+
+        try {
+            // Step 1: Home Z axis
+            await adapter.sendGcode('G28 Z');
+            logger.info('[PrinterService] Anycubic: Z-axis homed');
+
+            // Step 2: Move to Z213mm (Z200 + 13mm compensation)
+            await adapter.sendGcode(`G1 Z${actualPosition} F600`);
+            logger.info(`[PrinterService] Anycubic: Moved to Z${actualPosition}mm (Z${recommendedPos}mm + ${compensationOffset}mm compensation)`);
+
+            return {
+                success: true,
+                message: `Calibration complete: Bed moved to Z${actualPosition}mm (Z${recommendedPos}mm + ${compensationOffset}mm compensation)`
+            };
+        } catch (error) {
+            logger.error(`[PrinterService] Anycubic calibration error: ${error.message}`);
+            return { success: false, message: `Calibration failed: ${error.message}` };
+        }
+    },
+
+    async _calibratePrusa(adapter, printerFromDb) {
+        logger.info('[PrinterService] Prusa calibration');
+
+        const path = require('path');
+
+        // Determine bed type (default to sling_bed for MK3/MK4)
+        const model = String(printerFromDb.model || '').toLowerCase();
+        const isZBed = model.includes('core one');
+
+        const dwellFilename = isZBed ? 'Z_POS_DWELL.gcode' : 'Y_POS_DWELL.gcode';
+        const localPath = path.join(__dirname, '..', '..', 'gcode', dwellFilename);
+        const remotePath = `OTTOTEMP/${dwellFilename}`;
+
+        try {
+            // Step 1: Upload dwell file to printer
+            logger.info(`[PrinterService] Prusa: Uploading ${dwellFilename}...`);
+            const spec = new JobSpec({
+                filename: remotePath,
+                localPath: localPath
+            });
+
+            const uploadResult = await adapter.upload(spec);
+            if (!uploadResult.success) {
+                return { success: false, message: `Failed to upload dwell file: ${uploadResult.message}` };
+            }
+
+            logger.info(`[PrinterService] Prusa: Dwell file uploaded successfully`);
+
+            // Step 2: Start the dwell file
+            const startSpec = new JobSpec({ filename: remotePath });
+            const startResult = await adapter.start(startSpec);
+
+            if (!startResult.success) {
+                return { success: false, message: `Failed to start dwell file: ${startResult.message}` };
+            }
+
+            logger.info('[PrinterService] Prusa: Dwell positioning file started');
+
+            const description = isZBed ? 'Z200 positioning (Core One)' : 'Y210 positioning (MK3/MK4)';
+            return {
+                success: true,
+                message: `Calibration started: ${description}. The printer will move to position and pause automatically.`
+            };
+        } catch (error) {
+            logger.error(`[PrinterService] Prusa calibration error: ${error.message}`);
+            return { success: false, message: `Calibration failed: ${error.message}` };
+        }
+    },
+
+    async _calibrateElegoo(adapter, printerFromDb) {
+        logger.info('[PrinterService] Elegoo calibration');
+
+        const path = require('path');
+        const calibrationFile = 'ELEGOO_Z205_PLA.gcode';
+        const localPath = path.join(__dirname, '..', '..', 'gcode', calibrationFile);
+
+        try {
+            // Step 1: Upload calibration file
+            logger.info(`[PrinterService] Elegoo: Uploading ${calibrationFile}...`);
+            const uploadSpec = new JobSpec({
+                filename: calibrationFile,
+                localPath: localPath
+            });
+
+            const uploadResult = await adapter.upload(uploadSpec);
+            if (!uploadResult.success) {
+                return { success: false, message: `Failed to upload calibration file: ${uploadResult.message}` };
+            }
+
+            logger.info(`[PrinterService] Elegoo: Calibration file uploaded successfully`);
+
+            // Step 2: Start the calibration print
+            const startSpec = new JobSpec({ filename: calibrationFile });
+            const startResult = await adapter.start(startSpec);
+
+            if (!startResult.success) {
+                return { success: false, message: `Failed to start calibration print: ${startResult.message}` };
+            }
+
+            logger.info('[PrinterService] Elegoo: Calibration print started');
+
+            return {
+                success: true,
+                message: 'Calibration print started: OTTOMAT3D Logo. Print will end with bed at Z205mm (duration: ~10-15 minutes).'
+            };
+        } catch (error) {
+            logger.error(`[PrinterService] Elegoo calibration error: ${error.message}`);
+            return { success: false, message: `Calibration failed: ${error.message}` };
+        }
     }
 };
 

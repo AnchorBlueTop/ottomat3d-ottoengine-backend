@@ -81,7 +81,10 @@ router.post('/:id/pause', printerController.pausePrint);
 router.post('/:id/resume', printerController.resumePrint);
 
 // POST /api/printers/{id}/stop - Stop (cancel) the current print job
-router.post('/:id/stop', printerController.stopPrint); 
+router.post('/:id/stop', printerController.stopPrint);
+
+// POST /api/printers/{id}/calibrate - Calibrate/level bed for printer
+router.post('/:id/calibrate', printerController.calibratePrinter);
 
 
 module.exports = router;

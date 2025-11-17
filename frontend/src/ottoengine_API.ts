@@ -66,6 +66,19 @@ export const sendGCodeToPrinter = async (id: number, gcodePayload: GCodePayload)
   return response.json();
 };
 
+export const calibratePrinter = async (id: number): Promise<any> => {
+  const response = await fetch(`${BASE_URL}/api/printers/${id}/calibrate`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`Error calibrating printer ID ${id}: ${response.statusText}`);
+  }
+  return response.json();
+};
+
 export const startPrint = async (id: number, startPrintPayload: StartPrintPayload): Promise<any> => {
   const response = await fetch(`${BASE_URL}/api/printers/${id}/start-print`, {
     method: "POST",

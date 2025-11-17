@@ -142,7 +142,9 @@ const printJobService = {
             store_location,    // NEW - Manual store slot
             grab_location,     // NEW - Manual grab slot
             auto_start,
-            priority = 1
+            priority = 1,
+            use_ams = false,              // NEW - Bambu Lab AMS support
+            use_material_station = false  // NEW - FlashForge Material Station support
         } = jobData;
 
         try {
@@ -182,9 +184,11 @@ const printJobService = {
                     auto_start,
                     priority,
                     status,
-                    status_message
+                    status_message,
+                    use_ams,
+                    use_material_station
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
             const params = [
                 print_item_id,
@@ -196,7 +200,9 @@ const printJobService = {
                 auto_start ? 1 : 0,
                 priority,
                 initialStatus,
-                initialStatusMessage
+                initialStatusMessage,
+                use_ams ? 1 : 0,
+                use_material_station ? 1 : 0
             ];
 
             const result = await dbRun(sql, params);

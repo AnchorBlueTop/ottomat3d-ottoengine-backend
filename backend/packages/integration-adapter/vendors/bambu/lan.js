@@ -227,25 +227,53 @@ class BambuLanAdapter extends IPrinterAdapter {
     
     async start(spec) {
         this._requireAuth();
-        
+
         try {
             if (!spec.filename) {
                 throw AdapterError.PRINTER_ERROR('Filename is required to start print');
             }
 
+            const useAMS = spec.use_ams || false;
+
+            // If AMS is enabled, setup AMS mapping table first
+            if (useAMS) {
+                console.log('[BambuLanAdapter] AMS enabled - setting up filament mapping...');
+
+                try {
+                    await this.setupAMSMapping();
+                } catch (error) {
+                    console.error('[BambuLanAdapter] AMS setup failed:', error.message);
+                    return {
+                        success: false,
+                        message: `AMS setup failed: ${error.message}`
+                    };
+                }
+
+                console.log('[BambuLanAdapter] Starting print with AMS mapping...');
+            }
+
+            // AMS mapping: T0→Slot0, T1→Slot1, T2→Slot2, T3→Slot3
+            const amsMapping = useAMS ? [0, 1, 2, 3] : (spec.ams_mapping || null);
+
+            // Start the print
             const success = await this._printer.start_print(
                 spec.filename,
-                spec.plate_id,
-                spec.use_ams,
-                spec.ams_mapping,
+                spec.plate_id || "",  // Empty string to avoid SD card errors
+                useAMS,
+                amsMapping,
                 spec.skip_objects
             );
-            
+
             if (success) {
+                // Wait for initialization (longer for AMS)
+                const waitTime = useAMS ? 20000 : 10000;
+                console.log(`[BambuLanAdapter] Waiting ${waitTime/1000}s for print initialization...`);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+
                 return {
                     success: true,
                     jobId: spec.filename, // Bambu uses filename as job identifier
-                    message: `Print started: ${spec.filename}`
+                    message: `Print started: ${spec.filename}${useAMS ? ' (with AMS)' : ''}`
                 };
             } else {
                 return {
@@ -253,7 +281,7 @@ class BambuLanAdapter extends IPrinterAdapter {
                     message: 'Failed to start print'
                 };
             }
-            
+
         } catch (error) {
             throw this._wrapError(error, 'start');
         }
@@ -328,6 +356,173 @@ class BambuLanAdapter extends IPrinterAdapter {
     async getJobEvents(jobId) {
         // Not implemented in current bambulabs-api
         throw AdapterError.UNSUPPORTED('Job history not supported by BambuLanAdapter');
+    }
+
+    // ========== Bed Positioning & AMS Support ==========
+
+    /**
+     * Position bed for ejection (model-specific: Z-bed vs Sling bed)
+     * Ported from bambu_printer.py:515-579
+     */
+    async positionBedForEjection() {
+        this._requireAuth();
+
+        try {
+            const model = (this.config.model || '').toLowerCase();
+            const isSlingBed = model.includes('a1');
+
+            let gcode, position;
+            if (isSlingBed) {
+                // A1 is sling bed - use Y positioning
+                position = 170;
+                gcode = `G90\nG1 Y${position} F600`;
+                console.log(`[BambuLanAdapter] Positioning ${model} sling bed to Y${position} for ejection`);
+            } else {
+                // P1P, P1S, X1C are Z-bed - use Z positioning
+                position = 200;
+                gcode = `G90\nG1 Z${position} F600`;
+                console.log(`[BambuLanAdapter] Positioning ${model} bed to Z${position} for ejection`);
+            }
+
+            // Send G-code command
+            const result = await this.sendGcode(gcode);
+
+            if (result.success) {
+                console.log(`[BambuLanAdapter] Bed positioning command sent successfully`);
+
+                // Wait for movement to complete (20s timeout)
+                await this._waitForMoveCompletion(20000);
+                console.log(`[BambuLanAdapter] Bed positioning completed`);
+
+                return {
+                    success: true,
+                    message: `Bed positioned to ${isSlingBed ? 'Y' : 'Z'}${position}mm`
+                };
+            } else {
+                return {
+                    success: false,
+                    message: 'Failed to send bed positioning command'
+                };
+            }
+
+        } catch (error) {
+            throw this._wrapError(error, 'positionBedForEjection');
+        }
+    }
+
+    /**
+     * Wait for printer movement to complete
+     * Ported from bambu_printer.py:581-612
+     */
+    async _waitForMoveCompletion(timeout = 20000) {
+        const startTime = Date.now();
+        const pollInterval = 2000; // 2 seconds
+
+        while ((Date.now() - startTime) < timeout) {
+            try {
+                const status = await this.getStatus();
+                const state = status.status.toUpperCase();
+
+                // Movement complete states
+                if (['IDLE', 'FINISH', 'COMPLETED', 'READY'].includes(state)) {
+                    console.log(`[BambuLanAdapter] Movement complete - printer state: ${state}`);
+                    return true;
+                }
+            } catch (error) {
+                // Ignore errors during movement wait
+            }
+
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+        }
+
+        console.warn(`[BambuLanAdapter] Movement completion timeout after ${timeout}ms`);
+        return false;
+    }
+
+    /**
+     * Setup AMS filament mapping table
+     * Ported from bambu_printer.py:358-416
+     */
+    async setupAMSMapping() {
+        this._requireAuth();
+
+        try {
+            console.log('[BambuLanAdapter] Configuring AMS mapping table...');
+
+            // Import Filament enum (handle both bambulabs-api and bambulabs_api naming)
+            let Filament;
+            try {
+                const filamentInfo = require('../../../../src/bambulabs-api/filament-info');
+                Filament = filamentInfo.Filament;
+            } catch (err) {
+                throw new Error('Cannot import Filament enum from bambulabs-api');
+            }
+
+            // Placeholder filament settings (matching working beta script)
+            const amsSlots = [
+                { slot: 0, color: '808080', name: 'PETG Gray' },    // Slot 1 = index 0
+                { slot: 1, color: '000000', name: 'PETG Black' },   // Slot 2 = index 1
+                { slot: 2, color: 'FF0000', name: 'PETG Red' },     // Slot 3 = index 2
+                { slot: 3, color: '0000FF', name: 'PETG Blue' }     // Slot 4 = index 3
+            ];
+
+            // Configure each slot
+            for (const slotInfo of amsSlots) {
+                const { slot, color } = slotInfo;
+
+                // Set filament for this slot
+                const success = await this._printer.set_filament_printer(
+                    color,
+                    Filament.PETG,  // Use PETG filament type
+                    0,              // AMS unit 0 (first AMS)
+                    slot            // Tray/slot ID
+                );
+
+                if (!success) {
+                    throw new Error(`Failed to configure AMS slot ${slot + 1}`);
+                }
+
+                // Small delay between slot configurations
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+
+            // Wait for AMS to process the mapping table
+            await new Promise(resolve => setTimeout(resolve, 5000));
+
+            console.log('[BambuLanAdapter] AMS mapping table configured successfully');
+            return true;
+
+        } catch (error) {
+            console.error('[BambuLanAdapter] AMS setup error:', error.message);
+            throw this._wrapError(error, 'setupAMSMapping');
+        }
+    }
+
+    /**
+     * List files on printer via FTP
+     * Uses existing FTP client functionality
+     */
+    async listFiles(remotePath = '/') {
+        this._requireAuth();
+
+        try {
+            // Get FTP client from printer instance
+            if (!this._printer || !this._printer._ftp) {
+                throw AdapterError.PRINTER_ERROR('FTP client not available');
+            }
+
+            // Call the existing listFiles method from ftp-client.js
+            const files = await this._printer._ftp.listFiles(remotePath);
+
+            return {
+                success: true,
+                files: files || [],
+                message: `Found ${files?.length || 0} files`
+            };
+
+        } catch (error) {
+            throw this._wrapError(error, 'listFiles');
+        }
     }
 
     // ========== Lifecycle ==========

@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS print_jobs (
     progress_percent REAL DEFAULT 0.0,
     priority INTEGER DEFAULT 1, -- Lower number = higher priority
     auto_start INTEGER NOT NULL DEFAULT 0, -- Boolean (0/1)
-    
+
     -- Foreign Keys to link the job to its components
     print_item_id INTEGER NOT NULL,
     printer_id INTEGER NULL,
@@ -97,9 +97,9 @@ CREATE TABLE IF NOT EXISTS print_jobs (
     effective_clearance_mm DECIMAL(10,2) NULL,
     orchestration_status TEXT DEFAULT 'waiting', -- 'waiting', 'printing', 'ejecting', 'storing', 'completed', 'paused'
 
-    -- Material system flags (brand-specific)
-    use_ams INTEGER NOT NULL DEFAULT 0,              -- Bambu Lab: Use AMS for filament
-    use_material_station INTEGER NOT NULL DEFAULT 0, -- FlashForge: Use Material Station
+    -- === Printer-specific settings ===
+    use_ams INTEGER NOT NULL DEFAULT 0, -- Boolean (0/1) - Bambu Lab AMS support
+    use_material_station INTEGER NOT NULL DEFAULT 0, -- Boolean (0/1) - FlashForge Material Station support
 
     -- Timestamps for tracking the job's lifecycle
     submitted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
@@ -108,7 +108,7 @@ CREATE TABLE IF NOT EXISTS print_jobs (
     finished_printing_at TEXT NULL,
     stored_at TEXT NULL,
     completed_at TEXT NULL,
-    
+
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
 

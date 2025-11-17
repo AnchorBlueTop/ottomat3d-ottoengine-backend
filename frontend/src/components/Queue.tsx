@@ -1,9 +1,8 @@
 import PrintJobRepresentation, { QueueRepresentation } from "../representations/printJobRepresentation.ts";
-import { OttoejectDevice } from "../representations/ottoejectRepresentation.ts";
-import { getOttoejectStatusById, getPrinterStatusById, sendGCodeToPrinter, sendOttoejectMacro, startPrint, uploadFile } from "../ottoengine_API.ts";
+import { getOttoejectStatusById, getPrinterStatusById, sendGCodeToPrinter, sendOttoejectMacro, startPrint } from "../ottoengine_API.ts";
 import { StartPrintPayload } from "../representations/printerRepresentation.ts";
 
-export default async function startQueue(queue: QueueRepresentation[], setPrintJob: any, currentFiles: any) {
+export default async function startQueue(queue: QueueRepresentation[], setPrintJob: any, _currentFiles: any) {
     queue.sort((a, b) => a.storageLocation! - b.storageLocation!);
     const job_count = queue.length;
     let completed_jobs_successfully = 0;
@@ -217,7 +216,7 @@ export default async function startQueue(queue: QueueRepresentation[], setPrintJ
 console.log(`\nAutomation finished. Successfully completed ${completed_jobs_successfully} out of ${job_count} jobs.`);
 };
 
-const start_Print = async (printerId: number, jobDetails: StartPrintPayload, setPrintJob: any, currentFiles: any): Promise<boolean> => {
+const start_Print = async (printerId: number, jobDetails: StartPrintPayload, setPrintJob: any, _currentFiles: any): Promise<boolean> => {
     console.log(`Sending print command for file '${jobDetails.filename}' to printer ID ${printerId}...`);
 
     //TODO: UPLOAD FILE
@@ -328,7 +327,7 @@ const performEjectionSequence = async (ottoejectId: number, printerId: number, p
             }
             return f;
         });
-        const parkOttoeject = await sendOttoejectMacro(ottoejectId, { macro: 'PARK_OTTOEJECT' });
+        const _parkOttoeject = await sendOttoejectMacro(ottoejectId, { macro: 'PARK_OTTOEJECT' });
         return e;
 
     }).catch(() => {
@@ -382,7 +381,7 @@ const resetPrintBed = async (ottoejectId: number, job_count: number, element: an
             }
             return f;
         });
-        const parkOttoeject = await sendOttoejectMacro(ottoejectId, { macro: 'PARK_OTTOEJECT' });
+        const _parkOttoeject = await sendOttoejectMacro(ottoejectId, { macro: 'PARK_OTTOEJECT' });
         return e;
 
     }).catch(() => {

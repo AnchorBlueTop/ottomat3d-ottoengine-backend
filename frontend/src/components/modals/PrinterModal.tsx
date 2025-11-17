@@ -26,10 +26,10 @@ import { PrinterRegistrationRepresentation, PrinterRepresentation } from "../../
 import { PRINTER_BRANDS } from "../../constants/printerBrands";
 import { PRINTER_MODELS } from "../../constants/printerModels";
 import {
+  calibratePrinter,
   deletePrinter,
   getPrinterById,
   registerPrinter,
-  sendGCodeToPrinter,
   testPrinterConnection,
   updatePrinterDetails,
 } from "../../ottoengine_API";
@@ -112,10 +112,10 @@ export default function PrinterModal() {
   const handleLevelBed = async () => {
     if (!selectedPrinter?.id) return;
     try {
-      await sendGCodeToPrinter(selectedPrinter.id, { gcode: "G90\nG1 Z150 F3000" });
-      alert('Bed leveling command sent successfully!');
+      await calibratePrinter(selectedPrinter.id);
+      alert('Calibration started successfully!');
     } catch (error: any) {
-      alert(`Bed leveling failed: ${error.message}`);
+      alert(`Calibration failed: ${error.message}`);
     }
   };
 

@@ -83,9 +83,8 @@ export const Job: React.FunctionComponent = () => {
               <DataListItem key={value.id ?? rowIndex} aria-labelledby={`job-${value.id}`}>
                 <DataListItemRow
                   onClick={() => openEdit(value.id, rowIndex)}
-                  className="pf-u-align-items-center pf-u-py-0"
-
-                  style={{ minHeight: 56 }}
+                  className="pf-u-align-items-center pf-u-py-0 clickable-job-row"
+                  style={{ minHeight: 56, cursor: 'pointer' }}
                 >
                   <DataListItemCells
                     className='pf-custom-align-center-horizontally'

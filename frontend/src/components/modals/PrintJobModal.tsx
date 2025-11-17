@@ -1,4 +1,4 @@
-import { Brand, Button, Content, ContentVariants, Form, FormGroup, Grid, GridItem, Modal, ModalFooter, ModalHeader, PageSection, Spinner } from "@patternfly/react-core";
+import { Brand, Button, Checkbox, Content, ContentVariants, Form, FormGroup, Grid, GridItem, Modal, ModalFooter, ModalHeader, ModalVariant, PageSection, Spinner } from "@patternfly/react-core";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { JobContext } from "../../App";
 import PrintJobIcon from '../../public/PrintJob-Icon.svg';
@@ -42,12 +42,19 @@ export default function PrintJobModal() {
   const [selectedOttorack, setSelectedOttorack] = useState<number | null>(null);
   const [selectedStoreLocation, setSelectedStoreLocation] = useState<number>(1);
   const [selectedGrabLocation, setSelectedGrabLocation] = useState<number>(2);
+  const [useAMS, setUseAMS] = useState<boolean>(false);
+  const [autoStart, setAutoStart] = useState<boolean>(true); // Default to checked
   const [nextItemId, setNextItemId] = useState<number>(1);
 
   // Edit job state
   const [loading, setLoading] = useState(false);
   const [job, setJob] = useState<PrintJobRepresentation | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Error dialog state
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [errorDetails, setErrorDetails] = useState<string[]>([]);
 
   // Define helpers before usage to avoid temporal dead zone issues
   const safeParse = (text?: string) => {
@@ -159,6 +166,11 @@ export default function PrintJobModal() {
     setSelectedOttorackDetails(null);
     setSelectedStoreLocation(1);
     setSelectedGrabLocation(2);
+    setUseAMS(false);
+    setAutoStart(true); // Reset to default checked state
+    setErrorDialogOpen(false);
+    setErrorMessage('');
+    setErrorDetails([]);
     setJob(null);
     setLoading(false);
     setDeleting(false);
@@ -256,17 +268,32 @@ export default function PrintJobModal() {
       rack_id: selectedOttorack,
       store_location: selectedStoreLocation,
       grab_location: selectedGrabLocation,
-      auto_start: false,
+      use_ams: useAMS,
+      auto_start: autoStart, // Use state instead of hardcoded false
     };
     try {
       await createPrintJob(printJobData);
       // Only increment the local counter when we actually used it
       if (printJobUID == null) setNextItemId(nextItemId + 1);
       await refreshJobs();
-    } catch (e) {
+      onClose(); // Only close on success
+    } catch (e: any) {
       console.error('Error creating print job', e);
+
+      // Show error dialog instead of just logging
+      if (e.response?.data) {
+        const errorData = e.response.data;
+        setErrorMessage(errorData.message || 'Failed to create print job');
+        setErrorDetails(errorData.details || []);
+      } else {
+        setErrorMessage(e.message || 'Failed to create print job');
+        setErrorDetails([]);
+      }
+      setErrorDialogOpen(true);
+
+      // Don't close modal on error - let user fix and retry
+      return;
     }
-    setIsPrintTaskModalOpen(false);
   };
 
   const handleDelete = async () => {
@@ -312,6 +339,7 @@ export default function PrintJobModal() {
   const title = isEdit ? 'EDIT PRINT JOB' : 'NEW PRINT JOB';
 
   return (
+    <>
     <Modal isOpen={isOpen} className="pf-custom-new-print-job-modal" aria-label="printJobModal" onClose={onClose}>
       <PageSection className="pf-custom-new-print-job">
         <ModalHeader className="pf-custom-upload-header">
@@ -429,6 +457,50 @@ export default function PrintJobModal() {
                     </FormGroup>
                   </>
                 )}
+                {/* Material System Checkbox - Show for Bambu Lab (AMS) and FlashForge (Material Station) */}
+                {selectedPrinter && printers.find(p => p.id === selectedPrinter)?.brand === 'bambu_lab' && (
+                  <FormGroup className="pf-custom-formGroup" label="">
+                    <Checkbox
+                      id="use-ams-checkbox"
+                      label="Use AMS (Automatic Material System)"
+                      isChecked={useAMS}
+                      onChange={(_e, checked) => setUseAMS(checked)}
+                    />
+                  </FormGroup>
+                )}
+                {selectedPrinter && printers.find(p => p.id === selectedPrinter)?.brand === 'flashforge' && (
+                  <FormGroup className="pf-custom-formGroup" label="">
+                    <Checkbox
+                      id="use-material-station-checkbox"
+                      label="Use Material Station"
+                      isChecked={useAMS}
+                      onChange={(_e, checked) => setUseAMS(checked)}
+                    />
+                  </FormGroup>
+                )}
+                {/* Anycubic: AMS always enabled (disabled checkbox, always checked) */}
+                {selectedPrinter && printers.find(p => p.id === selectedPrinter)?.brand === 'anycubic' && (
+                  <FormGroup className="pf-custom-formGroup" label="">
+                    <Checkbox
+                      id="anycubic-ams-checkbox"
+                      label="Use AMS (Automatic Material System)"
+                      isChecked={true}
+                      isDisabled={true}
+                    />
+                    <div style={{ fontSize: '0.875rem', color: '#6a6e73', marginTop: '4px' }}>
+                      AMS is automatically enabled for Anycubic printers
+                    </div>
+                  </FormGroup>
+                )}
+                {/* Auto-start Checkbox - Available for all printers */}
+                <FormGroup className="pf-custom-formGroup" label="">
+                  <Checkbox
+                    id="auto-start-checkbox"
+                    label="Auto-start print when plate is ready"
+                    isChecked={autoStart}
+                    onChange={(_e, checked) => setAutoStart(checked)}
+                  />
+                </FormGroup>
                 <FormGroup className="pf-custom-formGroup" label={'MATERIAL: '}>{(printFile as any)?.filament}</FormGroup>
                 <FormGroup className="pf-custom-formGroup" label={'MATERIAL REQUIRED: '}>{(printFile as any)?.filament_weight}</FormGroup>
                 <FormGroup className="pf-custom-formGroup" label={'DURATION: '}>{(printFile as any)?.duration}</FormGroup>
@@ -464,5 +536,28 @@ export default function PrintJobModal() {
         </ModalFooter>
       </PageSection>
     </Modal>
+
+    {/* Error Dialog */}
+    <Modal
+      variant={ModalVariant.small}
+      title="Validation Error"
+      isOpen={errorDialogOpen}
+      onClose={() => setErrorDialogOpen(false)}
+    >
+      <p>{errorMessage}</p>
+      {errorDetails.length > 0 && (
+        <ul style={{ marginTop: '10px', paddingLeft: '20px' }}>
+          {errorDetails.map((detail, idx) => (
+            <li key={idx}>{detail}</li>
+          ))}
+        </ul>
+      )}
+      <ModalFooter>
+        <Button variant="primary" onClick={() => setErrorDialogOpen(false)}>
+          OK
+        </Button>
+      </ModalFooter>
+    </Modal>
+  </>
   );
 }

@@ -1519,56 +1519,36 @@ class OrchestratorService extends EventEmitter {
     }
 
     /**
-     * Position printer bed for ejection (Bambu & FlashForge only)
+     * Position printer bed for ejection using adapter
+     * Delegates to adapter's positionBedForEjection() method
      */
     async _positionPrinterBedForEjection(printerId) {
         try {
-            const printerInfo = await this._getPrinterInfo(printerId);
-            
-            if (!printerInfo || !printerInfo.brand) {
-                logger.warn(`[OrchestratorService] No printer brand info for printer ${printerId} - skipping bed positioning`);
+            // Get adapter instance for this printer
+            const adapter = adapterStateManager.getAdapter(printerId);
+
+            if (!adapter) {
+                logger.warn(`[OrchestratorService] No adapter found for printer ${printerId} - skipping bed positioning`);
                 return;
             }
-            
-            const brand = printerInfo.brand.toLowerCase();
-            const model = printerInfo.model ? printerInfo.model.toLowerCase() : '';
-            
-            // Only Bambu and FlashForge printers need bed positioning
-            if (!brand.includes('bambu') && !brand.includes('flashforge')) {
-                logger.info(`[OrchestratorService] Printer ${printerInfo.brand} ${printerInfo.model} does not need bed positioning`);
+
+            // Check if adapter supports bed positioning
+            if (typeof adapter.positionBedForEjection !== 'function') {
+                logger.info(`[OrchestratorService] Printer ${printerId} adapter does not support bed positioning`);
                 return;
             }
-            
-            let gcode = '';
-            
-            // Bambu Lab bed positioning based on model
-            if (brand.includes('bambu')) {
-                if (model.includes('a1')) {
-                    // A1 is sling bed - use Y positioning
-                    gcode = 'G90\nG1 Y170 F600';
-                    logger.info(`[OrchestratorService] Positioning Bambu A1 sling bed to Y170 for ejection`);
-                } else {
-                    // P1P, P1S, X1C are Z-bed - use Z positioning
-                    gcode = 'G90\nG1 Z200 F600';
-                    logger.info(`[OrchestratorService] Positioning Bambu ${printerInfo.model} bed to Z200 for ejection`);
-                }
-            } else if (brand.includes('flashforge')) {
-                // FlashForge printers use Z positioning
-                gcode = 'G90\nG1 Z200 F600';
-                logger.info(`[OrchestratorService] Positioning FlashForge ${printerInfo.model} bed to Z200 for ejection`);
+
+            logger.info(`[OrchestratorService] Positioning printer bed for ejection via adapter...`);
+
+            // Call adapter's bed positioning method
+            const result = await adapter.positionBedForEjection();
+
+            if (result && result.success) {
+                logger.info(`[OrchestratorService] Bed positioning completed: ${result.message}`);
+            } else {
+                logger.warn(`[OrchestratorService] Bed positioning may have failed: ${result?.message || 'Unknown error'}`);
             }
-            
-            if (gcode) {
-                const result = await printerService.commandSendGcode(printerId, gcode);
-                if (result.success) {
-                    logger.info(`[OrchestratorService] Bed positioning G-code sent successfully`);
-                    // Wait for bed movement to complete
-                    await new Promise(resolve => setTimeout(resolve, 5000));
-                } else {
-                    logger.warn(`[OrchestratorService] Failed to send bed positioning G-code: ${result.message}`);
-                }
-            }
-            
+
         } catch (error) {
             logger.error(`[OrchestratorService] Error positioning printer bed:`, error.message);
             // Don't throw error - continue with ejection even if bed positioning fails

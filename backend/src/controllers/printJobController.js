@@ -121,7 +121,9 @@ const printJobController = {
                 store_location,    // NEW - Manual store slot
                 grab_location,     // NEW - Manual grab slot
                 auto_start = false,
-                priority
+                priority,
+                use_ams = false,              // NEW - Bambu Lab AMS support
+                use_material_station = false  // NEW - FlashForge Material Station support
             } = req.body;
 
             // Validate required fields
@@ -176,7 +178,9 @@ const printJobController = {
                 store_location,
                 grab_location,
                 auto_start,
-                priority
+                priority,
+                use_ams,
+                use_material_station
             });
 
             res.status(201).json({

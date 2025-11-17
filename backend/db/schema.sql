@@ -14,8 +14,15 @@ CREATE TABLE IF NOT EXISTS printers (
     model TEXT NULL,
     type TEXT NULL,              -- e.g., "bambu", "klipper", "prusa", "flashforge"
     ip_address TEXT NOT NULL UNIQUE,
-    access_code TEXT NULL,
-    serial_number TEXT NULL UNIQUE,
+
+    -- Authentication fields (brand-specific)
+    access_code TEXT NULL,       -- Bambu Lab: MQTT access code
+    serial_number TEXT NULL UNIQUE, -- Bambu Lab: Printer serial number
+    serial_code TEXT NULL,       -- FlashForge: Serial code
+    check_code TEXT NULL,        -- FlashForge: Check code
+    api_key TEXT NULL,           -- Prusa: PrusaLink API key
+    -- Note: Creality, Anycubic, Elegoo only require ip_address
+
     build_volume_json TEXT NULL,     -- Stores build volume object as JSON string
     current_filament_json TEXT NULL, -- Stores default/fallback filament object as JSON string
     has_build_plate INTEGER NOT NULL DEFAULT 1, -- Track if printer currently has a build plate
@@ -76,7 +83,7 @@ CREATE TABLE IF NOT EXISTS print_jobs (
     progress_percent REAL DEFAULT 0.0,
     priority INTEGER DEFAULT 1, -- Lower number = higher priority
     auto_start INTEGER NOT NULL DEFAULT 0, -- Boolean (0/1)
-    
+
     -- Foreign Keys to link the job to its components
     print_item_id INTEGER NOT NULL,
     printer_id INTEGER NULL,
@@ -90,6 +97,10 @@ CREATE TABLE IF NOT EXISTS print_jobs (
     effective_clearance_mm DECIMAL(10,2) NULL,
     orchestration_status TEXT DEFAULT 'waiting', -- 'waiting', 'printing', 'ejecting', 'storing', 'completed', 'paused'
 
+    -- === Printer-specific settings ===
+    use_ams INTEGER NOT NULL DEFAULT 0, -- Boolean (0/1) - Bambu Lab AMS support
+    use_material_station INTEGER NOT NULL DEFAULT 0, -- Boolean (0/1) - FlashForge Material Station support
+
     -- Timestamps for tracking the job's lifecycle
     submitted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
     queued_at TEXT NULL,
@@ -97,7 +108,7 @@ CREATE TABLE IF NOT EXISTS print_jobs (
     finished_printing_at TEXT NULL,
     stored_at TEXT NULL,
     completed_at TEXT NULL,
-    
+
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),
 

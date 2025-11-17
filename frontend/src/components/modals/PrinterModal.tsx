@@ -26,10 +26,10 @@ import { PrinterRegistrationRepresentation, PrinterRepresentation } from "../../
 import { PRINTER_BRANDS } from "../../constants/printerBrands";
 import { PRINTER_MODELS } from "../../constants/printerModels";
 import {
+  calibratePrinter,
   deletePrinter,
   getPrinterById,
   registerPrinter,
-  sendGCodeToPrinter,
   testPrinterConnection,
   updatePrinterDetails,
 } from "../../ottoengine_API";
@@ -111,7 +111,12 @@ export default function PrinterModal() {
 
   const handleLevelBed = async () => {
     if (!selectedPrinter?.id) return;
-    await sendGCodeToPrinter(selectedPrinter.id, { gcode: "G90\nG1 Z150 F3000" });
+    try {
+      await calibratePrinter(selectedPrinter.id);
+      alert('Calibration started successfully!');
+    } catch (error: any) {
+      alert(`Calibration failed: ${error.message}`);
+    }
   };
 
   const handleSave = async () => {
@@ -249,26 +254,74 @@ export default function PrinterModal() {
                       </TextInputGroup>
                     </GridItem>
                   </Grid>
-                  <Grid>
-                    <GridItem span={3}><Content>{'SERIAL:'}</Content></GridItem>
-                    <GridItem span={8}>
-                      <TextInputGroup>
-                        <TextInputGroupMain id='printer-connection-serial' value={tempPrinter?.serial_number ?? ''}
-                          onChange={(_e, value: any) => setTempPrinter(prev => ({ ...(prev || {}), serial_number: value }))}
-                        />
-                      </TextInputGroup>
-                    </GridItem>
-                  </Grid>
-                  <Grid>
-                    <GridItem span={3}><Content>{'ACCESS CODE:'}</Content></GridItem>
-                    <GridItem span={8}>
-                      <TextInputGroup>
-                        <TextInputGroupMain id='printer-connection-accesscode' value={tempPrinter?.access_code ?? ''}
-                          onChange={(_e, value: any) => setTempPrinter(prev => ({ ...(prev || {}), access_code: value }))}
-                        />
-                      </TextInputGroup>
-                    </GridItem>
-                  </Grid>
+
+                  {/* Bambu Lab: Serial + Access Code */}
+                  {tempPrinter?.brand === 'bambu_lab' && (
+                    <>
+                      <Grid>
+                        <GridItem span={3}><Content>{'SERIAL NUMBER:'}</Content></GridItem>
+                        <GridItem span={8}>
+                          <TextInputGroup>
+                            <TextInputGroupMain id='printer-connection-serial' value={tempPrinter?.serial_number ?? ''}
+                              onChange={(_e, value: any) => setTempPrinter(prev => ({ ...(prev || {}), serial_number: value }))}
+                            />
+                          </TextInputGroup>
+                        </GridItem>
+                      </Grid>
+                      <Grid>
+                        <GridItem span={3}><Content>{'ACCESS CODE:'}</Content></GridItem>
+                        <GridItem span={8}>
+                          <TextInputGroup>
+                            <TextInputGroupMain id='printer-connection-accesscode' value={tempPrinter?.access_code ?? ''}
+                              onChange={(_e, value: any) => setTempPrinter(prev => ({ ...(prev || {}), access_code: value }))}
+                            />
+                          </TextInputGroup>
+                        </GridItem>
+                      </Grid>
+                    </>
+                  )}
+
+                  {/* FlashForge: Serial Code + Check Code */}
+                  {tempPrinter?.brand === 'flashforge' && (
+                    <>
+                      <Grid>
+                        <GridItem span={3}><Content>{'SERIAL CODE:'}</Content></GridItem>
+                        <GridItem span={8}>
+                          <TextInputGroup>
+                            <TextInputGroupMain id='printer-connection-serial-code' value={(tempPrinter as any)?.serial_code ?? ''}
+                              onChange={(_e, value: any) => setTempPrinter(prev => ({ ...(prev || {}), serial_code: value }))}
+                            />
+                          </TextInputGroup>
+                        </GridItem>
+                      </Grid>
+                      <Grid>
+                        <GridItem span={3}><Content>{'CHECK CODE:'}</Content></GridItem>
+                        <GridItem span={8}>
+                          <TextInputGroup>
+                            <TextInputGroupMain id='printer-connection-check-code' value={(tempPrinter as any)?.check_code ?? ''}
+                              onChange={(_e, value: any) => setTempPrinter(prev => ({ ...(prev || {}), check_code: value }))}
+                            />
+                          </TextInputGroup>
+                        </GridItem>
+                      </Grid>
+                    </>
+                  )}
+
+                  {/* Prusa: API Key */}
+                  {tempPrinter?.brand === 'prusa' && (
+                    <Grid>
+                      <GridItem span={3}><Content>{'API KEY:'}</Content></GridItem>
+                      <GridItem span={8}>
+                        <TextInputGroup>
+                          <TextInputGroupMain id='printer-connection-api-key' value={(tempPrinter as any)?.api_key ?? ''}
+                            onChange={(_e, value: any) => setTempPrinter(prev => ({ ...(prev || {}), api_key: value }))}
+                          />
+                        </TextInputGroup>
+                      </GridItem>
+                    </Grid>
+                  )}
+
+                  {/* Creality, Anycubic, Elegoo: IP only (no additional auth fields) */}
                   <Grid>
                     <GridItem span={3}><Content>{''}</Content></GridItem>
                     <GridItem span={8}>
@@ -277,6 +330,7 @@ export default function PrinterModal() {
                           variant="secondary"
                           isDisabled={testing || !tempPrinter?.brand || !tempPrinter?.ip_address}
                           onClick={handleTestConnection}
+                          style={{ minWidth: '140px', flexShrink: 0 }}
                         >
                           {testing ? 'Testing…' : 'Test Connection'}
                         </Button>

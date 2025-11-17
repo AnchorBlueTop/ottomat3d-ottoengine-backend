@@ -1,7 +1,5 @@
 import {
     PageSection,
-    Bullseye,
-    Spinner,
 } from "@patternfly/react-core";
 import {
     Table,
@@ -20,7 +18,6 @@ import { getAllOttoracks, getOttorackById } from "../ottoengine_API";
 
 export function Ottorack() {
     const { ottorack, setOttorack, setOttorackIndex, setIsOttorackEditModalOpen } = useContext(JobContext);
-    const [loading, setLoading] = useState<boolean>(true);
 
     // Helper to compute capacity metrics
     const getCapacity = (r: OttoRack) => {

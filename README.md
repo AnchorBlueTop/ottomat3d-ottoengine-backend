@@ -39,12 +39,7 @@ flowchart LR
 
     subgraph INTEGRATION["Integration Layer"]
         BAMBU["Bambu Labs<br/>(MQTT + FTP)"]
-        KLIP["Klipper<br/>(Moonraker)"]
-        ANYCUBIC["Anycubic<br/>(MQTT)"]
-        CREALITY["Creality<br/>(MQTT)"]
-        ELEGOO["Elegoo<br/>(MQTT)"]
-        FLASH["Flashforge<br/>(TCP)"]
-        PRUSA["Prusa<br/>(HTTP API)"]
+        MOON["Moonraker<br/>(HTTP/TCP/WS)"]
     end
 
     subgraph DB_LAYER["Database"]
@@ -59,31 +54,20 @@ flowchart LR
     API --> AMS
 
     ORCH --> BAMBU
-    ORCH --> KLIP
-    ORCH --> ANYCUBIC
-    ORCH --> CREALITY
-    ORCH --> ELEGOO
-    ORCH --> FLASH
-    ORCH --> PRUSA
+    ORCH --> MOON
     ADAPT --> BAMBU
-    ADAPT --> KLIP
-    ADAPT --> ANYCUBIC
-    ADAPT --> CREALITY
-    ADAPT --> ELEGOO
-    ADAPT --> FLASH
-    ADAPT --> PRUSA
+    ADAPT --> MOON
     AMS --> BAMBU
-    AMS --> ANYCUBIC
 
     SLOT --> DB
     EVENT --> DB
     BAMBU --> DB
-    KLIP --> DB
+    MOON --> DB
 
     %% Styles
     class API apiLayer
     class ORCH,ADAPT,SLOT,EVENT,AMS serviceLayer
-    class BAMBU,KLIP,ANYCUBIC,CREALITY,ELEGOO,FLASH,PRUSA integrationLayer
+    class BAMBU,MOON integrationLayer
     class DB databaseLayer
 ```
 

@@ -82,6 +82,12 @@ frontend/dist/
 # Ignore temp files
 uploads/temp_*/
 
-# Documentation and Claude Code instructions (local only)
+# Electron build output
+out/
+
+# Claude Code artifacts
+backend/.claude_code/
+
+# Test/documentation files
+backend/gcode/
 backend/docs/
-backend/.claude_code

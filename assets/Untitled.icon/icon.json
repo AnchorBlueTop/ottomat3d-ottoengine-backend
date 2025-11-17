@@ -1,0 +1,51 @@
+{
+  "fill" : {
+    "linear-gradient" : [
+      "display-p3:0.19123,0.17862,0.56152,1.00000",
+      "display-p3:0.14000,0.13312,0.39822,1.00000"
+    ],
+    "orientation" : {
+      "start" : {
+        "x" : 0.5,
+        "y" : 0
+      },
+      "stop" : {
+        "x" : 0.5,
+        "y" : 0.7
+      }
+    }
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "glass" : false,
+          "hidden" : false,
+          "image-name" : "Ottomat3d Logomark - White.png",
+          "name" : "Ottomat3d Logomark - White",
+          "position" : {
+            "scale" : 1.58,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

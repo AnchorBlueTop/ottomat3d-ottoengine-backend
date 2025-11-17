@@ -7,6 +7,7 @@ const { AdapterError } = require('./types');
 const BambuLanAdapter = require('./vendors/bambu/lan');
 const FlashForgeHybridAdapter = require('./vendors/flashforge/hybrid');
 const CrealityWebSocketAdapter = require('./vendors/creality/websocket');
+const AnycubicMoonrakerAdapter = require('./vendors/anycubic/moonraker');
 
 /**
  * Registry of available printer adapters
@@ -35,10 +36,12 @@ class AdapterRegistry {
         // Creality adapters (K1C)
         this.register('creality', 'websocket', CrealityWebSocketAdapter);
 
+        // Anycubic adapters (Kobra series)
+        this.register('anycubic', 'moonraker', AnycubicMoonrakerAdapter);
+
         // Future adapters would be registered here:
         // this.register('bambu', 'cloud', BambuCloudAdapter);
         // this.register('prusa', 'lan', PrusaLanAdapter);
-        // this.register('anycubic', 'moonraker', AnycubicMoonrakerAdapter);
         // this.register('elegoo', 'moonraker', ElegooMoonrakerAdapter);
     }
 

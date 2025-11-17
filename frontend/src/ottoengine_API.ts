@@ -277,7 +277,11 @@ export const createPrintJob = async (printJobData: any): Promise<any> => {
     body: JSON.stringify(printJobData),
   });
   if (!response.ok) {
-    throw new Error(`Error creating print job: ${response.statusText}`);
+    // Parse error response body to get detailed message
+    const errorData = await response.json().catch(() => ({ message: response.statusText }));
+    const error: any = new Error(errorData.message || `Error creating print job: ${response.statusText}`);
+    error.response = { data: errorData };
+    throw error;
   }
   return response.json();
 };

@@ -14,8 +14,15 @@ CREATE TABLE IF NOT EXISTS printers (
     model TEXT NULL,
     type TEXT NULL,              -- e.g., "bambu", "klipper", "prusa", "flashforge"
     ip_address TEXT NOT NULL UNIQUE,
-    access_code TEXT NULL,
-    serial_number TEXT NULL UNIQUE,
+
+    -- Authentication fields (brand-specific)
+    access_code TEXT NULL,       -- Bambu Lab: MQTT access code
+    serial_number TEXT NULL UNIQUE, -- Bambu Lab: Printer serial number
+    serial_code TEXT NULL,       -- FlashForge: Serial code
+    check_code TEXT NULL,        -- FlashForge: Check code
+    api_key TEXT NULL,           -- Prusa: PrusaLink API key
+    -- Note: Creality, Anycubic, Elegoo only require ip_address
+
     build_volume_json TEXT NULL,     -- Stores build volume object as JSON string
     current_filament_json TEXT NULL, -- Stores default/fallback filament object as JSON string
     has_build_plate INTEGER NOT NULL DEFAULT 1, -- Track if printer currently has a build plate
@@ -89,6 +96,10 @@ CREATE TABLE IF NOT EXISTS print_jobs (
     slot_assignment_reason TEXT NULL,
     effective_clearance_mm DECIMAL(10,2) NULL,
     orchestration_status TEXT DEFAULT 'waiting', -- 'waiting', 'printing', 'ejecting', 'storing', 'completed', 'paused'
+
+    -- Material system flags (brand-specific)
+    use_ams INTEGER NOT NULL DEFAULT 0,              -- Bambu Lab: Use AMS for filament
+    use_material_station INTEGER NOT NULL DEFAULT 0, -- FlashForge: Use Material Station
 
     -- Timestamps for tracking the job's lifecycle
     submitted_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%d %H:%M:%f', 'now', 'utc')),

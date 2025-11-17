@@ -29,7 +29,7 @@ const printerController = {
             // Service will validate Bambu-specific fields based on brand (access_code and serial_number)
             
             const newPrinter = await printerService.createPrinter(printerData);
-            // createPrinter now informs PrinterStateManager to connect if it's a Bambu printer
+            // createPrinter now informs BambuStateManager to connect if it's a Bambu printer
 
             res.status(201).json({
                 id: newPrinter.id,
@@ -96,7 +96,7 @@ const printerController = {
 
             logger.info(`[PrinterController] Request to update printer ID ${printerId}`);
             // printerService.updatePrinter updates the DB.
-            // The service also now notifies PrinterStateManager if connection details changed.
+            // The service also now notifies BambuStateManager if connection details changed.
             const updatedPrinterRecordFromDb = await printerService.updatePrinter(printerId, updateData);
 
             if (!updatedPrinterRecordFromDb) {
@@ -145,7 +145,7 @@ const printerController = {
         try {
             const printerId = validateIdParam(req.params.id);
             logger.info(`[PrinterController] Request to delete printer ID ${printerId}`);
-            // printerService.deletePrinter now also informs PrinterStateManager
+            // printerService.deletePrinter now also informs BambuStateManager
             const success = await printerService.deletePrinter(printerId);
             if (success) {
                 res.status(200).json({ message: "Printer deleted successfully" }); // API doc shows 200
@@ -370,6 +370,25 @@ const printerController = {
             }
         } catch (error) {
             logger.error(`[PrinterController] StopPrint Error: ${error.message}`, error);
+            if (error.statusCode) {
+                return res.status(error.statusCode).json({ error: 'Bad Request', message: error.message });
+            }
+            next(error);
+        }
+    },
+
+    async calibratePrinter(req, res, next) {
+        try {
+            const printerId = validateIdParam(req.params.id);
+            logger.info(`[PrinterController] Request to CALIBRATE printer ID: ${printerId}`);
+            const result = await printerService.calibratePrinter(printerId);
+            if (result.success) {
+                res.status(202).json({ message: result.message });
+            } else {
+                res.status(result.statusCode || 500).json({ error: 'Command Failed', message: result.message });
+            }
+        } catch (error) {
+            logger.error(`[PrinterController] CalibratePrinter Error: ${error.message}`, error);
             if (error.statusCode) {
                 return res.status(error.statusCode).json({ error: 'Bad Request', message: error.message });
             }

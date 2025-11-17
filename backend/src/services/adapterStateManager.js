@@ -1,6 +1,6 @@
 // src/services/adapterStateManager.js
 // Enhanced state manager using Integration Adapters
-// Maintains persistent adapter instances similar to PrinterStateManager
+// Maintains persistent adapter instances for ALL printer brands (Bambu uses BambuStateManager for MQTT)
 
 const logger = require('../utils/logger');
 const { makeAdapter, AdapterError, AuthConfig } = require('../../packages/integration-adapter');
@@ -22,8 +22,9 @@ class AdapterStateManager {
             
             // Get all printers that have adapter support
             const printers = await dbAll(`
-                SELECT id, name, brand, model, type, ip_address, access_code, serial_number 
-                FROM printers 
+                SELECT id, name, brand, model, type, ip_address,
+                       access_code, serial_number, serial_code, check_code, api_key
+                FROM printers
                 WHERE brand IS NOT NULL AND ip_address IS NOT NULL
             `);
             
@@ -76,19 +77,44 @@ class AdapterStateManager {
 
     async _doAddAndConnect(printerRecord) {
         const printerId = parseInt(String(printerRecord.id));
-        
+
         try {
             // Determine adapter type based on printer brand
             const brand = String(printerRecord.brand || '').toLowerCase().trim();
-            
+
             // Map brand to supported adapters
             let adapterBrand, adapterMode;
-            if (brand === 'bambu_lab' || brand === 'bambu' || brand === 'bambulab') {
-                adapterBrand = 'bambu';
-                adapterMode = 'lan';
-            } else {
-                logger.info(`[AdapterStateManager] Printer ${printerId} brand '${brand}' not supported by adapter system`);
-                return null;
+
+            switch (brand) {
+                case 'bambu_lab':
+                case 'bambu':
+                case 'bambulab':
+                    adapterBrand = 'bambu';
+                    adapterMode = 'lan';
+                    break;
+                case 'flashforge':
+                    adapterBrand = 'flashforge';
+                    adapterMode = 'hybrid';
+                    break;
+                case 'prusa':
+                    adapterBrand = 'prusa';
+                    adapterMode = 'lan';
+                    break;
+                case 'creality':
+                    adapterBrand = 'creality';
+                    adapterMode = 'websocket';
+                    break;
+                case 'anycubic':
+                    adapterBrand = 'anycubic';
+                    adapterMode = 'moonraker';
+                    break;
+                case 'elegoo':
+                    adapterBrand = 'elegoo';
+                    adapterMode = 'websocket';
+                    break;
+                default:
+                    logger.info(`[AdapterStateManager] Printer ${printerId} brand '${brand}' not supported by adapter system`);
+                    return null;
             }
 
             // Close existing adapter if any
@@ -97,22 +123,29 @@ class AdapterStateManager {
                 await this.removeAdapter(printerId);
             }
 
-            // Create adapter configuration
-            const config = new AuthConfig({
+            // Create adapter configuration (flexible for all adapters)
+            const config = {
                 ip: printerRecord.ip_address,
+                // Bambu Lab fields
                 accessCode: printerRecord.access_code,
                 serial: printerRecord.serial_number,
+                // FlashForge fields
+                serialCode: printerRecord.serial_code,
+                checkCode: printerRecord.check_code,
+                // Prusa fields
+                apiKey: printerRecord.api_key,
+                // Common fields
                 printerId: printerId,
                 name: printerRecord.name,
                 model: printerRecord.model,
                 debug: process.env.LOG_LEVEL === 'DEBUG' || process.env.BAMBU_API_DEBUG === 'true'
-            });
+            };
 
             logger.info(`[AdapterStateManager] Creating ${adapterBrand}/${adapterMode} adapter for printer: ${printerRecord.name} (ID: ${printerId})`);
 
             // Create adapter instance
-            logger.debug(`[AdapterStateManager] Calling makeAdapter('${adapterBrand}', '${adapterMode}', config)`);
-            const adapter = makeAdapter(adapterBrand, adapterMode, config);
+            logger.debug(`[AdapterStateManager] Calling makeAdapter('${adapterBrand}', '${adapterMode}')`);
+            const adapter = makeAdapter(adapterBrand, adapterMode);
 
             if (!adapter) {
                 logger.error(`[AdapterStateManager] makeAdapter returned null/undefined for ${adapterBrand}/${adapterMode}`);
@@ -142,7 +175,7 @@ class AdapterStateManager {
                 await adapter.close();
                 return null;
             }
-            
+
         } catch (error) {
             logger.error(`[AdapterStateManager] Error connecting adapter for printer ${printerId}: ${error.message}`);
             logger.debug(`[AdapterStateManager] Error stack trace: ${error.stack}`);

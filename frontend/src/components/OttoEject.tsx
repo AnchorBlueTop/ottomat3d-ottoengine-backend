@@ -68,6 +68,8 @@ export function Ottoeject() {
                                         setOttoejectIndex(index)
                                         setIsOttoejectEditModalOpen(true)
                                     }}
+                                    className="clickable-job-row"
+                                    style={{ cursor: 'pointer' }}
                                 >
                                     <Td>{value.device_name}</Td>
                                     <Td>{value.status}</Td>

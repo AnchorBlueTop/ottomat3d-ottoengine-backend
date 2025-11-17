@@ -9,7 +9,7 @@ import {
     Tr,
     Td
 } from "@patternfly/react-table";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect } from "react";
 import { JobContext } from "../App";
 import AddNewOttorackButton from "./buttons/addNewOttorackButton";
 import OttorackModal from "./modals/OttorackModal";
@@ -32,7 +32,7 @@ export function Ottorack() {
 
     const ottoRackFetch = async () => {
         try {
-            setLoading(true);
+            // setLoading(true);
             const allOttoracks = await getAllOttoracks();
 
             const list = (allOttoracks || []).filter((r: any) => r?.id);
@@ -52,7 +52,7 @@ export function Ottorack() {
             console.error("Error fetching Ottoracks:", error);
             // On error, don't clear existing UI list; keep current state
         } finally {
-            setLoading(false);
+            // setLoading(false);
         }
     }
 

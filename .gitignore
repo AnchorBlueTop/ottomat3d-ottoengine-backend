@@ -87,6 +87,8 @@ out/
 
 # Claude Code artifacts
 backend/.claude_code/
+.claude_code
+**/.claude_code
 
 # Test/documentation files
 backend/gcode/

@@ -7,10 +7,8 @@ import {
   StartPrintPayload
 } from "./representations/printerRepresentation";
 
-// const BASE_URL = import.meta.env.BASE_URL || 'http://localhost:3000'; 
-// const BASE_URL = 'http://localhost:3000';
-const BASE_URL = 'http://127.0.0.1:3000';
-// const BASE_URL = 'http://100.79.73.105:3000';
+// Use Electron's backend URL if available, otherwise fallback to localhost:3001
+const BASE_URL = (window as any).electron?.backendUrl || 'http://localhost:3001';
 
 /////// OTTO PRINTER APIs ///////
 export const registerPrinter = async (printerData: PrinterRegistrationRepresentation): Promise<PrinterRepresentation> => {

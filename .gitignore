@@ -93,3 +93,10 @@ backend/.claude_code/
 # Test/documentation files
 backend/gcode/
 backend/docs/
+
+# Project README (personal)
+README.md
+
+# Beta testing and scripts
+__beta_testing/
+__python_scripts/

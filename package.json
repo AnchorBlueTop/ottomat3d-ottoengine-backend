@@ -39,16 +39,13 @@
       "packagerConfig": {
         "name": "OttoStudio",
         "executableName": "Ottostudio",
-        "icon": "./assets/icon",
         "asar": false
       },
       "makers": [
         {
           "name": "@electron-forge/maker-squirrel",
           "config": {
-            "name": "Ottostudio",
-            "setupIcon": "./assets/icon.ico",
-            "iconUrl": "https://ottostudio.com/icon.ico"
+            "name": "Ottostudio"
           }
         },
         {
@@ -63,8 +60,7 @@
           "config": {
             "options": {
               "name": "Ottostudio",
-              "productName": "OttoStudio",
-              "icon": "./assets/icon.png"
+              "productName": "OttoStudio"
             }
           }
         },

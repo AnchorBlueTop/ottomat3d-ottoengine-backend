@@ -11,7 +11,8 @@ const fs = require('fs');
 const path = require('path');
 
 // Configuration
-const DEVELOPER_ID = 'Developer ID Application: Harshil Patel (VG4BA3XSGG)';
+// TODO: Set your Developer ID certificate identity here
+const DEVELOPER_ID = 'YOUR_DEVELOPER_ID_HERE';
 const APP_PATH = path.join(__dirname, '../out/OttoStudio-darwin-arm64/OttoStudio.app');
 const ENTITLEMENTS_PATH = path.join(__dirname, 'entitlements.plist');
 

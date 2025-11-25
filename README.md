@@ -16,6 +16,11 @@ OTTOMAT3D addresses the operational challenges of continuous 3D printing by auto
 - **Concurrent Processing**: Simultaneous management of multiple printers with independent progress tracking
 - **Cross-Platform Desktop App**: Electron-based application with automated build pipeline and code signing
 
+## Packaged Application
+
+<img width="2056" height="1278" alt="packaged-application" src="https://github.com/user-attachments/assets/f80500bc-e385-49b9-bec9-aa7d77483498" />
+
+
 ## System Architecture
 ```mermaid
 flowchart LR
